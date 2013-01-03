@@ -46,16 +46,16 @@
  
  */
 
-// Define SMJBXPC_PRIVATE so that we pick up our private definitions from
+// Define SJBX_PRIVATE so that we pick up our private definitions from
 // "BetterAuthorizationSampleLib.h".
 
-#define SMJBXPC_PRIVATE 1
+#define SJBX_PRIVATE 1
 
 #include "SMJobBlessXPCLib.h"
 
 #include <syslog.h>
 
-// At runtime SMJBXPC only requires CoreFoundation.  However, at build time we need
+// At runtime SJBX only requires CoreFoundation.  However, at build time we need
 // CoreServices for the various OSStatus error codes in "MacErrors.h".  Thus, by default,
 // we include CoreServices at build time.  However, you can flip this switch to check
 // that you're not accidentally using any other CoreServices things.
@@ -71,7 +71,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 #pragma mark ***** Constants
 
-// kSMJBXPCMaxNumberOfKBytes has two uses:
+// kSJBXMaxNumberOfKBytes has two uses:
 //
 // 1. When receiving a dictionary, it is used to limit the size of the incoming
 //    data.  This ensures that a non-privileged client can't exhaust the
@@ -80,20 +80,20 @@
 // 2. Because it's less than 4 GB, this limit ensures that the dictionary size
 //    can be sent as an architecture-neutral uint32_t.
 
-#define kSMJBXPCMaxNumberOfKBytes			(1024 * 1024)
+#define kSJBXMaxNumberOfKBytes			(1024 * 1024)
 
 // The key used to get the request dictionary in the XPC request.
 
-#define kSMJBXPCRequestKey              "Request"
+#define kSJBXRequestKey              "Request"
 
 // The key used to get our flattened AuthorizationRef in the XPC request.
 
-#define kSMJBXPCAuthorizationRefKey     "AuthorizationRef"
+#define kSJBXAuthorizationRefKey     "AuthorizationRef"
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Common Code
 
-extern int SMJBXPCOSStatusToErrno(OSStatus errNum)
+extern int SJBXOSStatusToErrno(OSStatus errNum)
 // See comment in header.
 {
 	int retval;
@@ -142,7 +142,7 @@ break
     return retval;
 }
 
-extern OSStatus SMJBXPCErrnoToOSStatus(int errNum)
+extern OSStatus SJBXErrnoToOSStatus(int errNum)
 // See comment in header.
 {
 	OSStatus retval;
@@ -158,17 +158,17 @@ extern OSStatus SMJBXPCErrnoToOSStatus(int errNum)
     return retval;
 }
 
-static Boolean SMJBXPCIsBinaryPropertyListData(const void * plistBuffer, size_t plistSize)
+static Boolean SJBXIsBinaryPropertyListData(const void * plistBuffer, size_t plistSize)
 // Make sure that whatever is passed into the buffer that will
 // eventually become a plist (and then sequentially a dictionary)
 // is NOT in binary format.
 {
-    static const char kSMJBXPCBinaryPlistWatermark[6] = "bplist";
+    static const char kSJBXBinaryPlistWatermark[6] = "bplist";
     
     assert(plistBuffer != NULL);
 	
-	return (plistSize >= sizeof(kSMJBXPCBinaryPlistWatermark))
-    && (memcmp(plistBuffer, kSMJBXPCBinaryPlistWatermark, sizeof(kSMJBXPCBinaryPlistWatermark)) == 0);
+	return (plistSize >= sizeof(kSJBXBinaryPlistWatermark))
+    && (memcmp(plistBuffer, kSJBXBinaryPlistWatermark, sizeof(kSJBXBinaryPlistWatermark)) == 0);
 }
 
 static void NormaliseOSStatusErrorCode(OSStatus *errPtr)
@@ -183,14 +183,14 @@ static void NormaliseOSStatusErrorCode(OSStatus *errPtr)
     }
 }
 
-static int SMJBXPCReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr)
+static int SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr)
 // Create a CFDictionary by reading the XML data from xpcIn.
 // It first reads the data in, and then
 // unflattens the data into a CFDictionary.
 //
 // On success, the caller is responsible for releasing *dictPtr.
 //
-// See also the companion routine, SMJBXPCWriteDictionary, below.
+// See also the companion routine, SJBXWriteDictionary, below.
 {
 	int                 err = 0;
 	size_t				dictSize;
@@ -211,25 +211,25 @@ static int SMJBXPCReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr)
 	// Read the data and unflatten.
 	
 	if (err == 0) {
-        dictBuffer = xpc_dictionary_get_data(xpcIn, kSMJBXPCRequestKey, &dictSize);
+        dictBuffer = xpc_dictionary_get_data(xpcIn, kSJBXRequestKey, &dictSize);
         
         if (dictBuffer == NULL) {
-            err = SMJBXPCOSStatusToErrno( coreFoundationUnknownErr );
+            err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
         }
 	}
-	if ( (err == 0) && SMJBXPCIsBinaryPropertyListData(dictBuffer, dictSize) ) {
-        err = SMJBXPCOSStatusToErrno( coreFoundationUnknownErr );
+	if ( (err == 0) && SJBXIsBinaryPropertyListData(dictBuffer, dictSize) ) {
+        err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
 	}
 	if (err == 0) {
 		dictData = CFDataCreateWithBytesNoCopy(NULL, dictBuffer, dictSize, kCFAllocatorNull);
 		if (dictData == NULL) {
-			err = SMJBXPCOSStatusToErrno( coreFoundationUnknownErr );
+			err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
 		}
 	}
 	if (err == 0) {
 		dict = CFPropertyListCreateFromXMLData(NULL, dictData, kCFPropertyListImmutable, NULL);
 		if (dict == NULL) {
-			err = SMJBXPCOSStatusToErrno( coreFoundationUnknownErr );
+			err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
 		}
 	}
 	if ( (err == 0) && (CFGetTypeID(dict) != CFDictionaryGetTypeID()) ) {
@@ -256,11 +256,11 @@ static int SMJBXPCReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr)
 	return err;
 }
 
-static int SMJBXPCWriteDictionary(CFDictionaryRef dict, xpc_object_t message)
+static int SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message)
 // Write a dictionary to an XPC message by flattening
 // it into XML.
 //
-// See also the companion routine, SMJBXPCReadDictionary, above.
+// See also the companion routine, SJBXReadDictionary, above.
 {
 	int                 err = 0;
 	CFDataRef			dictData;
@@ -276,7 +276,7 @@ static int SMJBXPCWriteDictionary(CFDictionaryRef dict, xpc_object_t message)
     
 	dictData = CFPropertyListCreateXMLData(NULL, dict);
 	if (dictData == NULL) {
-		err = SMJBXPCOSStatusToErrno( coreFoundationUnknownErr );
+		err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
 	}
     
     // Send the length, then send the data.  Always send the length as a big-endian
@@ -287,12 +287,12 @@ static int SMJBXPCWriteDictionary(CFDictionaryRef dict, xpc_object_t message)
     // CFDataGetBytePtr can't fail, so this version of the code doesn't do the unnecessary
     // allocation.
     
-    if ( (err == 0) && (CFDataGetLength(dictData) > kSMJBXPCMaxNumberOfKBytes) ) {
+    if ( (err == 0) && (CFDataGetLength(dictData) > kSJBXMaxNumberOfKBytes) ) {
         err = EINVAL;
     }
     
 	if (err == 0) {
-        xpc_dictionary_set_data(message, kSMJBXPCRequestKey, CFDataGetBytePtr(dictData), CFDataGetLength(dictData));
+        xpc_dictionary_set_data(message, kSJBXRequestKey, CFDataGetBytePtr(dictData), CFDataGetLength(dictData));
 	}
     
 	if (dictData != NULL) {
@@ -304,12 +304,12 @@ static int SMJBXPCWriteDictionary(CFDictionaryRef dict, xpc_object_t message)
 
 static OSStatus FindCommand(
                             CFDictionaryRef             request,
-                            const SMJBXPCCommandSpec		commands[],
+                            const SJBXCommandSpec		commands[],
                             size_t *                    commandIndexPtr
                             )
 // FindCommand is a simple utility routine for checking that the
 // command name within a request is valid (that is, matches one of the command
-// names in the SMJBXPCCommandSpec array).
+// names in the SJBXCommandSpec array).
 //
 // On success, *commandIndexPtr will be the index of the requested command
 // in the commands array.  On error, the value in *commandIndexPtr is undefined.
@@ -332,7 +332,7 @@ static OSStatus FindCommand(
     // Get the command as a C string.  To prevent untrusted command string from
 	// trying to run us out of memory, we limit its length to 1024 UTF-16 values.
     
-    commandStr = CFDictionaryGetValue(request, CFSTR(kSMJBXPCCommandKey));
+    commandStr = CFDictionaryGetValue(request, CFSTR(kSJBXCommandKey));
     if ( (commandStr == NULL) || (CFGetTypeID(commandStr) != CFStringGetTypeID()) ) {
         retval = paramErr;
     }
@@ -363,7 +363,7 @@ static OSStatus FindCommand(
             }
             index += 1;
             if (commands[index].commandName == NULL) {
-                retval = SMJBXPCErrnoToOSStatus(ENOENT);
+                retval = SJBXErrnoToOSStatus(ENOENT);
                 break;
             }
         } while (true);
@@ -380,8 +380,8 @@ static OSStatus FindCommand(
 #if ! defined(NDEBUG)
 
 static bool CommandArraySizeMatchesCommandProcArraySize(
-                                                        const SMJBXPCCommandSpec		commands[],
-                                                        const SMJBXPCCommandProc		commandProcs[]
+                                                        const SJBXCommandSpec		commands[],
+                                                        const SJBXCommandProc		commandProcs[]
                                                         )
 {
     size_t  commandCount;
@@ -403,8 +403,8 @@ static bool CommandArraySizeMatchesCommandProcArraySize(
 #endif
 
 static int HandleCommand(
-                         const SMJBXPCCommandSpec		commands[],
-                         const SMJBXPCCommandProc		commandProcs[],
+                         const SJBXCommandSpec		commands[],
+                         const SJBXCommandProc		commandProcs[],
                          CFDictionaryRef                request,
                          CFDictionaryRef                *responsePtr,
                          AuthorizationRef               authRef
@@ -415,7 +415,7 @@ static int HandleCommand(
 // execute a command.  Finally, fd is the file descriptor from which the request
 // should be read, and to which the response should be sent.
 {
-    int                         retval;
+    int                         retval = 0;
     size_t                      commandIndex;
     CFMutableDictionaryRef		response	= NULL;
     OSStatus                    commandProcStatus;
@@ -431,16 +431,16 @@ static int HandleCommand(
     if (retval == 0) {
         response = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         if (response == NULL) {
-            retval = SMJBXPCOSStatusToErrno( coreFoundationUnknownErr );
+            retval = SJBXOSStatusToErrno( coreFoundationUnknownErr );
         }
     }
     
     // Errors that occur within this block are considered command errors, that is, they're
-    // reported to the client in the kSMJBXPCErrorKey value of the response dictionary
-    // (that is, SMJBXPCExecuteRequestInHelperTool returns noErr and valid response dictionary with
-    // an error value in the kSMJBXPCErrorKey entry of the dictionary).  In contrast, other errors
+    // reported to the client in the kSJBXErrorKey value of the response dictionary
+    // (that is, SJBXExecuteRequestInHelperTool returns noErr and valid response dictionary with
+    // an error value in the kSJBXErrorKey entry of the dictionary).  In contrast, other errors
     // are considered IPC errors and generally result in a the client getting an error status
-    // back from SMJBXPCExecuteRequestInHelperTool.
+    // back from SJBXExecuteRequestInHelperTool.
     //
     // Notably a request with an unrecognised command string will return an error code
     // in the response, as opposed to an IPC error.  This means that a client can check
@@ -448,7 +448,7 @@ static int HandleCommand(
     
     if (retval == 0) {
         // Get the command name from the request dictionary and check to see whether or
-        // not the command is valid by comparing with the SMJBXPCCommandSpec array.  Also,
+        // not the command is valid by comparing with the SJBXCommandSpec array.  Also,
         // if the command is valid, return the associated right (if any).
         
         commandProcStatus = FindCommand(request, commands, &commandIndex);
@@ -484,14 +484,14 @@ static int HandleCommand(
         // If the command didn't insert its own error value, we use its function
         // result as the error value.
         
-        if ( ! CFDictionaryContainsKey(response, CFSTR(kSMJBXPCErrorKey)) ) {
+        if ( ! CFDictionaryContainsKey(response, CFSTR(kSJBXErrorKey)) ) {
             CFNumberRef     numRef;
             
             numRef = CFNumberCreate(NULL, kCFNumberSInt32Type, &commandProcStatus);
             if (numRef == NULL) {
-                retval = SMJBXPCOSStatusToErrno( coreFoundationUnknownErr );
+                retval = SJBXOSStatusToErrno( coreFoundationUnknownErr );
             } else {
-                CFDictionaryAddValue(response, CFSTR(kSMJBXPCErrorKey), numRef);
+                CFDictionaryAddValue(response, CFSTR(kSJBXErrorKey), numRef);
                 CFRelease(numRef);
             }
         }
@@ -506,8 +506,8 @@ static int HandleCommand(
 }
 
 static int HandleEvent(
-                       const SMJBXPCCommandSpec		commands[],
-                       const SMJBXPCCommandProc		commandProcs[],
+                       const SJBXCommandSpec		commands[],
+                       const SJBXCommandProc		commandProcs[],
                        xpc_object_t                 event
                        )
 {
@@ -539,28 +539,24 @@ static int HandleEvent(
         size_t authExtFormSize = 0;
         AuthorizationRef authRef = NULL;
         
-        authExtFormData = xpc_dictionary_get_data(event, kSMJBXPCAuthorizationRefKey, &authExtFormSize);
+        authExtFormData = xpc_dictionary_get_data(event, kSJBXAuthorizationRefKey, &authExtFormSize);
         
         if (authExtFormData == NULL || authExtFormSize > sizeof(authExtForm)) {
-            err = SMJBXPCOSStatusToErrno(coreFoundationUnknownErr);
+            err = SJBXOSStatusToErrno(coreFoundationUnknownErr);
         }
         
         if (err == 0) {
             memcpy(&authExtForm, authExtFormData, authExtFormSize);
             
-            err = SMJBXPCOSStatusToErrno(AuthorizationCreateFromExternalForm(&authExtForm, &authRef));
+            err = SJBXOSStatusToErrno(AuthorizationCreateFromExternalForm(&authExtForm, &authRef));
             
             if (authRef == NULL) {
-                err = SMJBXPCOSStatusToErrno(coreFoundationUnknownErr);
+                err = SJBXOSStatusToErrno(coreFoundationUnknownErr);
             }
         }
         
         if (err == 0) {
-            err = SMJBXPCOSStatusToErrno(coreFoundationUnknownErr);
-        }
-        
-        if (err == 0) {
-            err = SMJBXPCReadDictionary(event, &request);
+            err = SJBXReadDictionary(event, &request);
         }
         
         if (err == 0) {
@@ -570,14 +566,14 @@ static int HandleEvent(
         if (err == 0) {
             reply = xpc_dictionary_create_reply(event);
 
-            err = SMJBXPCWriteDictionary(response, reply);
+            err = SJBXWriteDictionary(response, reply);
         }
         
         if (err == 0) {
             remote = xpc_dictionary_get_remote_connection(event);
             
             if (remote == NULL) {
-                err = SMJBXPCOSStatusToErrno(coreFoundationUnknownErr);
+                err = SJBXOSStatusToErrno(coreFoundationUnknownErr);
             }
         }
         
@@ -603,10 +599,10 @@ static int HandleEvent(
     return err;
 }
 
-extern int SMJBXPCHelperToolMain(
+extern int SJBXHelperToolMain(
                                  CFStringRef                    helperID,
-                                 const SMJBXPCCommandSpec		commands[],
-                                 const SMJBXPCCommandProc		commandProcs[]
+                                 const SJBXCommandSpec		commands[],
+                                 const SJBXCommandProc		commandProcs[]
                                  )
 // See comment in header.
 {
@@ -626,7 +622,7 @@ extern int SMJBXPCHelperToolMain(
     }
     
     xpc_connection_t service = xpc_connection_create_mach_service(helperIDC, dispatch_get_main_queue(), XPC_CONNECTION_MACH_SERVICE_LISTENER);
-    
+
     if (!service) {
         syslog(LOG_NOTICE, "Failed to create service.");
         return EXIT_FAILURE;
@@ -644,6 +640,8 @@ extern int SMJBXPCHelperToolMain(
         
         xpc_connection_resume(connection);
 	});
+    
+    xpc_connection_resume(service);
 
     dispatch_main();
     
@@ -655,9 +653,9 @@ extern int SMJBXPCHelperToolMain(
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** App Code
 
-extern void SMJBXPCSetDefaultRules(
+extern void SJBXSetDefaultRules(
                                    AuthorizationRef			auth,
-                                   const SMJBXPCCommandSpec		commands[],
+                                   const SJBXCommandSpec		commands[],
                                    CFStringRef					bundleID,
                                    CFStringRef					descriptionStringTableName
                                    )
@@ -752,9 +750,9 @@ extern void SMJBXPCSetDefaultRules(
 	}
 }
 
-extern OSStatus SMJBXPCExecuteRequestInHelperTool(
+extern OSStatus SJBXExecuteRequestInHelperTool(
                                                   AuthorizationRef			auth,
-                                                  const SMJBXPCCommandSpec	commands[],
+                                                  const SJBXCommandSpec	commands[],
                                                   CFStringRef				bundleID,
                                                   CFDictionaryRef			request,
                                                   void                      (^errorHandler)(CFErrorRef error),
@@ -779,8 +777,8 @@ extern OSStatus SMJBXPCExecuteRequestInHelperTool(
     
 	// For debugging.
     
-	assert(CFDictionaryContainsKey(request, CFSTR(kSMJBXPCCommandKey)));
-	assert(CFGetTypeID(CFDictionaryGetValue(request, CFSTR(kSMJBXPCCommandKey))) == CFStringGetTypeID());
+	assert(CFDictionaryContainsKey(request, CFSTR(kSJBXCommandKey)));
+	assert(CFGetTypeID(CFDictionaryGetValue(request, CFSTR(kSJBXCommandKey))) == CFStringGetTypeID());
     
     // Look up the command and preauthorize.  This has the nice side effect that
     // the authentication dialog comes up, in the typical case, here, rather than
@@ -790,10 +788,10 @@ extern OSStatus SMJBXPCExecuteRequestInHelperTool(
     
     retval = FindCommand(request, commands, &commandIndex);
     
-#if !defined(SMJBXPC_PREAUTHORIZE)
-#define SMJBXPC_PREAUTHORIZE 1
+#if !defined(SJBX_PREAUTHORIZE)
+#define SJBX_PREAUTHORIZE 1
 #endif
-#if SMJBXPC_PREAUTHORIZE
+#if SJBX_PREAUTHORIZE
     if ( (retval == noErr) && (commands[commandIndex].rightName != NULL) ) {
         AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
         AuthorizationRights rights = { 1, &item };
@@ -860,13 +858,13 @@ extern OSStatus SMJBXPCExecuteRequestInHelperTool(
     }
     
 	if (retval == noErr) {
-        xpc_dictionary_set_data(message, kSMJBXPCAuthorizationRefKey, &extAuth, sizeof(extAuth));
+        xpc_dictionary_set_data(message, kSJBXAuthorizationRefKey, &extAuth, sizeof(extAuth));
 	}
 	
     // Write the request.
     
 	if (retval == noErr) {
-		retval = SMJBXPCErrnoToOSStatus( SMJBXPCWriteDictionary(request, message) );
+		retval = SJBXErrnoToOSStatus( SJBXWriteDictionary(request, message) );
 	}
 	
     // Send request.
@@ -878,7 +876,7 @@ extern OSStatus SMJBXPCExecuteRequestInHelperTool(
             
             // Read response.
             
-            int err = SMJBXPCReadDictionary(reply, &dict);
+            int err = SJBXReadDictionary(reply, &dict);
             
             if (err != 0) {
                 dict = NULL;
@@ -904,7 +902,7 @@ extern OSStatus SMJBXPCExecuteRequestInHelperTool(
 	return retval;
 }
 
-extern OSStatus SMJBXPCGetErrorFromResponse(CFDictionaryRef response)
+extern OSStatus SJBXGetErrorFromResponse(CFDictionaryRef response)
 // See comment in header.
 {
 	OSStatus	err;
@@ -912,7 +910,7 @@ extern OSStatus SMJBXPCGetErrorFromResponse(CFDictionaryRef response)
 	
 	assert(response != NULL);
 	
-	num = (CFNumberRef) CFDictionaryGetValue(response, CFSTR(kSMJBXPCErrorKey));
+	num = (CFNumberRef) CFDictionaryGetValue(response, CFSTR(kSJBXErrorKey));
     err = noErr;
     if ( (num == NULL) || (CFGetTypeID(num) != CFNumberGetTypeID()) ) {
         err = coreFoundationUnknownErr;

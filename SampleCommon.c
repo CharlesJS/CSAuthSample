@@ -75,9 +75,9 @@
  in "SMJobBlessHelper.c".
  */
 
-const SMJBXPCCommandSpec kSampleCommandSet[] = {
+const SJBXCommandSpec kSampleCommandSet[] = {
     {	kSampleGetVersionCommand,               // commandName
-        kSMJBXPCRuleAllow,                      // rightName           -- never authorize
+        NULL,                      // rightName           -- never authorize
         NULL,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
         NULL,									// rightDescriptionKey -- not applicable if rightName is NULL
         NULL                                    // userData
@@ -85,8 +85,8 @@ const SMJBXPCCommandSpec kSampleCommandSet[] = {
     
     {	kSampleSecretSpyStuffCommand,           // commandName
         kSampleSecretSpyStuffRightName,         // rightName
-        kSMJBXPCRuleAuthenticateAdmin,          // rightDefaultRule    -- authenticate as admin
-        NULL,	             					// rightDescriptionKey -- haven't bothered trying this yet
+        kSJBXRuleAuthenticateAdmin30,          // rightDefaultRule    -- authenticate as admin
+        "Please identify yourself",  			// rightDescriptionKey -- haven't bothered trying this yet
         NULL                                    // userData
 	},
     

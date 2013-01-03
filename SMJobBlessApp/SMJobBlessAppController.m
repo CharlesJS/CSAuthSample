@@ -51,12 +51,10 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 #import <ServiceManagement/ServiceManagement.h>
 #import <Security/Authorization.h>
 #import "SMJobBlessAppController.h"
+#include "SMJobBlessXPCLib.h"
 #include "SampleCommon.h"
 
-@interface SMJobBlessAppController () {
-    AuthorizationRef _authRef;
-    xpc_connection_t _connection;
-}
+@interface SMJobBlessAppController ()
 
 @property (nonatomic, assign)	IBOutlet NSTextField* textField;
 
@@ -64,55 +62,54 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 - (IBAction)doSecretSpyStuff:(id)sender;
 
 - (BOOL)blessHelperWithLabel:(NSString *)label error:(NSError **)error;
-- (int64_t)helperVersion;
 
-- (void)openXPCConnection;
-- (void)closeXPCConnection;
+- (void)requestHelperVersion:(void (^)(int64_t version, NSError *error))handler;
 
-- (NSData *)authorizationData;
-
-- (void)sendXPCRequest:(char *)request;
-- (void)sendXPCRequest:(char *)request authorize:(BOOL)authorize;
-- (void)sendXPCRequest:(char *)request authorize:(BOOL)authorize handler:(xpc_handler_t)handler;
-
-- (xpc_object_t)sendSynchronousXPCRequest:(char *)request;
-- (xpc_object_t)sendSynchronousXPCRequest:(char *)request authorize:(BOOL)authorize;
+- (void)sendRequest:(NSDictionary *)request;
+- (void)sendRequest:(NSDictionary *)request replyHandler:(void (^)(NSDictionary *response))replyHandler;
+- (void)sendRequest:(NSDictionary *)request errorHandler:(void (^)(NSError *error))errorHandler replyHandler:(void (^)(NSDictionary *response))replyHandler;
 
 @end
 
 
-@implementation SMJobBlessAppController
+@implementation SMJobBlessAppController {
+    AuthorizationRef _authRef;
+}
 
 - (void)appendLog:(NSString *)log {
     self.textField.stringValue = [self.textField.stringValue stringByAppendingFormat:@"\n%@", log];
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-	NSError *error = nil;
+    OSStatus err = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &_authRef);
     
-    [self openXPCConnection];
-    
-	if (self.helperVersion != SMJOBBLESSHELPER_VERSION) {
-        [self closeXPCConnection];
-        
-        if (![self blessHelperWithLabel:@"com.apple.bsd.SMJobBlessHelper" error:&error]) {
-            [self appendLog:[NSString stringWithFormat:@"Failed to bless helper. Error: %@", error]];
-            return;
-        }
-        
-        [self openXPCConnection];
+    if (err != errAuthorizationSuccess) {
+        [self appendLog:[NSString stringWithFormat:@"Failed to create AuthorizationRef. Error %ld", (long)err]];
+        return;
     }
     
-    self.textField.stringValue = @"Helper available.";
+    [self requestHelperVersion:^(int64_t version, NSError *error) {
+        if (error != nil || version != SMJOBBLESSHELPER_VERSION) {
+            NSError *blessError = nil;
+            
+            if (![self blessHelperWithLabel:@kSampleHelperID error:&blessError]) {
+                [self appendLog:[NSString stringWithFormat:@"Failed to bless helper. Error: %@", blessError]];
+                return;
+            }
+        }
     
-    [self sendXPCRequest:"Hi there, helper service."];
+        self.textField.stringValue = @"Helper available.";
+    }];
+}
+
+- (void)applicationWillTerminate:(NSNotification *)aNotification {
+    if (_authRef != NULL) {
+        AuthorizationFree(_authRef, kAuthorizationFlagDestroyRights);
+        _authRef = NULL;
+    }
 }
 
 - (BOOL)blessHelperWithLabel:(NSString *)label error:(NSError **)error {
-    if (_connection != NULL) {
-        [self closeXPCConnection];
-    }
-
 	BOOL result = NO;
 
 	AuthorizationItem authItem		= { kSMRightBlessPrivilegedHelper, 0, NULL, 0 };
@@ -121,213 +118,87 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 										kAuthorizationFlagInteractionAllowed	|
 										kAuthorizationFlagPreAuthorize			|
 										kAuthorizationFlagExtendRights;
-
-	AuthorizationRef authRef = NULL;
 	
 	/* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
-	OSStatus status = AuthorizationCreate(&authRights, kAuthorizationEmptyEnvironment, flags, &authRef);
+	OSStatus status = AuthorizationCreate(&authRights, kAuthorizationEmptyEnvironment, flags, &_authRef);
 	if (status != errAuthorizationSuccess) {
         [self appendLog:[NSString stringWithFormat:@"Failed to create AuthorizationRef. Error code: %ld", (long)status]];
 	} else {
-        result = SMJobRemove(kSMDomainSystemLaunchd, (CFStringRef)label, authRef, YES, (CFErrorRef *)error);
-    }
+        SMJobRemove(kSMDomainSystemLaunchd, (CFStringRef)label, _authRef, YES, NULL);
     
-    if (result) {
-		/* This does all the work of verifying the helper tool against the application
+        /* This does all the work of verifying the helper tool against the application
 		 * and vice-versa. Once verification has passed, the embedded launchd.plist
 		 * is extracted and placed in /Library/LaunchDaemons and then loaded. The
 		 * executable is placed in /Library/PrivilegedHelperTools.
 		 */
-		result = SMJobBless(kSMDomainSystemLaunchd, (CFStringRef)label, authRef, (CFErrorRef *)error);
-	}
-    
-    AuthorizationFree(authRef, kAuthorizationFlagDestroyRights);
+		result = SMJobBless(kSMDomainSystemLaunchd, (CFStringRef)label, _authRef, (CFErrorRef *)error);
+    }
 	
 	return result;
 }
 
-- (void)openXPCConnection {
-    if (_connection != NULL) {
-        [self closeXPCConnection];
-    }
-    
-    _connection = xpc_connection_create_mach_service("com.apple.bsd.SMJobBlessHelper", NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
-    
-    if (!_connection) {
-        [self appendLog:@"Failed to create XPC connection."];
-        return;
-    }
-    
-    xpc_connection_set_event_handler(_connection, ^(xpc_object_t event) {
-        xpc_type_t type = xpc_get_type(event);
+- (void)sendRequest:(NSDictionary *)request {
+    void (^replyHandler)(NSDictionary *) = ^(NSDictionary *response) {
+        NSString *reply = response[@"Reply"];
         
-        if (type == XPC_TYPE_ERROR) {
-            
-            if (event == XPC_ERROR_CONNECTION_INTERRUPTED) {
-                [self appendLog:@"XPC connection interupted."];
-                
-            } else if (event == XPC_ERROR_CONNECTION_INVALID) {
-                [self appendLog:@"XPC connection invalid, releasing."];
-                xpc_release(_connection);
-                
-            } else {
-                [self appendLog:@"Unexpected XPC connection error."];
-            }
-            
-        } else {
-            [self appendLog:@"Unexpected XPC connection event."];
-        }
-    });
+        [self appendLog:[NSString stringWithFormat:@"Received response: %@.", reply]];
+    };
     
-    xpc_connection_resume(_connection);
+    [self sendRequest:request replyHandler:replyHandler];
 }
 
-- (void)closeXPCConnection {
-    if (_connection != NULL) {
-        xpc_connection_suspend(_connection);
-        xpc_connection_cancel(_connection);
-        xpc_release(_connection);
-        _connection = NULL;
-    }
+- (void)sendRequest:(NSDictionary *)request replyHandler:(void (^)(NSDictionary *))replyHandler {
+    void (^errorHandler)(NSError *) = ^(NSError *error) {
+        [self appendLog:[NSString stringWithFormat:@"An error occurred when sending the request: %@", error]];
+    };
+    
+    [self sendRequest:request errorHandler:errorHandler replyHandler:replyHandler];
 }
 
-- (NSData *)authorizationData {
-    NSData *authData = nil;
+- (void)sendRequest:(NSDictionary *)request errorHandler:(void (^)(NSError *))errorHandler replyHandler:(void (^)(NSDictionary *))replyHandler {
+    void (^cfErrorHandler)(CFErrorRef) = ^(CFErrorRef errorRef) {
+        errorHandler((NSError *)errorRef);
+    };
     
-    AuthorizationItem item;
+    void (^cfReplyHandler)(CFDictionaryRef) = ^(CFDictionaryRef replyRef) {
+        replyHandler((NSDictionary *)replyRef);
+    };
     
-    item.name = "test_right";
-    item.valueLength = 0;
-    item.value = NULL;
-    item.flags = 0;
+    [self appendLog:[NSString stringWithFormat:@"Sending request: %@", request[@kSJBXCommandKey]]];
     
-    AuthorizationRights rights;
+    SJBXExecuteRequestInHelperTool(_authRef, kSampleCommandSet, CFSTR(kSampleHelperID), (CFDictionaryRef)request, cfErrorHandler, cfReplyHandler);
+}
+
+- (void)requestHelperVersion:(void (^)(int64_t, NSError *))handler {
+    NSDictionary *request = @{ @kSJBXCommandKey : @kSampleGetVersionCommand };
     
-    rights.count = 1;
-    rights.items = &item;
-    
-    OSStatus err = errAuthorizationSuccess;
-    
-    if (_authRef == NULL) {
-        err = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &_authRef);
+    void (^replyHandler)(NSDictionary *) = ^(NSDictionary *response) {
+        NSNumber *version = response[@kSampleGetVersionResponse];
         
-        if (err != errAuthorizationSuccess) {
-            _authRef = NULL;
-        }
-    }
+        handler(version.longLongValue, nil);
+    };
     
-    if (err == errAuthorizationSuccess) {
-        err = AuthorizationCopyRights(_authRef, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagDestroyRights, NULL);
-    }
+    void (^errorHandler)(NSError *) = ^(NSError *error) {
+        handler(-1, error);
+    };
     
-    AuthorizationExternalForm extForm;
-    
-    if (err == errAuthorizationSuccess) {
-        err = AuthorizationMakeExternalForm(_authRef, &extForm);
-    }
-
-    if (err == errAuthorizationSuccess) {
-        authData = [NSData dataWithBytes:&extForm length:sizeof(extForm)];
-    }
-    
-    return authData;
-}
-
-- (void)destroyAuthorizationRights {
-    AuthorizationFree(_authRef, kAuthorizationFlagDestroyRights);
-    _authRef = NULL;
-}
-
-- (void)sendXPCRequest:(char *)request {
-    [self sendXPCRequest:request authorize:NO];
-}
-
-- (void)sendXPCRequest:(char *)request authorize:(BOOL)authorize {
-    [self sendXPCRequest:request authorize:authorize handler:^(xpc_object_t event) {
-        const char* response = xpc_dictionary_get_string(event, "reply");
-        [self appendLog:[NSString stringWithFormat:@"Received response: %s.", response]];
-    }];
-}
-
-- (void)sendXPCRequest:(char *)request authorize:(BOOL)authorize handler:(xpc_handler_t)handler {
-    if (_connection == NULL) {
-        handler(NULL);
-        return;
-    }
-    
-    xpc_object_t message = xpc_dictionary_create(NULL, NULL, 0);
-    xpc_dictionary_set_string(message, "request", request);
-    
-    if (authorize) {
-        NSData *authData = self.authorizationData;
-        xpc_dictionary_set_data(message, "authData", authData.bytes, authData.length);
-    }
-    
-    [self appendLog:[NSString stringWithFormat:@"Sending request: %s", request]];
-    
-    xpc_connection_send_message_with_reply(_connection, message, dispatch_get_main_queue(), ^(xpc_object_t event) {
-        if (authorize) {
-            [self destroyAuthorizationRights];
-        }
-        
-        handler(event);
-    });
-}
-
-- (xpc_object_t)sendSynchronousXPCRequest:(char *)request {
-    return [self sendSynchronousXPCRequest:request authorize:NO];
-}
-
-- (xpc_object_t)sendSynchronousXPCRequest:(char *)request authorize:(BOOL)authorize {
-    if (_connection == NULL) {
-        return NULL;
-    }
-    
-    xpc_object_t message = xpc_dictionary_create(NULL, NULL, 0);
-    xpc_dictionary_set_string(message, "request", request);
-    
-    if (authorize) {
-        NSData *authData = self.authorizationData;
-        xpc_dictionary_set_data(message, "authData", authData.bytes, authData.length);
-    }
-    
-    [self appendLog:[NSString stringWithFormat:@"Sending request: %s", request]];
-    
-    xpc_object_t reply = xpc_connection_send_message_with_reply_sync(_connection, message);
-    
-    if (authorize) {
-        [self destroyAuthorizationRights];
-    }
-    
-    return reply;
-}
-
-- (int64_t)helperVersion {
-    xpc_object_t event = [self sendSynchronousXPCRequest:"getVersion"];
-    
-    if (event == NULL) {
-        return 0;
-    }
-    
-    int64_t version = xpc_dictionary_get_int64(event, "version");
-    
-    xpc_release(event);
-    
-    return version;
+    [self sendRequest:request errorHandler:errorHandler replyHandler:replyHandler];
 }
 
 - (IBAction)getVersion:(id)sender {
-    [self appendLog:[NSString stringWithFormat:@"Version is %lld", self.helperVersion]];
+    [self requestHelperVersion:^(int64_t version, NSError *error) {
+        if (error == nil) {
+            [self appendLog:[NSString stringWithFormat:@"Version is %lld", (long long)version]];
+        } else {
+            [self appendLog:[NSString stringWithFormat:@"Error getting version: %@", error]];
+        }
+    }];
 }
 
 - (IBAction)doSecretSpyStuff:(id)sender {
-    xpc_object_t event = [self sendSynchronousXPCRequest:"secretSpyStuff" authorize:YES];
+    NSDictionary *request = @{ @kSJBXCommandKey : @kSampleSecretSpyStuffCommand };
     
-    if (event == NULL) {
-        return;
-    }
-    
-    [self appendLog:[NSString stringWithFormat:@"%s", xpc_dictionary_get_string(event, "reply")]];
+    [self sendRequest:request];
 }
 
 @end

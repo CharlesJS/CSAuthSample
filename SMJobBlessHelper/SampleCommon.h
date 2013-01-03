@@ -51,12 +51,13 @@
 
 #include "SMJobBlessXPCLib.h"
 
-#define SMJOBBLESSHELPER_VERSION	21
+#define SMJOBBLESSHELPER_VERSION	0
+
+#define kSampleHelperID                 "com.apple.bsd.SMJobBlessHelper"
 
 /////////////////////////////////////////////////////////////////
 
 // Commands supported by this sample
-
 
 // "GetVersion" gets the version of the helper tool.  This never requires authorization.
 
@@ -87,6 +88,6 @@
 // The kSampleCommandSet is used by both the app and the tool to communicate the set of
 // supported commands to the BetterAuthorizationSampleLib module.
 
-extern const SMJBXPCCommandSpec kSampleCommandSet[];
+extern const SJBXCommandSpec kSampleCommandSet[];
 
 #endif

@@ -55,139 +55,75 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 #include <xpc/xpc.h>
 #include "SampleCommon.h"
 
-CFMutableSetRef connections = NULL;
-
-static OSStatus GetRootPrivileges(AuthorizationRef authRef) {
-    AuthorizationItem item;
-    
-    item.name = "test_right";
-    item.valueLength = 0;
-    item.value = NULL;
-    item.flags = 0;
-    
+static OSStatus GetRights(AuthorizationRef authRef, AuthorizationItem item) {
     AuthorizationRights rights;
     
     rights.count = 1;
     rights.items = &item;
-
-    return AuthorizationCopyRights(authRef, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagDestroyRights, NULL);
+    
+    return AuthorizationCopyRights(authRef, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights, NULL);
 }
 
-static void __XPC_Peer_Event_Handler(xpc_connection_t connection, xpc_object_t event) {
-    syslog(LOG_NOTICE, "%ld: Received event in helper. Connection is %p", (long)getpid(), connection);
+/////////////////////////////////////////////////////////////////
+#pragma mark ***** Get Version Command
+
+static OSStatus DoGetVersion(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response) {
+    assert(authRef != NULL);
+    assert(response != NULL);
     
-	xpc_type_t type = xpc_get_type(event);
+    long long version = (long long)SMJOBBLESSHELPER_VERSION;
+    CFNumberRef versionRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberLongLongType, &version);
+
+    CFDictionaryAddValue(response, CFSTR(kSampleGetVersionResponse), versionRef);
+
+    CFRelease(versionRef);
     
-	if (type == XPC_TYPE_ERROR) {
-        syslog(LOG_NOTICE, "%ld: Some kind of error occurred with connection %p", (long)getpid(), connection);
-        
-		if (event == XPC_ERROR_CONNECTION_INVALID) {
-			// The client process on the other end of the connection has either
-			// crashed or cancelled the connection. After receiving this error,
-			// the connection is in an invalid state, and you do not need to
-			// call xpc_connection_cancel(). Just tear down any associated state
-			// here.
-            syslog(LOG_NOTICE, "%ld: invalid connection", (long)getpid());
-            
-            CFSetRemoveValue(connections, connection);
-            
-            if (CFSetGetCount(connections) == 0) {
-                syslog(LOG_NOTICE, "%ld: no more connections", (long)getpid());
-                //exit(0);
-            }
-		} else if (event == XPC_ERROR_TERMINATION_IMMINENT) {
-            syslog(LOG_NOTICE, "%ld: termination imminent", (long)getpid());
-			// Handle per-connection termination cleanup.
-		}
-	} else if (type == XPC_TYPE_DICTIONARY) {
-        const char *request = xpc_dictionary_get_string(event, "request");
-        
-        if (strcmp(request, "getVersion") == 0) {
-            xpc_connection_t remote = xpc_dictionary_get_remote_connection(event);
-            
-            xpc_object_t reply = xpc_dictionary_create_reply(event);
-            xpc_dictionary_set_int64(reply, "version", (int64_t)SMJOBBLESSHELPER_VERSION);
-            xpc_connection_send_message(remote, reply);
-            xpc_release(reply);
-        } else if (strcmp(request, "secretSpyStuff") == 0) {
-            size_t authDataLength = 0;
-            const char *authData = xpc_dictionary_get_data(event, "authData", &authDataLength);
-            AuthorizationExternalForm extForm;
-            
-            assert(authDataLength <= sizeof(extForm));
-            
-            memcpy(&extForm, authData, authDataLength);
-            
-            AuthorizationRef authRef = NULL;
-            OSStatus err = AuthorizationCreateFromExternalForm(&extForm, &authRef);
-            
-            if (err != noErr) {
-                err = GetRootPrivileges(authRef);
-                AuthorizationFree(authRef, kAuthorizationFlagDestroyRights);
-            }
-            
-            const char *replyMessage;
-            
-            if (err == errAuthorizationSuccess) {
-                replyMessage = "Hello 007";
-            } else {
-                syslog(LOG_NOTICE, "error %ld", (long)err);
-                replyMessage = "I'd have to kill you";
-            }
-            
-            xpc_connection_t remote = xpc_dictionary_get_remote_connection(event);
-            
-            xpc_object_t reply = xpc_dictionary_create_reply(event);
-            xpc_dictionary_set_string(reply, "reply", replyMessage);
-            xpc_connection_send_message(remote, reply);
-            xpc_release(reply);
-        } else {
-            xpc_connection_t remote = xpc_dictionary_get_remote_connection(event);
-            
-            xpc_object_t reply = xpc_dictionary_create_reply(event);
-            xpc_dictionary_set_string(reply, "reply", "Hi there, host application!");
-            xpc_connection_send_message(remote, reply);
-            xpc_release(reply);
-        }
-	}
+    return noErr;
 }
 
-static void __XPC_Connection_Handler(xpc_connection_t connection)  {
-    syslog(LOG_NOTICE, "%ld: Configuring message event handler for helper. Connection is %p", (long)getpid(), connection);
-    
-    CFSetAddValue(connections, connection);
-    
-	xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
-		__XPC_Peer_Event_Handler(connection, event);
-	});
-	
-	xpc_connection_resume(connection);
-}
+/////////////////////////////////////////////////////////////////
+#pragma mark ***** Get Version Command
 
-int main(int argc, const char *argv[]) {
-    connections = CFSetCreateMutable(kCFAllocatorDefault, 0, &kCFTypeSetCallBacks);
+static OSStatus DoSecretSpyStuff(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response) {
+    assert(authRef != NULL);
+    assert(response != NULL);
     
-    xpc_connection_t service = xpc_connection_create_mach_service("com.apple.bsd.SMJobBlessHelper",
-                                                                  dispatch_get_main_queue(),
-                                                                  XPC_CONNECTION_MACH_SERVICE_LISTENER);
+    AuthorizationItem authItem = { kSampleSecretSpyStuffRightName, 0, NULL, 0 };
     
-    if (!service) {
-        syslog(LOG_NOTICE, "Failed to create service.");
-        exit(EXIT_FAILURE);
+    OSStatus err = GetRights(authRef, authItem);
+    CFStringRef replyMessage;
+    
+    if (err == errAuthorizationSuccess) {
+        replyMessage = CFSTR("Hello 007");
+    } else {
+        syslog(LOG_NOTICE, "error %ld", (long)err);
+        replyMessage = CFSTR("I'd have to kill you");
     }
     
-    syslog(LOG_NOTICE, "%ld: Configuring connection event handler for helper. Service is %p", (long)getpid(), service);
-    xpc_connection_set_event_handler(service, ^(xpc_object_t connection) {
-        __XPC_Connection_Handler(connection);
-    });
+    CFDictionarySetValue(response, CFSTR(kSampleSecretSpyStuffResponse), replyMessage);
     
-    xpc_connection_resume(service);
-    
-    dispatch_main();
-    
-    xpc_release(service);
-    CFRelease(connections);
-    
-    return EXIT_SUCCESS;
+    return noErr;
+}
+
+/////////////////////////////////////////////////////////////////
+#pragma mark ***** Tool Infrastructure
+
+/*
+ IMPORTANT
+ ---------
+ This array must be exactly parallel to the kSampleCommandSet array
+ in "SampleCommon.c".
+ */
+
+static const SJBXCommandProc kSampleCommandProcs[] = {
+    DoGetVersion,
+    DoSecretSpyStuff,
+    NULL
+};
+
+int main(int argc, const char *argv[]) {
+    // Go directly into SMJobBlessXPCLib code.
+	
+	return SJBXHelperToolMain(CFSTR(kSampleHelperID), kSampleCommandSet, kSampleCommandProcs);
 }
 

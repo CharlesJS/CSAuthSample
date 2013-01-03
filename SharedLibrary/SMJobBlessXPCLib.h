@@ -88,15 +88,15 @@ extern "C" {
  installing the helper tool and communicating with it.  Specifically, it
  has routines that your application can call to:
  
- 1. send requests to a helper tool (SMJBXPCExecuteRequestInHelperTool)
+ 1. send requests to a helper tool (SJBXExecuteRequestInHelperTool)
  
  2. install the helper tool if it's not installed, or fix an installation if
- it's broken (SMJBXPCDiagnoseFailure and SMJBXPCFixFailure)
+ it's broken (SJBXDiagnoseFailure and SJBXFixFailure)
  
  BetterAuthorizationSampleLib also helps you implement the helper tool.
- Specifically, you call the routine SMJBXPCHelperToolMain in the main entry
+ Specifically, you call the routine SJBXHelperToolMain in the main entry
  point for your helper tool, passing it an array of command callbacks (of
- type SMJBXPCCommandProc).  SMJBXPCHelperToolMain will take care of all the details
+ type SJBXCommandProc).  SJBXHelperToolMain will take care of all the details
  of communication with the application and only call your callback to
  execute the actual command.
  
@@ -104,14 +104,14 @@ extern "C" {
  NSDictionaries).  BetterAuthorizationSampleLib defines three special keys for
  these dictionaries:
  
- 1. kSMJBXPCCommandKey -- In the request dictionary, this is the name of the
+ 1. kSJBXCommandKey -- In the request dictionary, this is the name of the
  command. Its value is a string that uniquely identifies the command within
  your program.
  
- 2. kSMJBXPCErrorKey -- In the response dictionary, this is the error result for
+ 2. kSJBXErrorKey -- In the response dictionary, this is the error result for
  the request. Its value is an OSStatus-style error code.
  
- 3. kSMJBXPCDescriptorArrayKey -- In the response dictionary, if present, this is
+ 3. kSJBXDescriptorArrayKey -- In the response dictionary, if present, this is
  an array of file descriptors being returned from the helper tool.
  
  You can use any other key to represent addition parameters (or return values)
@@ -120,9 +120,9 @@ extern "C" {
  
  BetterAuthorizationSampleLib requires that you tell it about the list of commands
  that you support.  Each command is represented by a command specification
- (SMJBXPCCommandSpec).  The command specification includes the following information:
+ (SJBXCommandSpec).  The command specification includes the following information:
  
- 1. The name of the command.  This is the same as the kSMJBXPCCommandKey value in
+ 1. The name of the command.  This is the same as the kSJBXCommandKey value in
  the request dictionary.
  
  2. The authorization right associated with the command.  BetterAuthorizationSampleLib
@@ -130,24 +130,24 @@ extern "C" {
  it calls your command callback in the privileged helper tool.
  
  3. Information to create the command's authorization right specification in the
- policy database.  The is used by the SMJBXPCSetDefaultRules function.
+ policy database.  The is used by the SJBXSetDefaultRules function.
  
  Finally, BetterAuthorizationSampleLib includes a number of utilities routines to help
- wrangle error codes (SMJBXPCErrnoToOSStatus, SMJBXPCOSStatusToErrno, and SMJBXPCGetErrorFromResponse)
- and file descriptors (SMJBXPCCloseDescriptorArray).
+ wrangle error codes (SJBXErrnoToOSStatus, SJBXOSStatusToErrno, and SJBXGetErrorFromResponse)
+ and file descriptors (SJBXCloseDescriptorArray).
  */
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Command Description
 
 /*!
- @struct         SMJBXPCCommandSpec
+ @struct         SJBXCommandSpec
  
  @abstract       Describes a privileged operation to BetterAuthorizationSampleLib.
  
  @discussion     Both the application and the tool must tell BetterAuthorizationSampleLib about
  the operations (that is, commands) that they support.  They do this by passing
- in an array of SMJBXPCCommandSpec structures.  Each element describes one command.
+ in an array of SJBXCommandSpec structures.  Each element describes one command.
  The array is terminated by a command whose commandName field is NULL.
  
  In general the application and tool should use the same array definition.
@@ -181,7 +181,7 @@ extern "C" {
  @field rightDescriptionKey
  This is a key used to form a custom prompt for the right.  The value of this
  string should be a key into a .strings file whose name you supply to
- SMJBXPCSetDefaultRules.  When BetterAuthorizationSampleLib creates the right specification,
+ SJBXSetDefaultRules.  When BetterAuthorizationSampleLib creates the right specification,
  it uses this key to get all of the localised prompt strings for the right.
  
  This must be NULL if rightName is NULL.  Otherwise, this may be NULL if you
@@ -192,14 +192,14 @@ extern "C" {
  does not use it in any way.
  */
 
-struct SMJBXPCCommandSpec {
+struct SJBXCommandSpec {
     const char *	commandName;
     const char *	rightName;
     const char *	rightDefaultRule;
     const char *	rightDescriptionKey;
     const void *    userData;
 };
-typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
+typedef struct SJBXCommandSpec SJBXCommandSpec;
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Authorization Rules
@@ -207,47 +207,47 @@ typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
 /*!
  Some constants defining authorization rules, for use in SampleCommon.h.
  
- I'm not sure why SMJBXPC never provided any of these, to be honest. They're quite handy.
+ I'm not sure why SJBX never provided any of these, to be honest. They're quite handy.
  
  */
 
 // Default rule. Credentials remain valid for 5 minutes after they've been obtained.
 // An acquired credential is shared by all clients.
-#define kSMJBXPCRuleDefault                         "default"
+#define kSJBXRuleDefault                         "default"
 
 // Allow anyone.
-#define kSMJBXPCRuleAllow                           "allow"
+#define kSJBXRuleAllow                           "allow"
 
 // Authenticate as an administrator.
-#define kSMJBXPCRuleAuthenticateAdmin               "authenticate-admin"
+#define kSJBXRuleAuthenticateAdmin               "authenticate-admin"
 
 // Like the default rule, but credentials remain valid for only 30 seconds after they've been obtained.
 // An acquired credential is shared by all clients.
-#define kSMJBXPCRuleAuthenticateAdmin30        	    "authenticate-admin-30"
+#define kSJBXRuleAuthenticateAdmin30        	    "authenticate-admin-30"
 
 // Authenticate as a developer.
-#define kSMJBXPCRuleAuthenticateDeveloper           "authenticate-developer"
+#define kSJBXRuleAuthenticateDeveloper           "authenticate-developer"
 
 // Authenticate as the session owner.
-#define kSMJBXPCRuleAuthenticateSessionOwner        "authenticate-session-owner"
+#define kSJBXRuleAuthenticateSessionOwner        "authenticate-session-owner"
 
 // Authenticate either as the owner or as an administrator.
-#define kSMJBXPCRuleAuthenticateSessionOwnerOrAdmin "authenticate-session-owner-or-admin"
+#define kSJBXRuleAuthenticateSessionOwnerOrAdmin "authenticate-session-owner-or-admin"
 
 // Same as authenticate-session-owner.
-#define kSMJBXPCRuleAuthenticateSessionUser         "authenticate-session-user"
+#define kSJBXRuleAuthenticateSessionUser         "authenticate-session-user"
 
 // Verify that the user asking for authorization is an administrator.
-#define kSMJBXPCRuleIsAdmin                         "is-admin"
+#define kSJBXRuleIsAdmin                         "is-admin"
 
 // Verify that the user asking for authorization is a developer.
-#define kSMJBXPCRuleIsDeveloper                     "is-developer"
+#define kSJBXRuleIsDeveloper                     "is-developer"
 
 // Verify that the process that created this AuthorizationRef is running as root.
-#define kSMJBXPCRuleIsRoot                          "is-root"
+#define kSJBXRuleIsRoot                          "is-root"
 
 // Verify that the requesting process is running as the session owner.
-#define kSMJBXPCRuleIsSessionOwner                  "is-session-owner"
+#define kSJBXRuleIsSessionOwner                  "is-session-owner"
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Request/Response Keys
@@ -255,23 +255,23 @@ typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
 // Standard keys for the request dictionary
 
 /*!
- @define         kSMJBXPCCommandKey
+ @define         kSJBXCommandKey
  
  @abstract       Key for the command string within the request dictionary.
  
  @discussion     Within a request, this key must reference a string that is the name of the
  command to execute.  This must match one of the commands in the
- SMJBXPCCommandSpec array.
+ SJBXCommandSpec array.
  
  The length of a command name must not be greater than 1024 UTF-16 values.
  */
 
-#define kSMJBXPCCommandKey      "com.apple.dts.BetterAuthorizationSample.command"			// CFString
+#define kSJBXCommandKey      "com.apple.dts.BetterAuthorizationSample.command"			// CFString
 
 // Standard keys for the response dictionary
 
 /*!
- @define         kSMJBXPCErrorKey
+ @define         kSJBXErrorKey
  
  @abstract       Key for the error result within the response dictionary.
  
@@ -279,7 +279,7 @@ typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
  for the response, interpreted as an OSStatus.
  */
 
-#define kSMJBXPCErrorKey        "com.apple.dts.BetterAuthorizationSample.error"				// CFNumber
+#define kSJBXErrorKey        "com.apple.dts.BetterAuthorizationSample.error"				// CFNumber
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Helper Tool Routines
@@ -289,18 +289,18 @@ typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
  */
 
 /*!
- @typedef        SMJBXPCCommandProc
+ @typedef        SJBXCommandProc
  
  @abstract       Command processing callback.
  
- @discussion     When your helper tool calls SMJBXPCHelperToolMain, it passes in a pointer to an
- array of callback functions of this type.  When SMJBXPCHelperToolMain receives a
+ @discussion     When your helper tool calls SJBXHelperToolMain, it passes in a pointer to an
+ array of callback functions of this type.  When SJBXHelperToolMain receives a
  valid command, it calls one of these function so that your program-specific
- code can process the request.  SMJBXPC guarantees that the effective, save and
+ code can process the request.  SJBX guarantees that the effective, save and
  real user IDs (EUID, SUID, RUID) will all be zero at this point (that is,
  you're "running as root").
  
- By the time this callback is called, SMJBXPCHelperToolMain has already verified that
+ By the time this callback is called, SJBXHelperToolMain has already verified that
  this is a known command.  It also acquires the authorization right associated
  with the command, if any.  However, it does nothing to validate the other
  parameters in the request.  These parameters come from a non-privileged source
@@ -308,10 +308,10 @@ typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
  
  Your implementation should get any input parameters from the request and place
  any output parameters in the response.  It can also put an array of file
- descriptors into the response using the kSMJBXPCDescriptorArrayKey key.
+ descriptors into the response using the kSJBXDescriptorArrayKey key.
  
  If an error occurs, you should just return an appropriate error code.
- SMJBXPCHelperToolMain will ensure that this gets placed in the response.
+ SJBXHelperToolMain will ensure that this gets placed in the response.
  
  You should attempt to fail before adding any file descriptors to the response,
  or remove them once you know that you're going to fail.  If you put file
@@ -319,9 +319,9 @@ typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
  still be passed back to the client.  It's likely the client isn't expecting this.
  
  Calls to this function will be serialised; that is, once your callback is
- running, SMJBXPCHelperToolMain won't call you again until you return.  Your callback
+ running, SJBXHelperToolMain won't call you again until you return.  Your callback
  should avoid blocking for long periods of time.  If you block for too long, the
- SMJBXPC watchdog will kill the entire helper tool process.
+ SJBX watchdog will kill the entire helper tool process.
  
  This callback runs in a daemon context; you must avoid doing things that require the
  user's context.  For example, launching a GUI application would be bad.  See
@@ -333,11 +333,11 @@ typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
  This will never be NULL.
  
  @param userData This is the value from the userData field of the corresponding entry in the
- SMJBXPCCommandSpec array that you passed to SMJBXPCHelperToolMain.
+ SJBXCommandSpec array that you passed to SJBXHelperToolMain.
  
  @param request  This dictionary contains the request.  It will have, at a bare minimum, a
- kSMJBXPCCommandKey item whose value matches one of the commands in the
- SMJBXPCCommandSpec array you passed to SMJBXPCHelperToolMain.  It may also have
+ kSJBXCommandKey item whose value matches one of the commands in the
+ SJBXCommandSpec array you passed to SJBXHelperToolMain.  It may also have
  other, command-specific parameters.
  
  This will never be NULL.
@@ -346,10 +346,10 @@ typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
  empty, and you can add any results you please to it.
  
  If you need to return file descriptors, place them in an array and place that
- array in the response using the kSMJBXPCDescriptorArrayKey key.
+ array in the response using the kSJBXDescriptorArrayKey key.
  
- There's no need to set the error result in the response.  SMJBXPCHelperToolMain will
- do that for you.  However, if you do set a value for the kSMJBXPCErrorKey key,
+ There's no need to set the error result in the response.  SJBXHelperToolMain will
+ do that for you.  However, if you do set a value for the kSJBXErrorKey key,
  that value will take precedence; in this case, the function result is ignored.
  
  This will never be NULL.
@@ -365,7 +365,7 @@ typedef struct SMJBXPCCommandSpec SMJBXPCCommandSpec;
  conditionalise your code.
  */
 
-typedef OSStatus (*SMJBXPCCommandProc)(
+typedef OSStatus (*SJBXCommandProc)(
 AuthorizationRef			auth,
 const void *                userData,
 CFDictionaryRef				request,
@@ -373,7 +373,7 @@ CFMutableDictionaryRef      response
 );
 
 /*!
- @function       SMJBXPCHelperToolMain
+ @function       SJBXHelperToolMain
  
  @abstract       Entry point for a privileged helper tool.
  
@@ -410,10 +410,10 @@ CFMutableDictionaryRef      response
  @result			An integer representing EXIT_SUCCESS or EXIT_FAILURE.
  */
 
-extern int SMJBXPCHelperToolMain(
+extern int SJBXHelperToolMain(
                                  CFStringRef                    helperID,
-                                 const SMJBXPCCommandSpec		commands[],
-                                 const SMJBXPCCommandProc		commandProcs[]
+                                 const SJBXCommandSpec		commands[],
+                                 const SJBXCommandProc		commandProcs[]
                                  );
 
 /////////////////////////////////////////////////////////////////
@@ -424,7 +424,7 @@ extern int SMJBXPCHelperToolMain(
  */
 
 /*!
- @function       SMJBXPCSetDefaultRules
+ @function       SJBXSetDefaultRules
  
  @abstract       Creates default right specifications in the policy database.
  
@@ -441,9 +441,9 @@ extern int SMJBXPCHelperToolMain(
  it will use your specification of the right (as modified by the system
  administrator) rather than the default right specification.
  
- You must call this function before calling SMJBXPCExecuteRequestInHelperTool.
+ You must call this function before calling SJBXExecuteRequestInHelperTool.
  Typically you would call it at application startup time, or lazily, immediately
- before calling SMJBXPCExecuteRequestInHelperTool.
+ before calling SJBXExecuteRequestInHelperTool.
  
  @param auth     A reference to your program's authorization instance; you typically get this
  by calling AuthorizationCreate.
@@ -469,15 +469,15 @@ extern int SMJBXPCHelperToolMain(
  and put the key that gets the prompt into the rightDescriptionKey of the command.
  */
 
-extern void SMJBXPCSetDefaultRules(
+extern void SJBXSetDefaultRules(
                                AuthorizationRef			auth,
-                               const SMJBXPCCommandSpec		commands[],
+                               const SJBXCommandSpec		commands[],
                                CFStringRef					bundleID,
                                CFStringRef					descriptionStringTableName
                                );
 
 /*!
- @function       SMJBXPCExecuteRequestInHelperTool
+ @function       SJBXExecuteRequestInHelperTool
  
  @abstract       Executes a request in the privileged helper tool, returning the response.
  
@@ -491,10 +491,10 @@ extern void SMJBXPCSetDefaultRules(
  
  If the functions returns no error, the IPC between your application and the helper tool
  was successful.  However, the command may still have failed.  You must get the error
- value from the response (typically using SMJBXPCGetErrorFromResponse) to see if the
+ value from the response (typically using SJBXGetErrorFromResponse) to see if the
  command succeeded or not.
  
- On success the response dictionary may contain a value for the kSMJBXPCDescriptorArrayKey key.
+ On success the response dictionary may contain a value for the kSJBXDescriptorArrayKey key.
  If so, that will be a non-empty CFArray of CFNumbers, each of which can be accessed as an int.
  Each value is a descriptor that is being returned to you from the helper tool.  You are
  responsible for closing these descriptors when you're done with them.
@@ -512,7 +512,7 @@ extern void SMJBXPCSetDefaultRules(
  This must not be NULL.
  
  @param request  A dictionary describing the requested operation.  This must, at least, contain
- a string value for the kSMJBXPCCommandKey.  Furthermore, this string must match
+ a string value for the kSJBXCommandKey.  Furthermore, this string must match
  one of the commands in the array.
  
  The dictionary may also contain other values.  These are passed to the helper
@@ -527,12 +527,12 @@ extern void SMJBXPCSetDefaultRules(
  On success, you are responsible for disposing of *response.  You are also
  responsible for closing any descriptors returned in the response.
  
- @result			An OSStatus code (see SMJBXPCErrnoToOSStatus and SMJBXPCOSStatusToErrno).
+ @result			An OSStatus code (see SJBXErrnoToOSStatus and SJBXOSStatusToErrno).
  */
 
-extern OSStatus SMJBXPCExecuteRequestInHelperTool(
+extern OSStatus SJBXExecuteRequestInHelperTool(
                                                   AuthorizationRef			auth,
-                                                  const SMJBXPCCommandSpec	commands[],
+                                                  const SJBXCommandSpec	commands[],
                                                   CFStringRef				bundleID,
                                                   CFDictionaryRef			request,
                                                   void                      (^errorHandler)(CFErrorRef error),
@@ -540,77 +540,77 @@ extern OSStatus SMJBXPCExecuteRequestInHelperTool(
                                                   );
 
 /*!
- @enum           SMJBXPCFailCode
+ @enum           SJBXFailCode
  
  @abstract       Indicates why a request failed.
  
- @discussion     If SMJBXPCExecuteRequestInHelperTool fails with an error (indicating
- an IPC failure), you can call SMJBXPCDiagnoseFailure to determine what
- went wrong.  SMJBXPCDiagnoseFailure will return the value of this
+ @discussion     If SJBXExecuteRequestInHelperTool fails with an error (indicating
+ an IPC failure), you can call SJBXDiagnoseFailure to determine what
+ went wrong.  SJBXDiagnoseFailure will return the value of this
  type that best describes the failure.
  
- @constant kSMJBXPCFailUnknown
- Indicates that SMJBXPCDiagnoseFailure could not accurately determine the cause of the
+ @constant kSJBXFailUnknown
+ Indicates that SJBXDiagnoseFailure could not accurately determine the cause of the
  failure.
  
- @constant kSMJBXPCFailDisabled
+ @constant kSJBXFailDisabled
  The request failed because the helper tool is installed but disabled.
  
- @constant kSMJBXPCFailPartiallyInstalled
+ @constant kSJBXFailPartiallyInstalled
  The request failed because the helper tool is only partially installed.
  
- @constant kSMJBXPCFailNotInstalled
+ @constant kSJBXFailNotInstalled
  The request failed because the helper tool is not installed at all.
  
- @constant kSMJBXPCFailNeedsUpdate
+ @constant kSJBXFailNeedsUpdate
  The request failed because the helper tool is installed but out of date.
- SMJBXPCDiagnoseFailure will never return this value.  However, if you detect that
+ SJBXDiagnoseFailure will never return this value.  However, if you detect that
  the helper tool is out of date (typically by sending it a "get version" request)
- you can pass this value to SMJBXPCFixFailure to force it to update the tool.
+ you can pass this value to SJBXFixFailure to force it to update the tool.
  */
 
 enum {
-    kSMJBXPCFailUnknown,
-    kSMJBXPCFailDisabled,
-    kSMJBXPCFailPartiallyInstalled,
-    kSMJBXPCFailNotInstalled,
-    kSMJBXPCFailNeedsUpdate
+    kSJBXFailUnknown,
+    kSJBXFailDisabled,
+    kSJBXFailPartiallyInstalled,
+    kSJBXFailNotInstalled,
+    kSJBXFailNeedsUpdate
 };
-typedef uint32_t SMJBXPCFailCode;
+typedef uint32_t SJBXFailCode;
 
 /*!
- @function       SMJBXPCDiagnoseFailure
+ @function       SJBXDiagnoseFailure
  
  @abstract       Determines the cause of a failed request.
  
- @discussion     If SMJBXPCExecuteRequestInHelperTool fails with an error (indicating an
+ @discussion     If SJBXExecuteRequestInHelperTool fails with an error (indicating an
  IPC failure), you can call this routine to determine what went wrong.
- It returns a SMJBXPCFailCode value indicating the cause of the failure.
+ It returns a SJBXFailCode value indicating the cause of the failure.
  You should use this value to tell the user what's going on and what
  you intend to do about it.  Once you get the user's consent, you can
- call SMJBXPCFixFailure to fix the problem.
+ call SJBXFixFailure to fix the problem.
  
- For example, if this function result is kSMJBXPCFailDisabled, you could put up the
+ For example, if this function result is kSJBXFailDisabled, you could put up the
  dialog saying:
  
  My privileged helper tool is disabled.  Would you like to enable it?
  This operation may require you to authorize as an admin user.
  [Cancel] [[Enable]]
  
- On the other hand, if this function result is kSMJBXPCFailNotInstalled, the dialog might be:
+ On the other hand, if this function result is kSJBXFailNotInstalled, the dialog might be:
  
  My privileged helper tool is not installed.  Would you like to install it?
  This operation may require you to authorize as an admin user.
  [Cancel] [[Install]]
  
- SMJBXPCDiagnoseFailure will never return kSMJBXPCFailNeedsUpdate.  It's your responsibility
+ SJBXDiagnoseFailure will never return kSJBXFailNeedsUpdate.  It's your responsibility
  to detect version conflicts (a good way to do this is by sending a "get version" request
  to the helper tool).  However, once you've detected a version conflict, you can pass
- kSMJBXPCFailNeedsUpdate to SMJBXPCFixFailure to get it to install the latest version of your
+ kSJBXFailNeedsUpdate to SJBXFixFailure to get it to install the latest version of your
  helper tool.
  
  If you call this routine when everything is working properly, you're likely to get
- a result of kSMJBXPCFailUnknown.
+ a result of kSJBXFailUnknown.
  
  @param auth     A reference to your program's authorization instance; you typically get this
  by calling AuthorizationCreate.
@@ -621,11 +621,11 @@ typedef uint32_t SMJBXPCFailCode;
  
  This must not be NULL.
  
- @result         A SMJBXPCFailCode value indicating the cause of the failure.  This will never be
- kSMJBXPCFailNeedsUpdate.
+ @result         A SJBXFailCode value indicating the cause of the failure.  This will never be
+ kSJBXFailNeedsUpdate.
  */
 
-extern SMJBXPCFailCode SMJBXPCDiagnoseFailure(
+extern SJBXFailCode SJBXDiagnoseFailure(
                                       AuthorizationRef			auth,
                                       CFStringRef					bundleID
                                       );
@@ -638,7 +638,7 @@ extern SMJBXPCFailCode SMJBXPCDiagnoseFailure(
  */
 
 /*!
- @function       SMJBXPCErrnoToOSStatus
+ @function       SJBXErrnoToOSStatus
  
  @abstract       Convert an errno value to an OSStatus value.
  
@@ -657,16 +657,16 @@ extern SMJBXPCFailCode SMJBXPCDiagnoseFailure(
  @result			An OSStatus code representing the errno equivalent.
  */
 
-extern OSStatus SMJBXPCErrnoToOSStatus(int errNum);
+extern OSStatus SJBXErrnoToOSStatus(int errNum);
 
 /*!
- @function       SMJBXPCOSStatusToErrno
+ @function       SJBXOSStatusToErrno
  
  @abstract       Convert an OSStatus value to an errno value.
  
  @discussion     This function converts some specific OSStatus values (Open Transport and
  errSecErrnoBase ranges) to their corresponding errno values.  It more-or-less
- undoes the conversion done by SMJBXPCErrnoToOSStatus, including a pass
+ undoes the conversion done by SJBXErrnoToOSStatus, including a pass
  through for unrecognised values.
  
  It's worth noting that there are many more defined OSStatus error codes
@@ -683,25 +683,25 @@ extern OSStatus SMJBXPCErrnoToOSStatus(int errNum);
  @result			An integer code representing the OSStatus equivalent.
  */
 
-extern int      SMJBXPCOSStatusToErrno(OSStatus errNum);
+extern int      SJBXOSStatusToErrno(OSStatus errNum);
 
 /*!
- @function       SMJBXPCGetErrorFromResponse
+ @function       SJBXGetErrorFromResponse
  
  @abstract       Extracts the error status from a helper tool response.
  
  @discussion     This function extracts the error status from a helper tool response.
- Specifically, its uses the kSMJBXPCErrorKey key to get a CFNumber and
+ Specifically, its uses the kSJBXErrorKey key to get a CFNumber and
  it gets the resulting value from that number.
  
- @param response A helper tool response, typically acquired by calling SMJBXPCExecuteRequestInHelperTool.
+ @param response A helper tool response, typically acquired by calling SJBXExecuteRequestInHelperTool.
  
  This must not be NULL
  
- @result			An OSStatus code (see SMJBXPCErrnoToOSStatus and SMJBXPCOSStatusToErrno).
+ @result			An OSStatus code (see SJBXErrnoToOSStatus and SJBXOSStatusToErrno).
  */
 
-extern OSStatus SMJBXPCGetErrorFromResponse(CFDictionaryRef response);
+extern OSStatus SJBXGetErrorFromResponse(CFDictionaryRef response);
 
 #ifdef __cplusplus
 }
