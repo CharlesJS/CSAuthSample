@@ -77,15 +77,15 @@
 
 const SJBXCommandSpec kSampleCommandSet[] = {
     {	kSampleGetVersionCommand,               // commandName
-        NULL,                      // rightName           -- never authorize
-        NULL,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
+        kSampleGetVersionRightName,                      // rightName           -- never authorize
+        kSJBXRuleAllow,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
         NULL,									// rightDescriptionKey -- not applicable if rightName is NULL
         NULL                                    // userData
 	},
     
     {	kSampleSecretSpyStuffCommand,           // commandName
         kSampleSecretSpyStuffRightName,         // rightName
-        kSJBXRuleAuthenticateAdmin30,          // rightDefaultRule    -- authenticate as admin
+        kSJBXRuleAuthenticateAdmin,          // rightDefaultRule    -- authenticate as admin
         "Please identify yourself",  			// rightDescriptionKey -- haven't bothered trying this yet
         NULL                                    // userData
 	},

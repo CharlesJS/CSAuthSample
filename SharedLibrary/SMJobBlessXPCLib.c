@@ -698,8 +698,34 @@ extern void SJBXSetDefaultRules(
         // right specification.
         
         if (commands[commandIndex].rightName != NULL) {
-            err = AuthorizationRightGet(commands[commandIndex].rightName, (CFDictionaryRef*) NULL);
+            Boolean rightNeedsChanging = false;
+            CFDictionaryRef existingRight = NULL;
+            
+            err = AuthorizationRightGet(commands[commandIndex].rightName, &existingRight);
+            
+            // The original BetterAuthorizationSample code just passes NULL to AuthorizationRightGet, and
+            // then checks err against errAuthorizationDenied.
+            // This will only set the default rights if they're not already set, but if they're already set
+            // (even if they're to wrong or outdated rights), the rights will not be corrected.
+            // I, however, want to change the rights if they're not what I want them to be, so check against
+            // that and set the rights if something's amiss. Note that the drawback of this is that it can
+            // cause annoying password prompts to show up.
+            
             if (err == errAuthorizationDenied) {
+                rightNeedsChanging = true;
+            } else if (err == errAuthorizationSuccess) {
+                CFStringRef existingRule = CFDictionaryGetValue(existingRight, CFSTR(kAuthorizationRightRule));
+                CFStringRef desiredRule = CFStringCreateWithCString(kCFAllocatorDefault, commands[commandIndex].rightDefaultRule, kCFStringEncodingUTF8);
+                
+                if (CFStringCompare(existingRule, desiredRule, 0) != kCFCompareEqualTo) {
+                    rightNeedsChanging = true;
+                }
+                
+                CFRelease(desiredRule);
+                CFRelease(existingRight);
+            }
+            
+            if (rightNeedsChanging) {
                 CFStringRef thisDescription;
                 CFStringRef	thisRule;
                 

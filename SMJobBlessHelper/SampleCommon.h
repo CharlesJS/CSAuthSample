@@ -63,7 +63,7 @@
 
 #define kSampleGetVersionCommand        "GetVersion"
 
-// authorization right name (none)
+#define kSampleGetVersionRightName      "com.example.SMJobBlessXPC.GetVersion"
 
 // request keys (none)
 
