@@ -4,6 +4,8 @@
 <dict>
 	<key>Label</key>
 	<string>com.apple.bsd.SMJobBlessHelper</string>
+	<key>EnableTransactions</key>
+	<true/>
 	<key>MachServices</key>
 	<dict>
 		<key>com.apple.bsd.SMJobBlessHelper</key>

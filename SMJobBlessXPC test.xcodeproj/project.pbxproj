@@ -7,6 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		28A6F66E16918ED2006F0A93 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28A6F66B16918ECD006F0A93 /* CoreFoundation.framework */; };
+		28A6F67916919F2E006F0A93 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BE4906310445F2F006BE471 /* Security.framework */; };
+		28C4DA6F16925D7F00BBB7D2 /* SampleCommon.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C4DA6E16925D7F00BBB7D2 /* SampleCommon.c */; };
+		28C4DA7016925D7F00BBB7D2 /* SampleCommon.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C4DA6E16925D7F00BBB7D2 /* SampleCommon.c */; };
+		28C4DA8A1692686C00BBB7D2 /* SMJobBlessXPCLib.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C4DA881692686C00BBB7D2 /* SMJobBlessXPCLib.c */; };
+		28C4DA8B1692686C00BBB7D2 /* SMJobBlessXPCLib.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C4DA881692686C00BBB7D2 /* SMJobBlessXPCLib.c */; };
 		4BE4905110445D49006BE471 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 4BE4904D10445D49006BE471 /* main.m */; };
 		4BE4906110445E13006BE471 /* SMJobBlessHelper.c in Sources */ = {isa = PBXBuildFile; fileRef = 4BE4905510445DDD006BE471 /* SMJobBlessHelper.c */; };
 		4BE4906410445F2F006BE471 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BE4906310445F2F006BE471 /* Security.framework */; };
@@ -43,6 +49,11 @@
 /* Begin PBXFileReference section */
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
+		2872D45B1691317300D0DFF0 /* SampleCommon.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SampleCommon.h; path = SMJobBlessHelper/SampleCommon.h; sourceTree = "<group>"; };
+		28A6F66B16918ECD006F0A93 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = ../../../../System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<group>"; };
+		28C4DA6E16925D7F00BBB7D2 /* SampleCommon.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SampleCommon.c; sourceTree = "<group>"; };
+		28C4DA881692686C00BBB7D2 /* SMJobBlessXPCLib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SMJobBlessXPCLib.c; path = SharedLibrary/SMJobBlessXPCLib.c; sourceTree = "<group>"; };
+		28C4DA891692686C00BBB7D2 /* SMJobBlessXPCLib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SMJobBlessXPCLib.h; path = SharedLibrary/SMJobBlessXPCLib.h; sourceTree = "<group>"; };
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		4BE4904C10445D49006BE471 /* SMJobBlessApp-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "SMJobBlessApp-Info.plist"; sourceTree = "<group>"; };
@@ -64,6 +75,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				28A6F66E16918ED2006F0A93 /* CoreFoundation.framework in Frameworks */,
+				28A6F67916919F2E006F0A93 /* Security.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -83,6 +96,7 @@
 		1058C7A0FEA54F0111CA2CBB /* Linked Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				28A6F66B16918ECD006F0A93 /* CoreFoundation.framework */,
 				1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */,
 				4BE4906310445F2F006BE471 /* Security.framework */,
 				4BE4906710445F36006BE471 /* ServiceManagement.framework */,
@@ -109,11 +123,23 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		28C4DA7316925DE600BBB7D2 /* Library */ = {
+			isa = PBXGroup;
+			children = (
+				28C4DA891692686C00BBB7D2 /* SMJobBlessXPCLib.h */,
+				28C4DA881692686C00BBB7D2 /* SMJobBlessXPCLib.c */,
+			);
+			name = Library;
+			sourceTree = "<group>";
+		};
 		29B97314FDCFA39411CA2CEA /* SMJobBless */ = {
 			isa = PBXGroup;
 			children = (
+				2872D45B1691317300D0DFF0 /* SampleCommon.h */,
+				28C4DA6E16925D7F00BBB7D2 /* SampleCommon.c */,
 				4BE4905210445DDD006BE471 /* SMJobBlessHelper */,
 				4BE4904710445D49006BE471 /* SMJobBlessApp */,
+				28C4DA7316925DE600BBB7D2 /* Library */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
@@ -204,9 +230,9 @@
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0430;
+				LastUpgradeCheck = 0450;
 			};
-			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SMJobBless" */;
+			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SMJobBlessXPC test" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 1;
@@ -240,6 +266,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				4BE4906110445E13006BE471 /* SMJobBlessHelper.c in Sources */,
+				28C4DA7016925D7F00BBB7D2 /* SampleCommon.c in Sources */,
+				28C4DA8B1692686C00BBB7D2 /* SMJobBlessXPCLib.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -249,6 +277,8 @@
 			files = (
 				4BE4905110445D49006BE471 /* main.m in Sources */,
 				BF04235611C0531400431286 /* SMJobBlessAppController.m in Sources */,
+				28C4DA6F16925D7F00BBB7D2 /* SampleCommon.c in Sources */,
+				28C4DA8A1692686C00BBB7D2 /* SMJobBlessXPCLib.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -318,6 +348,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
 				COPY_PHASE_STRIP = NO;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_MODEL_TUNING = G5;
@@ -332,6 +363,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				COMBINE_HIDPI_IMAGES = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_MODEL_TUNING = G5;
 				INFOPLIST_FILE = "SMJobBlessApp/SMJobBlessApp-Info.plist";
@@ -344,7 +376,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
-				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_IDENTITY = "Developer ID Application: Charles Srstka";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
@@ -359,7 +391,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
-				CODE_SIGN_IDENTITY = "Mac Developer";
+				CODE_SIGN_IDENTITY = "Developer ID Application: Charles Srstka";
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -389,7 +421,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SMJobBless" */ = {
+		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SMJobBlessXPC test" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C01FCF4F08A954540054247B /* Debug */,

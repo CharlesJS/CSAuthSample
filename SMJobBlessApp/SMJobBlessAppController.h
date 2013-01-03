@@ -49,8 +49,6 @@
 
 #import <Cocoa/Cocoa.h>
 
-@interface SMJobBlessAppController : NSObject {
-    NSTextField* _textField;
-}
+@interface SMJobBlessAppController : NSObject
 
 @end
