@@ -459,7 +459,7 @@ static int HandleCommand(
         if ( (commandProcStatus == noErr) && (commands[commandIndex].rightName != NULL) ) {
             AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
             AuthorizationRights rights = { 1, &item };
-            
+
             commandProcStatus = AuthorizationCopyRights(
                                                         authRef,
                                                         &rights,
@@ -814,17 +814,12 @@ extern OSStatus SJBXExecuteRequestInHelperTool(
     
     retval = FindCommand(request, commands, &commandIndex);
     
-#if !defined(SJBX_PREAUTHORIZE)
-#define SJBX_PREAUTHORIZE 1
-#endif
-#if SJBX_PREAUTHORIZE
     if ( (retval == noErr) && (commands[commandIndex].rightName != NULL) ) {
         AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
         AuthorizationRights rights = { 1, &item };
-        
+
         retval = AuthorizationCopyRights(auth, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagPreAuthorize, NULL);
     }
-#endif
     
     // Open the XPC connection.
     

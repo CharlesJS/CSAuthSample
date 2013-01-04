@@ -55,15 +55,6 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 #include <xpc/xpc.h>
 #include "SampleCommon.h"
 
-static OSStatus GetRights(AuthorizationRef authRef, AuthorizationItem item) {
-    AuthorizationRights rights;
-    
-    rights.count = 1;
-    rights.items = &item;
-    
-    return AuthorizationCopyRights(authRef, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights, NULL);
-}
-
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command
 
@@ -88,19 +79,7 @@ static OSStatus DoSecretSpyStuff(AuthorizationRef authRef, const void *userData,
     assert(authRef != NULL);
     assert(response != NULL);
     
-    AuthorizationItem authItem = { kSampleSecretSpyStuffRightName, 0, NULL, 0 };
-    
-    OSStatus err = GetRights(authRef, authItem);
-    CFStringRef replyMessage;
-    
-    if (err == errAuthorizationSuccess) {
-        replyMessage = CFSTR("Hello 007");
-    } else {
-        syslog(LOG_NOTICE, "error %ld", (long)err);
-        replyMessage = CFSTR("I'd have to kill you");
-    }
-    
-    CFDictionarySetValue(response, CFSTR(kSampleSecretSpyStuffResponse), replyMessage);
+    CFDictionarySetValue(response, CFSTR(kSampleSecretSpyStuffResponse), CFSTR("Hello 007"));
     
     return noErr;
 }
