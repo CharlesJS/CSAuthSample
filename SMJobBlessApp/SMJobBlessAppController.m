@@ -51,7 +51,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 #import <ServiceManagement/ServiceManagement.h>
 #import <Security/Authorization.h>
 #import "SMJobBlessAppController.h"
-#include "SMJobBlessXPCLib.h"
+#include "SMJobBlessXPCAppLib.h"
 #include "SampleCommon.h"
 
 @interface SMJobBlessAppController ()
@@ -156,17 +156,9 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (void)sendRequest:(NSDictionary *)request errorHandler:(void (^)(NSError *))errorHandler replyHandler:(void (^)(NSDictionary *))replyHandler {
-    void (^cfErrorHandler)(CFErrorRef) = ^(CFErrorRef errorRef) {
-        errorHandler((NSError *)errorRef);
-    };
-    
-    void (^cfReplyHandler)(CFDictionaryRef) = ^(CFDictionaryRef replyRef) {
-        replyHandler((NSDictionary *)replyRef);
-    };
-    
     [self appendLog:[NSString stringWithFormat:@"Sending request: %@", request[@kSJBXCommandKey]]];
     
-    SJBXExecuteRequestInHelperTool(_authRef, kSampleCommandSet, CFSTR(kSampleHelperID), (CFDictionaryRef)request, cfErrorHandler, cfReplyHandler);
+    SJBXExecuteRequestInHelperTool(_authRef, kSampleCommandSet, @kSampleHelperID, request, errorHandler, replyHandler);
 }
 
 - (void)requestHelperVersion:(void (^)(int64_t, NSError *))handler {

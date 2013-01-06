@@ -1,7 +1,7 @@
 /*
- File:       SampleCommon.h
+ File:       BetterAuthorizationSampleLib.h
  
- Contains:   Sample-specific declarations common to the app and the tool.
+ Contains:   Interface to reusable code for privileged helper tools.
  
  Written by: DTS
  
@@ -46,49 +46,55 @@
  
  */
 
-#ifndef SampleCommon_h
-#define SampleCommon_h
+#ifndef SMJobBlessXPC_test_SMJobBlessXPCHelperLib_h
+#define SMJobBlessXPC_test_SMJobBlessXPCHelperLib_h
 
 #include "SMJobBlessXPCCommonLib.h"
+#include <CoreFoundation/CoreFoundation.h>
 
-#define SMJOBBLESSHELPER_VERSION	0
+/*!
+ @function       SJBXHelperToolMain
+ 
+ @abstract       Entry point for a privileged helper tool.
+ 
+ @discussion     You should call this function from the main function of your helper tool.  It takes
+ care of all of the details of receiving and processing commands.  It will call you
+ back (via one of the commandProcs callbacks) when a valid request arrives.
+ 
+ This function assumes acts like a replacement for main.  Thus, it assumes that
+ it owns various process-wide resources (like SIGALRM and the disposition of
+ SIGPIPE).  You should not use those resources, either in your main function or
+ in your callback function.  Also, you should not call this function on a thread,
+ or start any other threads in the process.  Finally, this function has a habit of
+ exiting the entire process if something goes wrong.  You should not expect the
+ function to always return.
+ 
+ This function does not clean up after itself.  When this function returns, you
+ are expected to exit.  If the function result is noErr, the command processing
+ loop quit in an expected manner (typically because of an idle timeout).  Otherwise
+ it quit because of an error.
+ 
+ @param commands An array that describes the commands that you implement, and their associated
+ rights.  The array is terminated by a command with a NULL name.  There must be
+ at least one valid command.
+ 
+ @param commandProcs
+ An array of callback routines that are called when a valid request arrives.  The
+ array is expected to perform the operation associated with the corresponding
+ command and set up the response values, if any.  The array is terminated by a
+ NULL pointer.
+ 
+ IMPORTANT: The array must have exactly the same number of entries as the
+ commands array.
+ 
+ @result			An integer representing EXIT_SUCCESS or EXIT_FAILURE.
+ */
 
-#define kSampleAppID                    "com.charlessoft.SMJobBlessXPC"
-#define kSampleHelperID                 "com.charlessoft.SMJobBlessXPC.helper"
-
-/////////////////////////////////////////////////////////////////
-
-// Commands supported by this sample
-
-// "GetVersion" gets the version of the helper tool.  This never requires authorization.
-
-#define kSampleGetVersionCommand        "GetVersion"
-
-#define kSampleGetVersionRightName      "com.example.SMJobBlessXPC.GetVersion"
-
-// request keys (none)
-
-// response keys
-
-#define kSampleGetVersionResponse			"Version"                   // CFNumber
-
-// A generic command that will require authorization.
-
-#define kSampleSecretSpyStuffCommand	"SecretSpyStuff"
-
-// authorization right name
-
-#define kSampleSecretSpyStuffRightName	"com.example.SMJobBlessXPC.SecretSpyStuff"
-
-// request keys (none)
-
-// response keys
-
-#define kSampleSecretSpyStuffResponse	"Reply"
-
-// The kSampleCommandSet is used by both the app and the tool to communicate the set of
-// supported commands to the BetterAuthorizationSampleLib module.
-
-extern const SJBXCommandSpec kSampleCommandSet[];
+extern int SJBXHelperToolMain(
+                              CFStringRef               helperID,
+                              CFStringRef               appID,
+                              const SJBXCommandSpec		commands[],
+                              const SJBXCommandProc		commandProcs[]
+                              );
 
 #endif

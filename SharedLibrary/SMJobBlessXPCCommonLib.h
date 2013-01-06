@@ -5,7 +5,7 @@
  
  Written by: DTS
  
- Modified by Charles Srstka, 2012.
+ Modified by Charles Srstka, 2013.
  
  Copyright:  Copyright (c) 2007 Apple Inc. All Rights Reserved.
  
@@ -201,6 +201,17 @@ struct SJBXCommandSpec {
 };
 typedef struct SJBXCommandSpec SJBXCommandSpec;
 
+//////////////////////////////////////////////////////////////////////////////////
+#pragma mark ***** Constants
+
+// The key used to get the request dictionary in the XPC request.
+
+#define kSJBXRequestKey              "Request"
+
+// The key used to get our flattened AuthorizationRef in the XPC request.
+
+#define kSJBXAuthorizationRefKey     "AuthorizationRef"
+
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Authorization Rules
 
@@ -377,212 +388,6 @@ CFMutableDictionaryRef      response,
 CFErrorRef *				error
 );
 
-/*!
- @function       SJBXHelperToolMain
- 
- @abstract       Entry point for a privileged helper tool.
- 
- @discussion     You should call this function from the main function of your helper tool.  It takes
- care of all of the details of receiving and processing commands.  It will call you
- back (via one of the commandProcs callbacks) when a valid request arrives.
- 
- This function assumes acts like a replacement for main.  Thus, it assumes that
- it owns various process-wide resources (like SIGALRM and the disposition of
- SIGPIPE).  You should not use those resources, either in your main function or
- in your callback function.  Also, you should not call this function on a thread,
- or start any other threads in the process.  Finally, this function has a habit of
- exiting the entire process if something goes wrong.  You should not expect the
- function to always return.
- 
- This function does not clean up after itself.  When this function returns, you
- are expected to exit.  If the function result is noErr, the command processing
- loop quit in an expected manner (typically because of an idle timeout).  Otherwise
- it quit because of an error.
- 
- @param commands An array that describes the commands that you implement, and their associated
- rights.  The array is terminated by a command with a NULL name.  There must be
- at least one valid command.
- 
- @param commandProcs
- An array of callback routines that are called when a valid request arrives.  The
- array is expected to perform the operation associated with the corresponding
- command and set up the response values, if any.  The array is terminated by a
- NULL pointer.
- 
- IMPORTANT: The array must have exactly the same number of entries as the
- commands array.
- 
- @result			An integer representing EXIT_SUCCESS or EXIT_FAILURE.
- */
-
-extern int SJBXHelperToolMain(
-                              CFStringRef               helperID,
-                              CFStringRef               appID,
-                              const SJBXCommandSpec		commands[],
-                              const SJBXCommandProc		commandProcs[]
-                              );
-
-/////////////////////////////////////////////////////////////////
-#pragma mark ***** Application Routines
-
-/*!
- @functiongroup  Application Routines
- */
-
-/*!
- @function       SJBXExecuteRequestInHelperTool
- 
- @abstract       Executes a request in the privileged helper tool, returning the response.
- 
- @discussion     This routine synchronously executes a request in the privileged helper tool and
- returns the response.
- 
- If the function returns an error, the IPC between your application and the helper tool
- failed.  Unfortunately it's not possible to tell whether this failure occurred while
- sending the request or receiving the response, thus it's not possible to know whether
- the privileged operation was done or not.
- 
- If the functions returns no error, the IPC between your application and the helper tool
- was successful.  However, the command may still have failed.  You must get the error
- value from the response (typically using SJBXGetErrorFromResponse) to see if the
- command succeeded or not.
- 
- On success the response dictionary may contain a value for the kSJBXDescriptorArrayKey key.
- If so, that will be a non-empty CFArray of CFNumbers, each of which can be accessed as an int.
- Each value is a descriptor that is being returned to you from the helper tool.  You are
- responsible for closing these descriptors when you're done with them.
- 
- @param auth     A reference to your program's authorization instance; you typically get this
- by calling AuthorizationCreate.
- 
- This must not be NULL.
- 
- @param commands An array that describes the commands that you implement, and their associated
- rights.  There must be at least one valid command.
- 
- @param bundleID The bundle identifier for your program.
- 
- This must not be NULL.
- 
- @param request  A dictionary describing the requested operation.  This must, at least, contain
- a string value for the kSJBXCommandKey.  Furthermore, this string must match
- one of the commands in the array.
- 
- The dictionary may also contain other values.  These are passed to the helper
- tool unintepreted.  All values must be serialisable using the CFPropertyList
- API.
- 
- This must not be NULL.
- 
- @param response This must not be NULL.  On entry, *response must be NULL.  On success, *response
- will not be NULL.  On error, *response will be NULL.
- 
- On success, you are responsible for disposing of *response.  You are also
- responsible for closing any descriptors returned in the response.
- 
- @result			An OSStatus code (see SJBXErrnoToOSStatus and SJBXOSStatusToErrno).
- */
-
-extern void SJBXExecuteRequestInHelperTool(
-                                           AuthorizationRef			auth,
-                                           const SJBXCommandSpec	commands[],
-                                           CFStringRef				bundleID,
-                                           CFDictionaryRef			request,
-                                           void                      (^errorHandler)(CFErrorRef error),
-                                           void                      (^replyHandler)(CFDictionaryRef response)
-                                           );
-
-/*!
- @enum           SJBXFailCode
- 
- @abstract       Indicates why a request failed.
- 
- @discussion     If SJBXExecuteRequestInHelperTool fails with an error (indicating
- an IPC failure), you can call SJBXDiagnoseFailure to determine what
- went wrong.  SJBXDiagnoseFailure will return the value of this
- type that best describes the failure.
- 
- @constant kSJBXFailUnknown
- Indicates that SJBXDiagnoseFailure could not accurately determine the cause of the
- failure.
- 
- @constant kSJBXFailDisabled
- The request failed because the helper tool is installed but disabled.
- 
- @constant kSJBXFailPartiallyInstalled
- The request failed because the helper tool is only partially installed.
- 
- @constant kSJBXFailNotInstalled
- The request failed because the helper tool is not installed at all.
- 
- @constant kSJBXFailNeedsUpdate
- The request failed because the helper tool is installed but out of date.
- SJBXDiagnoseFailure will never return this value.  However, if you detect that
- the helper tool is out of date (typically by sending it a "get version" request)
- you can pass this value to SJBXFixFailure to force it to update the tool.
- */
-
-enum {
-    kSJBXFailUnknown,
-    kSJBXFailDisabled,
-    kSJBXFailPartiallyInstalled,
-    kSJBXFailNotInstalled,
-    kSJBXFailNeedsUpdate
-};
-typedef uint32_t SJBXFailCode;
-
-/*!
- @function       SJBXDiagnoseFailure
- 
- @abstract       Determines the cause of a failed request.
- 
- @discussion     If SJBXExecuteRequestInHelperTool fails with an error (indicating an
- IPC failure), you can call this routine to determine what went wrong.
- It returns a SJBXFailCode value indicating the cause of the failure.
- You should use this value to tell the user what's going on and what
- you intend to do about it.  Once you get the user's consent, you can
- call SJBXFixFailure to fix the problem.
- 
- For example, if this function result is kSJBXFailDisabled, you could put up the
- dialog saying:
- 
- My privileged helper tool is disabled.  Would you like to enable it?
- This operation may require you to authorize as an admin user.
- [Cancel] [[Enable]]
- 
- On the other hand, if this function result is kSJBXFailNotInstalled, the dialog might be:
- 
- My privileged helper tool is not installed.  Would you like to install it?
- This operation may require you to authorize as an admin user.
- [Cancel] [[Install]]
- 
- SJBXDiagnoseFailure will never return kSJBXFailNeedsUpdate.  It's your responsibility
- to detect version conflicts (a good way to do this is by sending a "get version" request
- to the helper tool).  However, once you've detected a version conflict, you can pass
- kSJBXFailNeedsUpdate to SJBXFixFailure to get it to install the latest version of your
- helper tool.
- 
- If you call this routine when everything is working properly, you're likely to get
- a result of kSJBXFailUnknown.
- 
- @param auth     A reference to your program's authorization instance; you typically get this
- by calling AuthorizationCreate.
- 
- This must not be NULL.
- 
- @param bundleID The bundle identifier for your program.
- 
- This must not be NULL.
- 
- @result         A SJBXFailCode value indicating the cause of the failure.  This will never be
- kSJBXFailNeedsUpdate.
- */
-
-extern SJBXFailCode SJBXDiagnoseFailure(
-                                      AuthorizationRef			auth,
-                                      CFStringRef					bundleID
-                                      );
-
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Utility Routines
 
@@ -595,6 +400,18 @@ extern CFStringRef const kSJBXErrorDomainAuthorization;
 extern CFErrorRef SJBXCreateCFErrorFromErrno(int errNum);
 extern CFErrorRef SJBXCreateCFErrorFromCarbonError(OSStatus err);
 extern CFErrorRef SJBXCreateCFErrorFromSecurityError(OSStatus err);
+
+extern bool SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFErrorRef *errorPtr);
+extern bool SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFErrorRef *errorPtr);
+
+extern CFErrorRef SJBXCreateErrorFromResponse(CFDictionaryRef response);
+
+extern bool FindCommand(
+                        CFDictionaryRef             request,
+                        const SJBXCommandSpec		commands[],
+                        size_t *                    commandIndexPtr,
+                        CFErrorRef *                errorPtr
+                        );
 
 #ifdef __cplusplus
 }

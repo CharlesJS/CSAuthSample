@@ -54,6 +54,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 #include <syslog.h>
 #include <xpc/xpc.h>
 #include "SampleCommon.h"
+#include "SMJobBlessXPCHelperLib.h"
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command

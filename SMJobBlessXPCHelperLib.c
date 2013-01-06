@@ -1,11 +1,11 @@
-#include <sys/ucred.h>
-
 /*
  File:       BetterAuthorizationSampleLib.c
  
  Contains:   Implementation of reusable code for privileged helper tools.
  
  Written by: DTS
+ 
+ Modified by Charles Srstka, 2013.
  
  Copyright:  Copyright (c) 2007 Apple Inc. All Rights Reserved.
  
@@ -46,14 +46,7 @@
  
  */
 
-// Define SJBX_PRIVATE so that we pick up our private definitions from
-// "BetterAuthorizationSampleLib.h".
-
-#define SJBX_PRIVATE 1
-
-#include "SMJobBlessXPCLib.h"
-
-#include <syslog.h>
+#include "SMJobBlessXPCHelperLib.h"
 
 // At runtime SJBX only requires CoreFoundation.  However, at build time we need
 // CoreServices for the various OSStatus error codes in "MacErrors.h".  Thus, by default,
@@ -68,100 +61,7 @@
 #include "/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/MacErrors.h"
 #endif
 
-//////////////////////////////////////////////////////////////////////////////////
-#pragma mark ***** Constants
-
-// kSJBXMaxNumberOfKBytes has two uses:
-//
-// 1. When receiving a dictionary, it is used to limit the size of the incoming
-//    data.  This ensures that a non-privileged client can't exhaust the
-//    address space of a privileged helper tool.
-//
-// 2. Because it's less than 4 GB, this limit ensures that the dictionary size
-//    can be sent as an architecture-neutral uint32_t.
-
-#define kSJBXMaxNumberOfKBytes			(1024 * 1024)
-
-// The key used to get the request dictionary in the XPC request.
-
-#define kSJBXRequestKey              "Request"
-
-// The key used to get our flattened AuthorizationRef in the XPC request.
-
-#define kSJBXAuthorizationRefKey     "AuthorizationRef"
-
-CFStringRef const kSJBXErrorDomainAuthorization = CFSTR("kSJBXDomainAuthorization");
-
-/////////////////////////////////////////////////////////////////
-#pragma mark ***** Common Code
-
-static bool SJBXOSStatusToErrno(OSStatus errNum, int *posixErr)
-{
-    bool converted = true;
-    
-    switch (errNum) {
-		case noErr:
-			*posixErr = 0;
-			break;
-        case memFullErr:
-            *posixErr = ENOMEM;
-            break;
-		case kEOPNOTSUPPErr:
-			*posixErr = ENOTSUP;
-			break;
-        case kECANCELErr:
-        case userCanceledErr:
-            *posixErr = ECANCELED;             // note spelling difference
-            break;
-        default:
-            if ( (errNum >= errSecErrnoBase) && (errNum <= (errSecErrnoBase + ELAST)) ) {
-                *posixErr = (int) errNum - errSecErrnoBase;	// POSIX based error
-            } else {
-				converted = false;
-			}
-    }
-
-    return converted;
-}
-
-extern CFErrorRef SJBXCreateCFErrorFromErrno(int errNum) {
-    return CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainPOSIX, errNum, NULL);
-}
-
-extern CFErrorRef SJBXCreateCFErrorFromCarbonError(OSStatus err) {
-    // Prefer POSIX errors over OSStatus ones if possible, as they tend to present nicer error messages to the end user.
-    
-    int posixErr;
-    
-    if (SJBXOSStatusToErrno(err, &posixErr)) {
-        return SJBXCreateCFErrorFromErrno(posixErr);
-    } else {
-        return CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainOSStatus, err, NULL);
-    }
-}
-
-extern CFErrorRef SJBXCreateCFErrorFromSecurityError(OSStatus err) {
-    if (err == errAuthorizationCanceled) {
-        return SJBXCreateCFErrorFromErrno(ECANCELED);
-    } else if (err >= errSecErrnoBase && err <= errSecErrnoLimit) {
-        return SJBXCreateCFErrorFromErrno(err - errSecErrnoBase);
-    } else {
-        CFStringRef errStr = SecCopyErrorMessageString(err, NULL);
-        CFDictionaryRef userInfo = CFDictionaryCreate(kCFAllocatorDefault,
-                                                      (const void **)&kCFErrorLocalizedFailureReasonKey,
-                                                      (const void **)&errStr,
-                                                      1,
-                                                      &kCFTypeDictionaryKeyCallBacks,
-                                                      &kCFTypeDictionaryValueCallBacks);
-        
-        CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kSJBXErrorDomainAuthorization, err, userInfo);
-        
-        CFRelease(userInfo);
-        CFRelease(errStr);
-        
-        return error;
-    }
-}
+#include <syslog.h>
 
 // for serializing / deserializing errors
 
@@ -194,252 +94,6 @@ static CFDictionaryRef SJBXCreateErrorDictFromCFError(CFErrorRef error) {
     
     return (CFDictionaryRef)errorDict;
 }
-
-static CFErrorRef SJBXCreateErrorFromResponse(CFDictionaryRef response) {
-    CFErrorRef error = NULL;
-    CFDictionaryRef errorDict = NULL;
-    
-    if (response == NULL) {
-        error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-    } else {
-        errorDict = CFDictionaryGetValue(response, CFSTR(kSJBXErrorKey));
-    }
-    
-    if (errorDict != NULL) {
-        CFStringRef domain = CFDictionaryGetValue(errorDict, CFSTR(kSJBXErrorDomainKey));
-        CFIndex code = 0;
-        CFNumberRef codeNum = CFDictionaryGetValue(errorDict, CFSTR(kSJBXErrorCodeKey));
-        CFDictionaryRef userInfo = CFDictionaryGetValue(errorDict, CFSTR(kSJBXErrorUserInfoKey));
-        
-        if (!CFNumberGetValue(codeNum, kCFNumberCFIndexType, &code)) {
-            code = -1;
-        }
-    
-        error = CFErrorCreate(kCFAllocatorDefault, domain, code, userInfo);
-    }
-    
-    return error;
-}
-
-static Boolean SJBXIsBinaryPropertyListData(const void * plistBuffer, size_t plistSize)
-// Make sure that whatever is passed into the buffer that will
-// eventually become a plist (and then sequentially a dictionary)
-// is NOT in binary format.
-{
-    static const char kSJBXBinaryPlistWatermark[6] = "bplist";
-    
-    assert(plistBuffer != NULL);
-	
-	return (plistSize >= sizeof(kSJBXBinaryPlistWatermark))
-    && (memcmp(plistBuffer, kSJBXBinaryPlistWatermark, sizeof(kSJBXBinaryPlistWatermark)) == 0);
-}
-
-static bool SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFErrorRef *errorPtr)
-// Create a CFDictionary by reading the XML data from xpcIn.
-// It first reads the data in, and then
-// unflattens the data into a CFDictionary.
-//
-// On success, the caller is responsible for releasing *dictPtr.
-//
-// See also the companion routine, SJBXWriteDictionary, below.
-{
-    bool                success = true;
-	size_t				dictSize;
-	const void *		dictBuffer;
-	CFDataRef			dictData;
-	CFPropertyListRef 	dict;
-    
-    // Pre-conditions
-    
-	assert(xpcIn >= 0);
-	assert( dictPtr != NULL);
-	assert(*dictPtr == NULL);
-	
-	dictBuffer = NULL;
-	dictData   = NULL;
-	dict       = NULL;
-    
-	// Read the data and unflatten.
-	
-	if (success) {
-        dictBuffer = xpc_dictionary_get_data(xpcIn, kSJBXRequestKey, &dictSize);
-        
-        if (dictBuffer == NULL) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-        }
-	}
-	if ( success && SJBXIsBinaryPropertyListData(dictBuffer, dictSize) ) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-	}
-	if (success) {
-		dictData = CFDataCreateWithBytesNoCopy(NULL, dictBuffer, dictSize, kCFAllocatorNull);
-		if (dictData == NULL) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-		}
-	}
-	if (success) {
-		dict = CFPropertyListCreateFromXMLData(NULL, dictData, kCFPropertyListImmutable, NULL);
-		if (dict == NULL) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-		}
-	}
-	if ( success && (CFGetTypeID(dict) != CFDictionaryGetTypeID()) ) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL); // only CFDictionaries need apply
-	}
-	// CFShow(dict);
-	
-	// Clean up.
-	
-	if (!success) {
-		if (dict != NULL) {
-			CFRelease(dict);
-		}
-		dict = NULL;
-	}
-	*dictPtr = (CFDictionaryRef) dict;
-
-	if (dictData != NULL) {
-		CFRelease(dictData);
-	}
-	
-	assert( (success != false) == (*dictPtr != NULL) );
-	
-	return success;
-}
-
-static bool SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFErrorRef *errorPtr)
-// Write a dictionary to an XPC message by flattening
-// it into XML.
-//
-// See also the companion routine, SJBXReadDictionary, above.
-{
-    bool                success = true;
-	CFDataRef			dictData;
-    
-    // Pre-conditions
-    
-	assert(dict != NULL);
-	assert(message >= 0);
-	
-	dictData   = NULL;
-	
-    // Get the dictionary as XML data.
-    
-	dictData = CFPropertyListCreateXMLData(NULL, dict);
-	if (dictData == NULL) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-	}
-    
-    // Send the length, then send the data.  Always send the length as a big-endian
-    // uint32_t, so that the app and the helper tool can be different architectures.
-    //
-    // The MoreAuthSample version of this code erroneously assumed that CFDataGetBytePtr
-    // can fail and thus allocated an extra buffer to copy the data into.  In reality,
-    // CFDataGetBytePtr can't fail, so this version of the code doesn't do the unnecessary
-    // allocation.
-    
-    if ( success && (CFDataGetLength(dictData) > kSJBXMaxNumberOfKBytes) ) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL);
-    }
-    
-	if (success) {
-        xpc_dictionary_set_data(message, kSJBXRequestKey, CFDataGetBytePtr(dictData), CFDataGetLength(dictData));
-	}
-    
-	if (dictData != NULL) {
-		CFRelease(dictData);
-	}
-    
-	return success;
-}
-
-static bool FindCommand(
-                        CFDictionaryRef             request,
-                        const SJBXCommandSpec		commands[],
-                        size_t *                    commandIndexPtr,
-                        CFErrorRef *                errorPtr
-                        )
-// FindCommand is a simple utility routine for checking that the
-// command name within a request is valid (that is, matches one of the command
-// names in the SJBXCommandSpec array).
-//
-// On success, *commandIndexPtr will be the index of the requested command
-// in the commands array.  On error, the value in *commandIndexPtr is undefined.
-{
-	bool                        success = true;
-    CFStringRef                 commandStr;
-    char *                      command;
-	UInt32						commandSize = 0;
-	size_t						index = 0;
-	
-	// Pre-conditions
-	
-	assert(request != NULL);
-	assert(commands != NULL);
-	assert(commands[0].commandName != NULL);        // there must be at least one command
-	assert(commandIndexPtr != NULL);
-    
-    command = NULL;
-    
-    // Get the command as a C string.  To prevent untrusted command string from
-	// trying to run us out of memory, we limit its length to 1024 UTF-16 values.
-    
-    commandStr = CFDictionaryGetValue(request, CFSTR(kSJBXCommandKey));
-    if ( (commandStr == NULL) || (CFGetTypeID(commandStr) != CFStringGetTypeID()) ) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL);
-    }
-	commandSize = CFStringGetLength(commandStr);
-	if ( (success) && (commandSize > 1024) ) {
-		success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL);
-	}
-    if (success) {
-        size_t      bufSize;
-        
-        bufSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(commandStr), kCFStringEncodingUTF8) + 1;
-        command = malloc(bufSize);
-        
-        if (command == NULL) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(ENOMEM);
-        } else if ( ! CFStringGetCString(commandStr, command, bufSize, kCFStringEncodingUTF8) ) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-        }
-    }
-    
-    // Search the commands array for that command.
-    
-    if (success) {
-        do {
-            if ( strcmp(commands[index].commandName, command) == 0 ) {
-                *commandIndexPtr = index;
-                break;
-            }
-            index += 1;
-            if (commands[index].commandName == NULL) {
-                success = false;
-                if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(ENOENT);
-                break;
-            }
-        } while (true);
-    }
-    
-    free(command);
-    
-	return success;
-}
-
-/////////////////////////////////////////////////////////////////
-#pragma mark ***** Tool Code
 
 #if ! defined(NDEBUG)
 
@@ -527,7 +181,7 @@ static bool HandleCommand(
         if (commands[commandIndex].rightName != NULL) {
             AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
             AuthorizationRights rights = { 1, &item };
-
+            
             OSStatus authErr = AuthorizationCopyRights(
                                                        authRef,
                                                        &rights,
@@ -554,7 +208,7 @@ static bool HandleCommand(
         
         if ( (error != NULL) && !CFDictionaryContainsKey(response, CFSTR(kSJBXErrorKey)) ) {
             CFDictionaryRef errorDict = SJBXCreateErrorDictFromCFError(error);
-                
+            
             CFDictionaryAddValue(response, CFSTR(kSJBXErrorKey), errorDict);
             CFRelease(errorDict);
         }
@@ -640,7 +294,7 @@ static bool HandleEvent(
         
         if (success) {
             reply = xpc_dictionary_create_reply(event);
-
+            
             success = SJBXWriteDictionary(response, reply, errorPtr);
         }
         
@@ -691,8 +345,8 @@ static void SJBXSetDefaultRules(
 	
 	assert(commands != NULL);
 	assert(commands[0].commandName != NULL);        // there must be at least one command
-	// it's not the end of the world if bundleID is NULL
-    // descriptionStringTableName may be NULL
+                                                    // it's not the end of the world if bundleID is NULL
+                                                    // descriptionStringTableName may be NULL
     
     if (bundleID != NULL) {
         bundle = CFBundleGetBundleWithIdentifier(bundleID);
@@ -834,12 +488,12 @@ extern int SJBXHelperToolMain(
     }
     
     xpc_connection_t service = xpc_connection_create_mach_service(helperIDC, dispatch_get_main_queue(), XPC_CONNECTION_MACH_SERVICE_LISTENER);
-
+    
     if (!service) {
         syslog(LOG_NOTICE, "Failed to create service.");
         return EXIT_FAILURE;
     }
-
+    
     xpc_connection_set_event_handler(service, ^(xpc_object_t connection) {
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
             CFErrorRef thisConnectionError = NULL;
@@ -858,177 +512,10 @@ extern int SJBXHelperToolMain(
 	});
     
     xpc_connection_resume(service);
-
+    
     dispatch_main();
     
     xpc_release(service);
     
     return EXIT_SUCCESS;
-}
-
-/////////////////////////////////////////////////////////////////
-#pragma mark ***** App Code
-
-extern void SJBXExecuteRequestInHelperTool(
-                                           AuthorizationRef			auth,
-                                           const SJBXCommandSpec	commands[],
-                                           CFStringRef				bundleID,
-                                           CFDictionaryRef			request,
-                                           void                      (^errorHandler)(CFErrorRef error),
-                                           void                      (^replyHandler)(CFDictionaryRef response)
-                                           )
-// See comment in header.
-{
-    bool                        success = true;
-    size_t                      commandIndex;
-    char                        bundleIDC[PATH_MAX];
-	AuthorizationExternalForm	extAuth;
-    xpc_connection_t            connection;
-    xpc_object_t 				message;
-    CFErrorRef                  error = NULL;
-	
-	// Pre-conditions
-	
-	assert(auth != NULL);
-	assert(commands != NULL);
-	assert(commands[0].commandName != NULL);        // there must be at least one command
-    assert(bundleID != NULL);
-	assert(request != NULL);
-    
-	// For debugging.
-    
-	assert(CFDictionaryContainsKey(request, CFSTR(kSJBXCommandKey)));
-	assert(CFGetTypeID(CFDictionaryGetValue(request, CFSTR(kSJBXCommandKey))) == CFStringGetTypeID());
-    
-    // Look up the command and preauthorize.  This has the nice side effect that
-    // the authentication dialog comes up, in the typical case, here, rather than
-    // in the helper tool.  This is good because the helper tool is global /and/
-    // single threaded, so if it's waiting for an authentication dialog for user A
-    // it can't handle requests from user B.
-    
-    success = FindCommand(request, commands, &commandIndex, &error);
-    
-    if ( success && (commands[commandIndex].rightName != NULL) ) {
-        AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
-        AuthorizationRights rights = { 1, &item };
-
-        OSStatus authErr = AuthorizationCopyRights(auth, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagPreAuthorize, NULL);
-        
-        if (authErr != errSecSuccess) {
-            success = false;
-            error = SJBXCreateCFErrorFromSecurityError(authErr);
-        }
-    }
-    
-    // Open the XPC connection.
-    
-    if (success) {
-        if ( ! CFStringGetFileSystemRepresentation(bundleID, bundleIDC, sizeof(bundleIDC)) ) {
-            success = false;
-            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-        }
-    }
-    
-	if (success) {
-		connection = xpc_connection_create_mach_service(bundleIDC, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
-		if (connection == NULL) {
-            success = false;
-            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-		}
-	}
-    
-    // Attempt to connect.
-    
-    if (success) {
-        xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
-            xpc_type_t type = xpc_get_type(event);
-            
-            if (type == XPC_TYPE_ERROR) {
-                if (event == XPC_ERROR_CONNECTION_INTERRUPTED) {
-                    //[self appendLog:@"XPC connection interupted."];
-                    
-                } else if (event == XPC_ERROR_CONNECTION_INVALID) {
-                    //[self appendLog:@"XPC connection invalid, releasing."];
-                    xpc_release(connection);
-                    
-                } else {
-                    //[self appendLog:@"Unexpected XPC connection error."];
-                }
-                
-            } else {
-                //[self appendLog:@"Unexpected XPC connection event."];
-            }
-        });
-        
-        xpc_connection_resume(connection);
-	}
-    
-    // Create an XPC dictionary object.
-    
-    if (success) {
-        message = xpc_dictionary_create(NULL, NULL, 0);
-        
-        if (message == NULL) {
-            success = false;
-            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-        }
-    }
-	
-    // Send the flattened AuthorizationRef to the tool.
-    
-    if (success) {
-        OSStatus authErr = AuthorizationMakeExternalForm(auth, &extAuth);
-        
-        if (authErr != errSecSuccess) {
-            success = false;
-            error = SJBXCreateCFErrorFromSecurityError(authErr);
-        }
-    }
-    
-	if (success) {
-        xpc_dictionary_set_data(message, kSJBXAuthorizationRefKey, &extAuth, sizeof(extAuth));
-	}
-	
-    // Write the request.
-    
-	if (success) {
-		success = SJBXWriteDictionary(request, message, &error);
-	}
-	
-    // Send request.
-    
-    if (success) {
-        xpc_connection_send_message_with_reply(connection, message, dispatch_get_main_queue(), ^(xpc_object_t reply) {
-            CFDictionaryRef sendResponse = NULL;
-            CFErrorRef sendError = NULL;
-            
-            // Read response.
-            
-            bool sendSuccess = SJBXReadDictionary(reply, &sendResponse, &sendError);
-            
-            if (sendSuccess) {
-                sendError = SJBXCreateErrorFromResponse(sendResponse);
-                
-                if (sendError != NULL) {
-                    CFRelease(sendResponse);
-                    sendSuccess = false;
-                }
-            }
-            
-            if (sendSuccess) {
-                replyHandler(sendResponse);
-                CFRelease(sendResponse);
-            } else {
-                errorHandler(sendError);
-                CFRelease(sendError);
-            }
-        });
-    }
-    
-    // If something failed, let the user know.
-    
-    if (!success) {
-        errorHandler(error);
-        CFRelease(error);
-    }
 }
