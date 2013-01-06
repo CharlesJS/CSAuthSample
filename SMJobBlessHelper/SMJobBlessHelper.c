@@ -58,7 +58,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command
 
-static OSStatus DoGetVersion(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response) {
+static bool DoGetVersion(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFErrorRef *error) {
     assert(authRef != NULL);
     assert(response != NULL);
     
@@ -69,19 +69,19 @@ static OSStatus DoGetVersion(AuthorizationRef authRef, const void *userData, CFD
 
     CFRelease(versionRef);
     
-    return noErr;
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command
 
-static OSStatus DoSecretSpyStuff(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response) {
+static bool DoSecretSpyStuff(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFErrorRef *error) {
     assert(authRef != NULL);
     assert(response != NULL);
     
     CFDictionarySetValue(response, CFSTR(kSampleSecretSpyStuffResponse), CFSTR("Hello 007"));
     
-    return noErr;
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////

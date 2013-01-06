@@ -90,72 +90,135 @@
 
 #define kSJBXAuthorizationRefKey     "AuthorizationRef"
 
+CFStringRef const kSJBXErrorDomainAuthorization = CFSTR("kSJBXDomainAuthorization");
+
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Common Code
 
-extern int SJBXOSStatusToErrno(OSStatus errNum)
-// See comment in header.
+static bool SJBXOSStatusToErrno(OSStatus errNum, int *posixErr)
 {
-	int retval;
+    bool converted = true;
     
-#define CASE(ident)         \
-case k ## ident ## Err: \
-retval = ident;     \
-break
     switch (errNum) {
 		case noErr:
-			retval = 0;
+			*posixErr = 0;
 			break;
-        case kENORSRCErr:
-            retval = ESRCH;                 // no ENORSRC on Mac OS X, so use ESRCH
-            break;
         case memFullErr:
-            retval = ENOMEM;
+            *posixErr = ENOMEM;
             break;
-            CASE(EDEADLK);
-            CASE(EAGAIN);
 		case kEOPNOTSUPPErr:
-			retval = ENOTSUP;
+			*posixErr = ENOTSUP;
 			break;
-            CASE(EPROTO);
-            CASE(ETIME);
-            CASE(ENOSR);
-            CASE(EBADMSG);
         case kECANCELErr:
-            retval = ECANCELED;             // note spelling difference
+        case userCanceledErr:
+            *posixErr = ECANCELED;             // note spelling difference
             break;
-            CASE(ENOSTR);
-            CASE(ENODATA);
-            CASE(EINPROGRESS);
-            CASE(ESRCH);
-            CASE(ENOMSG);
         default:
-            if ( (errNum <= kEPERMErr) && (errNum >= kENOMSGErr) ) {
-				retval = (-3200 - errNum) + 1;				// OT based error
-            } else if ( (errNum >= errSecErrnoBase) && (errNum <= (errSecErrnoBase + ELAST)) ) {
-                retval = (int) errNum - errSecErrnoBase;	// POSIX based error
+            if ( (errNum >= errSecErrnoBase) && (errNum <= (errSecErrnoBase + ELAST)) ) {
+                *posixErr = (int) errNum - errSecErrnoBase;	// POSIX based error
             } else {
-				retval = (int) errNum;						// just return the value unmodified
+				converted = false;
 			}
     }
-#undef CASE
-    return retval;
+
+    return converted;
 }
 
-extern OSStatus SJBXErrnoToOSStatus(int errNum)
-// See comment in header.
-{
-	OSStatus retval;
-	
-	if ( errNum == 0 ) {
-		retval = noErr;
-	} else if ( (errNum >= EPERM) && (errNum <= ELAST) ) {
-		retval = (OSStatus) errNum + errSecErrnoBase;
-	} else {
-		retval = (int) errNum;      // just return the value unmodified
-	}
+extern CFErrorRef SJBXCreateCFErrorFromErrno(int errNum) {
+    return CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainPOSIX, errNum, NULL);
+}
+
+extern CFErrorRef SJBXCreateCFErrorFromCarbonError(OSStatus err) {
+    // Prefer POSIX errors over OSStatus ones if possible, as they tend to present nicer error messages to the end user.
     
-    return retval;
+    int posixErr;
+    
+    if (SJBXOSStatusToErrno(err, &posixErr)) {
+        return SJBXCreateCFErrorFromErrno(posixErr);
+    } else {
+        return CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainOSStatus, err, NULL);
+    }
+}
+
+extern CFErrorRef SJBXCreateCFErrorFromSecurityError(OSStatus err) {
+    if (err == errAuthorizationCanceled) {
+        return SJBXCreateCFErrorFromErrno(ECANCELED);
+    } else if (err >= errSecErrnoBase && err <= errSecErrnoLimit) {
+        return SJBXCreateCFErrorFromErrno(err - errSecErrnoBase);
+    } else {
+        CFStringRef errStr = SecCopyErrorMessageString(err, NULL);
+        CFDictionaryRef userInfo = CFDictionaryCreate(kCFAllocatorDefault,
+                                                      (const void **)&kCFErrorLocalizedFailureReasonKey,
+                                                      (const void **)&errStr,
+                                                      1,
+                                                      &kCFTypeDictionaryKeyCallBacks,
+                                                      &kCFTypeDictionaryValueCallBacks);
+        
+        CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kSJBXErrorDomainAuthorization, err, userInfo);
+        
+        CFRelease(userInfo);
+        CFRelease(errStr);
+        
+        return error;
+    }
+}
+
+// for serializing / deserializing errors
+
+static CFDictionaryRef SJBXCreateErrorDictFromCFError(CFErrorRef error) {
+    CFMutableDictionaryRef errorDict = CFDictionaryCreateMutable(kCFAllocatorDefault,
+                                                                 0,
+                                                                 &kCFTypeDictionaryKeyCallBacks,
+                                                                 &kCFTypeDictionaryValueCallBacks);
+    
+    if (errorDict == NULL) {
+        return NULL;
+    }
+    
+    CFStringRef domain = CFErrorGetDomain(error);
+    CFIndex code = CFErrorGetCode(error);
+    CFNumberRef codeNum = CFNumberCreate(kCFAllocatorDefault, kCFNumberCFIndexType, &code);
+    CFDictionaryRef userInfo = CFErrorCopyUserInfo(error);
+    
+    if (domain != NULL) {
+        CFDictionarySetValue(errorDict, CFSTR(kSJBXErrorDomainKey), domain);
+    }
+    
+    CFDictionarySetValue(errorDict, CFSTR(kSJBXErrorCodeKey), codeNum);
+    CFRelease(codeNum);
+    
+    if (userInfo != NULL) {
+        CFDictionarySetValue(errorDict, CFSTR(kSJBXErrorUserInfoKey), userInfo);
+        CFRelease(userInfo);
+    }
+    
+    return (CFDictionaryRef)errorDict;
+}
+
+static CFErrorRef SJBXCreateErrorFromResponse(CFDictionaryRef response) {
+    CFErrorRef error = NULL;
+    CFDictionaryRef errorDict = NULL;
+    
+    if (response == NULL) {
+        error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+    } else {
+        errorDict = CFDictionaryGetValue(response, CFSTR(kSJBXErrorKey));
+    }
+    
+    if (errorDict != NULL) {
+        CFStringRef domain = CFDictionaryGetValue(errorDict, CFSTR(kSJBXErrorDomainKey));
+        CFIndex code = 0;
+        CFNumberRef codeNum = CFDictionaryGetValue(errorDict, CFSTR(kSJBXErrorCodeKey));
+        CFDictionaryRef userInfo = CFDictionaryGetValue(errorDict, CFSTR(kSJBXErrorUserInfoKey));
+        
+        if (!CFNumberGetValue(codeNum, kCFNumberCFIndexType, &code)) {
+            code = -1;
+        }
+    
+        error = CFErrorCreate(kCFAllocatorDefault, domain, code, userInfo);
+    }
+    
+    return error;
 }
 
 static Boolean SJBXIsBinaryPropertyListData(const void * plistBuffer, size_t plistSize)
@@ -171,19 +234,7 @@ static Boolean SJBXIsBinaryPropertyListData(const void * plistBuffer, size_t pli
     && (memcmp(plistBuffer, kSJBXBinaryPlistWatermark, sizeof(kSJBXBinaryPlistWatermark)) == 0);
 }
 
-static void NormaliseOSStatusErrorCode(OSStatus *errPtr)
-// Normalise the cancelled error code to reduce the number of checks that our clients
-// have to do.  I made this a function in case I ever want to expand this to handle
-// more than just this one case.
-{
-    assert(errPtr != NULL);
-    
-    if ( (*errPtr == errAuthorizationCanceled) || (*errPtr == (errSecErrnoBase + ECANCELED)) ) {
-        *errPtr = userCanceledErr;
-    }
-}
-
-static int SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr)
+static bool SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFErrorRef *errorPtr)
 // Create a CFDictionary by reading the XML data from xpcIn.
 // It first reads the data in, and then
 // unflattens the data into a CFDictionary.
@@ -192,7 +243,7 @@ static int SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr)
 //
 // See also the companion routine, SJBXWriteDictionary, below.
 {
-	int                 err = 0;
+    bool                success = true;
 	size_t				dictSize;
 	const void *		dictBuffer;
 	CFDataRef			dictData;
@@ -210,36 +261,41 @@ static int SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr)
     
 	// Read the data and unflatten.
 	
-	if (err == 0) {
+	if (success) {
         dictBuffer = xpc_dictionary_get_data(xpcIn, kSJBXRequestKey, &dictSize);
         
         if (dictBuffer == NULL) {
-            err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
+            success = false;
+            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
 	}
-	if ( (err == 0) && SJBXIsBinaryPropertyListData(dictBuffer, dictSize) ) {
-        err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
+	if ( success && SJBXIsBinaryPropertyListData(dictBuffer, dictSize) ) {
+        success = false;
+        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 	}
-	if (err == 0) {
+	if (success) {
 		dictData = CFDataCreateWithBytesNoCopy(NULL, dictBuffer, dictSize, kCFAllocatorNull);
 		if (dictData == NULL) {
-			err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
+            success = false;
+            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 		}
 	}
-	if (err == 0) {
+	if (success) {
 		dict = CFPropertyListCreateFromXMLData(NULL, dictData, kCFPropertyListImmutable, NULL);
 		if (dict == NULL) {
-			err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
+            success = false;
+            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 		}
 	}
-	if ( (err == 0) && (CFGetTypeID(dict) != CFDictionaryGetTypeID()) ) {
-		err = EINVAL;		// only CFDictionaries need apply
+	if ( success && (CFGetTypeID(dict) != CFDictionaryGetTypeID()) ) {
+        success = false;
+        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL); // only CFDictionaries need apply
 	}
 	// CFShow(dict);
 	
 	// Clean up.
 	
-	if (err != 0) {
+	if (!success) {
 		if (dict != NULL) {
 			CFRelease(dict);
 		}
@@ -251,18 +307,18 @@ static int SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr)
 		CFRelease(dictData);
 	}
 	
-	assert( (err == 0) == (*dictPtr != NULL) );
+	assert( (success != false) == (*dictPtr != NULL) );
 	
-	return err;
+	return success;
 }
 
-static int SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message)
+static bool SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFErrorRef *errorPtr)
 // Write a dictionary to an XPC message by flattening
 // it into XML.
 //
 // See also the companion routine, SJBXReadDictionary, above.
 {
-	int                 err = 0;
+    bool                success = true;
 	CFDataRef			dictData;
     
     // Pre-conditions
@@ -276,7 +332,8 @@ static int SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message)
     
 	dictData = CFPropertyListCreateXMLData(NULL, dict);
 	if (dictData == NULL) {
-		err = SJBXOSStatusToErrno( coreFoundationUnknownErr );
+        success = false;
+        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 	}
     
     // Send the length, then send the data.  Always send the length as a big-endian
@@ -287,11 +344,12 @@ static int SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message)
     // CFDataGetBytePtr can't fail, so this version of the code doesn't do the unnecessary
     // allocation.
     
-    if ( (err == 0) && (CFDataGetLength(dictData) > kSJBXMaxNumberOfKBytes) ) {
-        err = EINVAL;
+    if ( success && (CFDataGetLength(dictData) > kSJBXMaxNumberOfKBytes) ) {
+        success = false;
+        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL);
     }
     
-	if (err == 0) {
+	if (success) {
         xpc_dictionary_set_data(message, kSJBXRequestKey, CFDataGetBytePtr(dictData), CFDataGetLength(dictData));
 	}
     
@@ -299,14 +357,15 @@ static int SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message)
 		CFRelease(dictData);
 	}
     
-	return err;
+	return success;
 }
 
-static OSStatus FindCommand(
-                            CFDictionaryRef             request,
-                            const SJBXCommandSpec		commands[],
-                            size_t *                    commandIndexPtr
-                            )
+static bool FindCommand(
+                        CFDictionaryRef             request,
+                        const SJBXCommandSpec		commands[],
+                        size_t *                    commandIndexPtr,
+                        CFErrorRef *                errorPtr
+                        )
 // FindCommand is a simple utility routine for checking that the
 // command name within a request is valid (that is, matches one of the command
 // names in the SJBXCommandSpec array).
@@ -314,7 +373,7 @@ static OSStatus FindCommand(
 // On success, *commandIndexPtr will be the index of the requested command
 // in the commands array.  On error, the value in *commandIndexPtr is undefined.
 {
-	OSStatus					retval = noErr;
+	bool                        success = true;
     CFStringRef                 commandStr;
     char *                      command;
 	UInt32						commandSize = 0;
@@ -334,28 +393,32 @@ static OSStatus FindCommand(
     
     commandStr = CFDictionaryGetValue(request, CFSTR(kSJBXCommandKey));
     if ( (commandStr == NULL) || (CFGetTypeID(commandStr) != CFStringGetTypeID()) ) {
-        retval = paramErr;
+        success = false;
+        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL);
     }
 	commandSize = CFStringGetLength(commandStr);
-	if ( (retval == noErr) && (commandSize > 1024) ) {
-		retval = paramErr;
+	if ( (success) && (commandSize > 1024) ) {
+		success = false;
+        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL);
 	}
-    if (retval == noErr) {
+    if (success) {
         size_t      bufSize;
         
         bufSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(commandStr), kCFStringEncodingUTF8) + 1;
         command = malloc(bufSize);
         
         if (command == NULL) {
-            retval = memFullErr;
+            success = false;
+            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(ENOMEM);
         } else if ( ! CFStringGetCString(commandStr, command, bufSize, kCFStringEncodingUTF8) ) {
-            retval = coreFoundationUnknownErr;
+            success = false;
+            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
     }
     
     // Search the commands array for that command.
     
-    if (retval == noErr) {
+    if (success) {
         do {
             if ( strcmp(commands[index].commandName, command) == 0 ) {
                 *commandIndexPtr = index;
@@ -363,7 +426,8 @@ static OSStatus FindCommand(
             }
             index += 1;
             if (commands[index].commandName == NULL) {
-                retval = SJBXErrnoToOSStatus(ENOENT);
+                success = false;
+                if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(ENOENT);
                 break;
             }
         } while (true);
@@ -371,7 +435,7 @@ static OSStatus FindCommand(
     
     free(command);
     
-	return retval;
+	return success;
 }
 
 /////////////////////////////////////////////////////////////////
@@ -402,23 +466,24 @@ static bool CommandArraySizeMatchesCommandProcArraySize(
 
 #endif
 
-static int HandleCommand(
-                         const SJBXCommandSpec		commands[],
-                         const SJBXCommandProc		commandProcs[],
-                         CFDictionaryRef                request,
-                         CFDictionaryRef                *responsePtr,
-                         AuthorizationRef               authRef
-                         )
+static bool HandleCommand(
+                          const SJBXCommandSpec		commands[],
+                          const SJBXCommandProc		commandProcs[],
+                          CFDictionaryRef                request,
+                          CFDictionaryRef *              responsePtr,
+                          AuthorizationRef               authRef,
+                          CFErrorRef *					 errorPtr
+                          )
 // This routine handles a single connection from a client.  This connection, in
 // turn, represents a single command (request/response pair).  commands is the
 // list of valid commands.  commandProc is a callback to call to actually
 // execute a command.  Finally, fd is the file descriptor from which the request
 // should be read, and to which the response should be sent.
 {
-    int                         retval = 0;
     size_t                      commandIndex;
     CFMutableDictionaryRef		response	= NULL;
-    OSStatus                    commandProcStatus;
+    bool                        success = true;
+    CFErrorRef                  error = NULL;
     
     // Pre-conditions
     
@@ -428,10 +493,11 @@ static int HandleCommand(
     assert( CommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
     
     // Create a mutable response dictionary before calling the client.
-    if (retval == 0) {
+    if (success) {
         response = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         if (response == NULL) {
-            retval = SJBXOSStatusToErrno( coreFoundationUnknownErr );
+            success = false;
+            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
     }
     
@@ -446,72 +512,76 @@ static int HandleCommand(
     // in the response, as opposed to an IPC error.  This means that a client can check
     // whether a tool supports a particular command without triggering an IPC teardown.
     
-    if (retval == 0) {
+    if (success) {
         // Get the command name from the request dictionary and check to see whether or
         // not the command is valid by comparing with the SJBXCommandSpec array.  Also,
         // if the command is valid, return the associated right (if any).
         
-        commandProcStatus = FindCommand(request, commands, &commandIndex);
-        
+        success = FindCommand(request, commands, &commandIndex, &error);
+    }
+    
+    if (success) {
         // Acquire the associated right for the command.  If rightName is NULL, the
 		// commandProc is required to do its own authorization.
         
-        if ( (commandProcStatus == noErr) && (commands[commandIndex].rightName != NULL) ) {
+        if (commands[commandIndex].rightName != NULL) {
             AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
             AuthorizationRights rights = { 1, &item };
 
-            commandProcStatus = AuthorizationCopyRights(
-                                                        authRef,
-                                                        &rights,
-                                                        kAuthorizationEmptyEnvironment,
-                                                        kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed,
-                                                        NULL
-                                                        );
-        }
-        
-        // Call callback to execute command based on the request.
-        
-        if (commandProcStatus == noErr) {
-            commandProcStatus = commandProcs[commandIndex](authRef, commands[commandIndex].userData, request, response);
+            OSStatus authErr = AuthorizationCopyRights(
+                                                       authRef,
+                                                       &rights,
+                                                       kAuthorizationEmptyEnvironment,
+                                                       kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed,
+                                                       NULL
+                                                       );
             
-            if (commandProcStatus == noErr) {
-                syslog(LOG_DEBUG, "Command callback succeeded");
-            } else {
-                syslog(LOG_DEBUG, "Command callback failed: %ld", (long) commandProcStatus);
-            }
-        }
-        
-        // If the command didn't insert its own error value, we use its function
-        // result as the error value.
-        
-        if ( ! CFDictionaryContainsKey(response, CFSTR(kSJBXErrorKey)) ) {
-            CFNumberRef     numRef;
-            
-            numRef = CFNumberCreate(NULL, kCFNumberSInt32Type, &commandProcStatus);
-            if (numRef == NULL) {
-                retval = SJBXOSStatusToErrno( coreFoundationUnknownErr );
-            } else {
-                CFDictionaryAddValue(response, CFSTR(kSJBXErrorKey), numRef);
-                CFRelease(numRef);
+            if (authErr != noErr) {
+                success = false;
+                
+                error = SJBXCreateCFErrorFromSecurityError(authErr);
             }
         }
     }
     
-    // Write response back to the client.
-    if (retval == 0) {
-        *responsePtr = (CFDictionaryRef)response;
-    }
+    if (success) {
+        // Call callback to execute command based on the request.
         
-    return retval;
+        success = commandProcs[commandIndex](authRef, commands[commandIndex].userData, request, response, &error);
+        
+        // If the command didn't insert its own error value, we use its function
+        // result as the error value.
+        
+        if ( (error != NULL) && !CFDictionaryContainsKey(response, CFSTR(kSJBXErrorKey)) ) {
+            CFDictionaryRef errorDict = SJBXCreateErrorDictFromCFError(error);
+                
+            CFDictionaryAddValue(response, CFSTR(kSJBXErrorKey), errorDict);
+            CFRelease(errorDict);
+        }
+    }
+    
+    // Write response back to the client.
+    if (success) {
+        *responsePtr = (CFDictionaryRef)response;
+    } else {
+        if (errorPtr != NULL) {
+            *errorPtr = error;
+        } else {
+            CFRelease(error);
+        }
+    }
+    
+    return success;
 }
 
-static int HandleEvent(
-                       const SJBXCommandSpec		commands[],
-                       const SJBXCommandProc		commandProcs[],
-                       xpc_object_t                 event
-                       )
+static bool HandleEvent(
+                        const SJBXCommandSpec		commands[],
+                        const SJBXCommandProc		commandProcs[],
+                        xpc_object_t                event,
+                        CFErrorRef *                errorPtr
+                        )
 {
-    int err = 0;
+    bool success = true;
     
     xpc_type_t type = xpc_get_type(event);
     
@@ -542,42 +612,48 @@ static int HandleEvent(
         authExtFormData = xpc_dictionary_get_data(event, kSJBXAuthorizationRefKey, &authExtFormSize);
         
         if (authExtFormData == NULL || authExtFormSize > sizeof(authExtForm)) {
-            err = SJBXOSStatusToErrno(coreFoundationUnknownErr);
+            success = false;
+            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
         
-        if (err == 0) {
+        if (success) {
             memcpy(&authExtForm, authExtFormData, authExtFormSize);
             
-            err = SJBXOSStatusToErrno(AuthorizationCreateFromExternalForm(&authExtForm, &authRef));
+            OSStatus authErr = AuthorizationCreateFromExternalForm(&authExtForm, &authRef);
             
-            if (authRef == NULL) {
-                err = SJBXOSStatusToErrno(coreFoundationUnknownErr);
+            if (authErr != errSecSuccess) {
+                success = false;
+                if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromSecurityError(authErr);
+            } else if (authRef == NULL) {
+                success = false;
+                if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
             }
         }
         
-        if (err == 0) {
-            err = SJBXReadDictionary(event, &request);
+        if (success) {
+            success = SJBXReadDictionary(event, &request, errorPtr);
         }
         
-        if (err == 0) {
-            err = HandleCommand(commands, commandProcs, request, &response, authRef);
+        if (success) {
+            success = HandleCommand(commands, commandProcs, request, &response, authRef, errorPtr);
         }
         
-        if (err == 0) {
+        if (success) {
             reply = xpc_dictionary_create_reply(event);
 
-            err = SJBXWriteDictionary(response, reply);
+            success = SJBXWriteDictionary(response, reply, errorPtr);
         }
         
-        if (err == 0) {
+        if (success) {
             remote = xpc_dictionary_get_remote_connection(event);
             
             if (remote == NULL) {
-                err = SJBXOSStatusToErrno(coreFoundationUnknownErr);
+                success = false;
+                if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
             }
         }
         
-        if (err == 0) {
+        if (success) {
             xpc_connection_send_message(remote, reply);
         }
         
@@ -596,7 +672,7 @@ static int HandleEvent(
         syslog(LOG_NOTICE, "Unhandled event");
     }
     
-    return err;
+    return success;
 }
 
 extern int SJBXHelperToolMain(
@@ -630,11 +706,15 @@ extern int SJBXHelperToolMain(
 
     xpc_connection_set_event_handler(service, ^(xpc_object_t connection) {
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
-            int thisConnectionError = HandleEvent(commands, commandProcs, event);
+            CFErrorRef thisConnectionError = NULL;
+            bool success = HandleEvent(commands, commandProcs, event, &thisConnectionError);
             
-            if (thisConnectionError != 0) {
-                errno = thisConnectionError;
-                syslog(LOG_NOTICE, "Request failed: %m");
+            if (!success) {
+                CFStringRef errorDesc = CFCopyDescription(thisConnectionError);
+                
+                syslog(LOG_NOTICE, "Request failed: %s", CFStringGetCStringPtr(errorDesc, kCFStringEncodingUTF8));
+                
+                CFRelease(errorDesc);
             }
         });
         
@@ -776,22 +856,23 @@ extern void SJBXSetDefaultRules(
 	}
 }
 
-extern OSStatus SJBXExecuteRequestInHelperTool(
-                                                  AuthorizationRef			auth,
-                                                  const SJBXCommandSpec	commands[],
-                                                  CFStringRef				bundleID,
-                                                  CFDictionaryRef			request,
-                                                  void                      (^errorHandler)(CFErrorRef error),
-                                                  void                      (^replyHandler)(CFDictionaryRef response)
-                                                  )
+extern void SJBXExecuteRequestInHelperTool(
+                                           AuthorizationRef			auth,
+                                           const SJBXCommandSpec	commands[],
+                                           CFStringRef				bundleID,
+                                           CFDictionaryRef			request,
+                                           void                      (^errorHandler)(CFErrorRef error),
+                                           void                      (^replyHandler)(CFDictionaryRef response)
+                                           )
 // See comment in header.
 {
-	OSStatus					retval = noErr;
+    bool                        success = true;
     size_t                      commandIndex;
     char                        bundleIDC[PATH_MAX];
 	AuthorizationExternalForm	extAuth;
     xpc_connection_t            connection;
     xpc_object_t 				message;
+    CFErrorRef                  error = NULL;
 	
 	// Pre-conditions
 	
@@ -812,33 +893,40 @@ extern OSStatus SJBXExecuteRequestInHelperTool(
     // single threaded, so if it's waiting for an authentication dialog for user A
     // it can't handle requests from user B.
     
-    retval = FindCommand(request, commands, &commandIndex);
+    success = FindCommand(request, commands, &commandIndex, &error);
     
-    if ( (retval == noErr) && (commands[commandIndex].rightName != NULL) ) {
+    if ( success && (commands[commandIndex].rightName != NULL) ) {
         AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
         AuthorizationRights rights = { 1, &item };
 
-        retval = AuthorizationCopyRights(auth, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagPreAuthorize, NULL);
+        OSStatus authErr = AuthorizationCopyRights(auth, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagPreAuthorize, NULL);
+        
+        if (authErr != errSecSuccess) {
+            success = false;
+            error = SJBXCreateCFErrorFromSecurityError(authErr);
+        }
     }
     
     // Open the XPC connection.
     
-    if (retval == noErr) {
+    if (success) {
         if ( ! CFStringGetFileSystemRepresentation(bundleID, bundleIDC, sizeof(bundleIDC)) ) {
-            retval = coreFoundationUnknownErr;
+            success = false;
+            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
     }
     
-	if (retval == noErr) {
+	if (success) {
 		connection = xpc_connection_create_mach_service(bundleIDC, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
 		if (connection == NULL) {
-			retval = coreFoundationUnknownErr;
+            success = false;
+            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 		}
 	}
     
     // Attempt to connect.
     
-    if (retval == noErr) {
+    if (success) {
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
             xpc_type_t type = xpc_get_type(event);
             
@@ -864,84 +952,70 @@ extern OSStatus SJBXExecuteRequestInHelperTool(
     
     // Create an XPC dictionary object.
     
-    if (retval == noErr) {
+    if (success) {
         message = xpc_dictionary_create(NULL, NULL, 0);
         
         if (message == NULL) {
-            retval = coreFoundationUnknownErr;
+            success = false;
+            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
     }
 	
     // Send the flattened AuthorizationRef to the tool.
     
-    if (retval == noErr) {
-        retval = AuthorizationMakeExternalForm(auth, &extAuth);
+    if (success) {
+        OSStatus authErr = AuthorizationMakeExternalForm(auth, &extAuth);
+        
+        if (authErr != errSecSuccess) {
+            success = false;
+            error = SJBXCreateCFErrorFromSecurityError(authErr);
+        }
     }
     
-	if (retval == noErr) {
+	if (success) {
         xpc_dictionary_set_data(message, kSJBXAuthorizationRefKey, &extAuth, sizeof(extAuth));
 	}
 	
     // Write the request.
     
-	if (retval == noErr) {
-		retval = SJBXErrnoToOSStatus( SJBXWriteDictionary(request, message) );
+	if (success) {
+		success = SJBXWriteDictionary(request, message, &error);
 	}
 	
     // Send request.
     
-    if (retval == noErr) {
+    if (success) {
         xpc_connection_send_message_with_reply(connection, message, dispatch_get_main_queue(), ^(xpc_object_t reply) {
-            CFDictionaryRef dict = NULL;
-            CFErrorRef error = NULL;
+            CFDictionaryRef sendResponse = NULL;
+            CFErrorRef sendError = NULL;
             
             // Read response.
             
-            int err = SJBXReadDictionary(reply, &dict);
+            bool sendSuccess = SJBXReadDictionary(reply, &sendResponse, &sendError);
             
-            if (err != 0) {
-                dict = NULL;
-                error = CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainPOSIX, err, NULL);
+            if (sendSuccess) {
+                sendError = SJBXCreateErrorFromResponse(sendResponse);
+                
+                if (sendError != NULL) {
+                    CFRelease(sendResponse);
+                    sendSuccess = false;
+                }
             }
             
-            if (dict) {
-                replyHandler(dict);
-                CFRelease(dict);
-            }
-            
-            if (error) {
-                errorHandler(error);
-                CFRelease(error);
+            if (sendSuccess) {
+                replyHandler(sendResponse);
+                CFRelease(sendResponse);
+            } else {
+                errorHandler(sendError);
+                CFRelease(sendError);
             }
         });
     }
     
-    // Clean up.
+    // If something failed, let the user know.
     
-    NormaliseOSStatusErrorCode(&retval);
-    
-	return retval;
-}
-
-extern OSStatus SJBXGetErrorFromResponse(CFDictionaryRef response)
-// See comment in header.
-{
-	OSStatus	err;
-	CFNumberRef num;
-	
-	assert(response != NULL);
-	
-	num = (CFNumberRef) CFDictionaryGetValue(response, CFSTR(kSJBXErrorKey));
-    err = noErr;
-    if ( (num == NULL) || (CFGetTypeID(num) != CFNumberGetTypeID()) ) {
-        err = coreFoundationUnknownErr;
+    if (!success) {
+        errorHandler(error);
+        CFRelease(error);
     }
-	if (err == noErr) {
-		if ( ! CFNumberGetValue(num, kCFNumberSInt32Type, &err) ) {
-            err = coreFoundationUnknownErr;
-        }
-	}
-	
-    NormaliseOSStatusErrorCode(&err);
-	return err;
 }

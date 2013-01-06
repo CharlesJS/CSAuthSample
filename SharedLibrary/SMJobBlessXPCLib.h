@@ -279,7 +279,11 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
  for the response, interpreted as an OSStatus.
  */
 
-#define kSJBXErrorKey        "com.apple.dts.BetterAuthorizationSample.error"				// CFNumber
+#define kSJBXErrorKey         "com.apple.dts.BetterAuthorizationSample.error"				// CFDictionary
+
+#define kSJBXErrorDomainKey   "com.apple.dts.BetterAuthorizationSample.error.domain"		// CFString
+#define kSJBXErrorCodeKey     "com.apple.dts.BetterAuthorizationSample.error.code"			// CFNumber
+#define kSJBXErrorUserInfoKey "com.apple.dts.BetterAuthorizationSample.error.userInfo"		// CFDictionary
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Helper Tool Routines
@@ -365,11 +369,12 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
  conditionalise your code.
  */
 
-typedef OSStatus (*SJBXCommandProc)(
+typedef bool (*SJBXCommandProc)(
 AuthorizationRef			auth,
 const void *                userData,
 CFDictionaryRef				request,
-CFMutableDictionaryRef      response
+CFMutableDictionaryRef      response,
+CFErrorRef *				error
 );
 
 /*!
@@ -530,14 +535,14 @@ extern void SJBXSetDefaultRules(
  @result			An OSStatus code (see SJBXErrnoToOSStatus and SJBXOSStatusToErrno).
  */
 
-extern OSStatus SJBXExecuteRequestInHelperTool(
-                                                  AuthorizationRef			auth,
-                                                  const SJBXCommandSpec	commands[],
-                                                  CFStringRef				bundleID,
-                                                  CFDictionaryRef			request,
-                                                  void                      (^errorHandler)(CFErrorRef error),
-                                                  void                      (^replyHandler)(CFDictionaryRef response)
-                                                  );
+extern void SJBXExecuteRequestInHelperTool(
+                                           AuthorizationRef			auth,
+                                           const SJBXCommandSpec	commands[],
+                                           CFStringRef				bundleID,
+                                           CFDictionaryRef			request,
+                                           void                      (^errorHandler)(CFErrorRef error),
+                                           void                      (^replyHandler)(CFDictionaryRef response)
+                                           );
 
 /*!
  @enum           SJBXFailCode
@@ -637,71 +642,11 @@ extern SJBXFailCode SJBXDiagnoseFailure(
  @functiongroup  Utilities
  */
 
-/*!
- @function       SJBXErrnoToOSStatus
- 
- @abstract       Convert an errno value to an OSStatus value.
- 
- @discussion     All errno values have accepted alternatives in the errSecErrnoBase
- OSStatus range, and this routine does the conversion. For example,
- ENOENT becomes errSecErrnoBase + ENOENT. Any value that's not
- recognised just gets passed through unmodified.
- 
- A value of 0 becomes noErr.
- 
- For more information about errSecErrnoBase, see DTS Q&A 1499
- <http://developer.apple.com/qa/qa2006/qa1499.html>.
- 
- @param errNum   The errno value to convert.
- 
- @result			An OSStatus code representing the errno equivalent.
- */
+extern CFStringRef const kSJBXErrorDomainAuthorization;
 
-extern OSStatus SJBXErrnoToOSStatus(int errNum);
-
-/*!
- @function       SJBXOSStatusToErrno
- 
- @abstract       Convert an OSStatus value to an errno value.
- 
- @discussion     This function converts some specific OSStatus values (Open Transport and
- errSecErrnoBase ranges) to their corresponding errno values.  It more-or-less
- undoes the conversion done by SJBXErrnoToOSStatus, including a pass
- through for unrecognised values.
- 
- It's worth noting that there are many more defined OSStatus error codes
- than errno error codes, so you're more likely to encounter a passed
- through value when going in this direction.
- 
- A value of noErr becomes 0.
- 
- For more information about errSecErrnoBase, see DTS Q&A 1499
- <http://developer.apple.com/qa/qa2006/qa1499.html>.
- 
- @param errNum   The OSStatus value to convert.
- 
- @result			An integer code representing the OSStatus equivalent.
- */
-
-extern int      SJBXOSStatusToErrno(OSStatus errNum);
-
-/*!
- @function       SJBXGetErrorFromResponse
- 
- @abstract       Extracts the error status from a helper tool response.
- 
- @discussion     This function extracts the error status from a helper tool response.
- Specifically, its uses the kSJBXErrorKey key to get a CFNumber and
- it gets the resulting value from that number.
- 
- @param response A helper tool response, typically acquired by calling SJBXExecuteRequestInHelperTool.
- 
- This must not be NULL
- 
- @result			An OSStatus code (see SJBXErrnoToOSStatus and SJBXOSStatusToErrno).
- */
-
-extern OSStatus SJBXGetErrorFromResponse(CFDictionaryRef response);
+extern CFErrorRef SJBXCreateCFErrorFromErrno(int errNum);
+extern CFErrorRef SJBXCreateCFErrorFromCarbonError(OSStatus err);
+extern CFErrorRef SJBXCreateCFErrorFromSecurityError(OSStatus err);
 
 #ifdef __cplusplus
 }
