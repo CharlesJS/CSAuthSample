@@ -94,7 +94,8 @@ extern int SJBXHelperToolMain(
                               CFStringRef               helperID,
                               CFStringRef               appID,
                               const SJBXCommandSpec		commands[],
-                              const SJBXCommandProc		commandProcs[]
+                              const SJBXCommandProc		commandProcs[],
+                              unsigned int              timeoutInterval
                               );
 
 #endif

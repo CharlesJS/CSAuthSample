@@ -53,8 +53,10 @@
 
 #define SMJOBBLESSHELPER_VERSION	0
 
-#define kSampleAppID                    "com.charlessoft.SMJobBlessXPC"
-#define kSampleHelperID                 "com.charlessoft.SMJobBlessXPC.helper"
+#define kSampleAppID                "com.charlessoft.SMJobBlessXPC"
+#define kSampleHelperID             "com.charlessoft.SMJobBlessXPC.helper"
+
+#define kSampleTimeoutInterval      120
 
 /////////////////////////////////////////////////////////////////
 

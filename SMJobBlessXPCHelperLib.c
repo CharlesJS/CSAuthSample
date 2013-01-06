@@ -63,6 +63,75 @@
 
 #include <syslog.h>
 
+// watchdog stuff
+
+static dispatch_source_t gWatchdogSource = NULL;
+static dispatch_queue_t gWatchdogQueue = NULL;
+
+static unsigned int gNumConnections = 0;
+static unsigned int gTimeoutInterval = 0;
+
+static void InitWatchdog(unsigned int timeoutInterval) {
+    gTimeoutInterval = timeoutInterval;
+    gWatchdogQueue = dispatch_queue_create("gWatchdogQueue", DISPATCH_QUEUE_SERIAL);
+}
+
+static void CleanupWatchdog() {
+    CancelWatchdog();
+    dispatch_release(gWatchdogQueue);
+    gWatchdogQueue = NULL;
+}
+
+static void ExitIfNoConnections() {
+    if (gNumConnections == 0) {
+        exit(0);
+    }
+}
+
+static void CancelWatchdog() {
+    if (gWatchdogSource != NULL) {
+        dispatch_source_cancel(gWatchdogSource);
+        dispatch_release(gWatchdogSource);
+        gWatchdogSource = NULL;
+    }
+}
+
+static void RestartWatchdog() {
+    if (gTimeoutInterval != 0) {
+        gWatchdogSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, gWatchdogQueue);
+        
+        dispatch_source_set_timer(gWatchdogSource, dispatch_time(DISPATCH_TIME_NOW, (int64_t)gTimeoutInterval * NSEC_PER_SEC), DISPATCH_TIME_FOREVER, 0);
+        
+        dispatch_source_set_event_handler(gWatchdogSource, ^{
+            ExitIfNoConnections();
+        });
+        
+        dispatch_resume(gWatchdogSource);
+    }
+}
+
+static void ConnectionOpened() {
+    dispatch_sync(gWatchdogQueue, ^{
+        CancelWatchdog();
+        
+        gNumConnections++;
+    });
+}
+
+static void ConnectionFinished() {
+    dispatch_sync(gWatchdogQueue, ^{
+        CancelWatchdog();
+        
+        if (gNumConnections > 0) {
+            gNumConnections--;
+        }
+        
+        if (gNumConnections == 0) {
+            RestartWatchdog();
+        }
+    });
+}
+
 // for serializing / deserializing errors
 
 static CFDictionaryRef SJBXCreateErrorDictFromCFError(CFErrorRef error) {
@@ -240,15 +309,13 @@ static bool HandleEvent(
     xpc_type_t type = xpc_get_type(event);
     
     if (type == XPC_TYPE_ERROR) {
-        syslog(LOG_NOTICE, "An error occurred");
-        
 		if (event == XPC_ERROR_CONNECTION_INVALID) {
 			// The client process on the other end of the connection has either
 			// crashed or cancelled the connection. After receiving this error,
 			// the connection is in an invalid state, and you do not need to
 			// call xpc_connection_cancel(). Just tear down any associated state
 			// here.
-            syslog(LOG_NOTICE, "Invalid connection");
+            syslog(LOG_NOTICE, "connection went invalid");
 		} else if (event == XPC_ERROR_TERMINATION_IMMINENT) {
             syslog(LOG_NOTICE, "Termination imminent");
 			// Handle per-connection termination cleanup.
@@ -464,7 +531,8 @@ extern int SJBXHelperToolMain(
                               CFStringRef               helperID,
                               CFStringRef               appID,
                               const SJBXCommandSpec		commands[],
-                              const SJBXCommandProc		commandProcs[]
+                              const SJBXCommandProc		commandProcs[],
+                              unsigned int              timeoutInterval
                               )
 // See comment in header.
 {
@@ -481,6 +549,9 @@ extern int SJBXHelperToolMain(
     
     SJBXSetDefaultRules(commands, appID, NULL);
     
+    // set up the watchdog stuff
+    InitWatchdog(timeoutInterval);
+    
     // Set up XPC service.
     
     if ( ! CFStringGetFileSystemRepresentation(helperID, helperIDC, sizeof(helperIDC)) ) {
@@ -495,7 +566,11 @@ extern int SJBXHelperToolMain(
     }
     
     xpc_connection_set_event_handler(service, ^(xpc_object_t connection) {
+        ConnectionOpened();
+        
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
+            ConnectionOpened();
+            
             CFErrorRef thisConnectionError = NULL;
             bool success = HandleEvent(commands, commandProcs, event, &thisConnectionError);
             
@@ -506,16 +581,24 @@ extern int SJBXHelperToolMain(
                 
                 CFRelease(errorDesc);
             }
+            
+            ConnectionFinished();
         });
         
         xpc_connection_resume(connection);
+        
+        ConnectionFinished();
 	});
     
     xpc_connection_resume(service);
-    
+
     dispatch_main();
     
+    // we'll never get here, but eh, release stuff anyway
+    
     xpc_release(service);
+    
+    CleanupWatchdog();
     
     return EXIT_SUCCESS;
 }
