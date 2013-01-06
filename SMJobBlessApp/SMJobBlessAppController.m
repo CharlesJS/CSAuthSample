@@ -57,6 +57,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 @property (nonatomic, assign)	IBOutlet NSTextField* textField;
 
 @property (retain)              SJBXCommandSender *commandSender;
+@property                       BOOL helperIsReady;
 
 - (IBAction)getVersion:(id)sender;
 - (IBAction)doSecretSpyStuff:(id)sender;
@@ -86,6 +87,8 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     NSError *error = nil;
     
+    self.helperIsReady = NO;
+    
     self.commandSender = [[SJBXCommandSender alloc] initWithCommandSet:kSampleCommandSet helperID:@kSampleHelperID error:&error];
     
     if (self.commandSender == nil) {
@@ -101,6 +104,8 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
                 [self appendLog:[NSString stringWithFormat:@"Failed to bless helper. Error: %@", blessError]];
                 return;
             }
+            
+            self.helperIsReady = YES;
         }
     
         self.textField.stringValue = @"Helper available.";
@@ -130,6 +135,11 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (void)sendRequest:(NSDictionary *)request errorHandler:(void (^)(NSError *))errorHandler replyHandler:(void (^)(NSDictionary *))replyHandler {
+    if (!self.helperIsReady) {
+        [self appendLog:@"Not sending request: Helper is not yet ready"];
+        return;
+    }
+    
     [self appendLog:[NSString stringWithFormat:@"Sending request: %@", request[@kSJBXCommandKey]]];
     
     [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:replyHandler];
@@ -148,7 +158,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         handler(-1, error);
     };
     
-    [self sendRequest:request errorHandler:errorHandler replyHandler:replyHandler];
+    [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:replyHandler];
 }
 
 - (IBAction)getVersion:(id)sender {
