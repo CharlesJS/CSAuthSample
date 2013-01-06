@@ -395,7 +395,21 @@ CFErrorRef *				error
  @functiongroup  Utilities
  */
 
-extern CFStringRef const kSJBXErrorDomainAuthorization;
+// Error domain for errors originating in the Security framework.
+extern CFStringRef const kSJBXErrorDomainSecurity;
+
+// Our very own error domain.
+extern CFStringRef const kSJBXErrorDomain;
+
+// Possible errors that could be returned with kSJBXErrorDomain.
+
+enum {
+    kSJBXErrorSuccess,
+    kSJBXErrorConnectionInterrupted,
+    kSJBXErrorConnectionInvalid,
+    kSJBXErrorUnexpectedConnection,
+    kSJBXErrorUnexpectedEvent
+};
 
 extern CFErrorRef SJBXCreateCFErrorFromErrno(int errNum);
 extern CFErrorRef SJBXCreateCFErrorFromCarbonError(OSStatus err);

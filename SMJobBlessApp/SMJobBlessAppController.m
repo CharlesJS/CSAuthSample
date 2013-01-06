@@ -92,7 +92,9 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
     }
     
     [self requestHelperVersion:^(int64_t version, NSError *error) {
-        if (error != nil || version != SMJOBBLESSHELPER_VERSION) {
+        if (error == nil && version == SMJOBBLESSHELPER_VERSION) {
+            self.helperIsReady = YES;
+        } else {
             NSError *blessError = nil;
             
             if (![self.commandSender blessHelperToolAndReturnError:&blessError]) {
@@ -123,7 +125,32 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 - (void)sendRequest:(NSDictionary *)request replyHandler:(void (^)(NSDictionary *))replyHandler {
     void (^errorHandler)(NSError *) = ^(NSError *error) {
-        [self appendLog:[NSString stringWithFormat:@"An error occurred when sending the request: %@", error]];
+        NSString *log = nil;
+        
+        if ([error.domain isEqualToString:(__bridge NSString *)kSJBXErrorDomain]) {
+            switch (error.code) {
+                case kSJBXErrorConnectionInterrupted:
+                    log = @"XPC connection interupted.";
+                    break;
+                case kSJBXErrorConnectionInvalid:
+                    log = @"XPC connection invalid, releasing.";
+                    break;
+                case kSJBXErrorUnexpectedConnection:
+                    log = @"Unexpected XPC connection error.";
+                    break;
+                case kSJBXErrorUnexpectedEvent:
+                    log = @"Unexpected XPC connection event.";
+                    break;
+                default:
+                    break;
+            }
+        }
+        
+        if (log == nil) {
+            log = [NSString stringWithFormat:@"An error occurred when sending the request: %@", error];
+        }
+        
+        [self appendLog:log];
     };
     
     [self sendRequest:request errorHandler:errorHandler replyHandler:replyHandler];

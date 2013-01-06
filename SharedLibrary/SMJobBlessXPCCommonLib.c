@@ -77,7 +77,8 @@
 
 #define kSJBXMaxNumberOfKBytes			(1024 * 1024)
 
-CFStringRef const kSJBXErrorDomainAuthorization = CFSTR("kSJBXDomainAuthorization");
+CFStringRef const kSJBXErrorDomainSecurity = CFSTR("kSJBXDomainAuthorization");
+CFStringRef const kSJBXErrorDomain = CFSTR("kSJBXErrorDomain");
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Common Code
@@ -154,7 +155,7 @@ extern CFErrorRef SJBXCreateCFErrorFromSecurityError(OSStatus err) {
                                                       &kCFTypeDictionaryKeyCallBacks,
                                                       &kCFTypeDictionaryValueCallBacks);
         
-        CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kSJBXErrorDomainAuthorization, err, userInfo);
+        CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kSJBXErrorDomainSecurity, err, userInfo);
         
         CFRelease(userInfo);
         CFRelease(errStr);

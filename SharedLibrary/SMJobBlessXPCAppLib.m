@@ -222,18 +222,16 @@
             
             if (type == XPC_TYPE_ERROR) {
                 if (event == XPC_ERROR_CONNECTION_INTERRUPTED) {
-                    //[self appendLog:@"XPC connection interupted."];
-                    
+                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kSJBXErrorDomain) code:kSJBXErrorConnectionInterrupted userInfo:nil]);
                 } else if (event == XPC_ERROR_CONNECTION_INVALID) {
-                    //[self appendLog:@"XPC connection invalid, releasing."];
                     RELEASE_XPC(connection);
-                    
+                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kSJBXErrorDomain) code:kSJBXErrorConnectionInvalid userInfo:nil]);
                 } else {
-                    //[self appendLog:@"Unexpected XPC connection error."];
+                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kSJBXErrorDomain) code:kSJBXErrorUnexpectedConnection userInfo:nil]);
                 }
                 
             } else {
-                //[self appendLog:@"Unexpected XPC connection event."];
+                errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kSJBXErrorDomain) code:kSJBXErrorUnexpectedEvent userInfo:nil]);
             }
         });
         
