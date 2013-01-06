@@ -54,9 +54,9 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 @interface SMJobBlessAppController ()
 
-@property (nonatomic, assign)	IBOutlet NSTextField* textField;
+@property (nonatomic, weak)	IBOutlet NSTextField* textField;
 
-@property (retain)              SJBXCommandSender *commandSender;
+@property (strong)              SJBXCommandSender *commandSender;
 @property                       BOOL helperIsReady;
 
 - (IBAction)getVersion:(id)sender;
@@ -73,11 +73,6 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 @implementation SMJobBlessAppController {
     AuthorizationRef _authRef;
-}
-
-- (void)dealloc {
-    [_commandSender release];
-    [super dealloc];
 }
 
 - (void)appendLog:(NSString *)log {

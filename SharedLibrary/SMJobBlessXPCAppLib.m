@@ -50,6 +50,34 @@
 #import <ServiceManagement/ServiceManagement.h>
 #import <Security/Authorization.h>
 
+#ifndef __has_feature
+#define __has_feature(x) 0
+#endif
+
+#if __has_feature(objc_arc)
+#define USING_ARC           1
+#endif
+
+#if USING_ARC
+#define RELEASE(x)
+#define BRIDGE(type, var)   ((__bridge type)(var))
+#define BRIDGING_RETAIN(x)  CFBridgingRetain(x)
+#define BRIDGING_RELEASE(x) CFBridgingRelease(x)
+#define SUPER_DEALLOC
+#else
+#define RELEASE(x)          [(x) release]
+#define BRIDGE(type, var)   ((type)var)
+#define BRIDGING_RETAIN(x)  ((CFTypeRef)[x retain])
+#define BRIDGING_RELEASE(x) [(id)(x) autorelease]
+#define SUPER_DEALLOC       [super dealloc]
+#endif
+
+#if USING_ARC && OS_OBJECT_USE_OBJC_RETAIN_RELEASE
+#define RELEASE_XPC(x)
+#else
+#define RELEASE_XPC(x)      xpc_release(x)
+#endif
+
 @interface SJBXCommandSender ()
 
 @property (copy) NSString *helperID;
@@ -72,14 +100,14 @@
     OSStatus err = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &_authRef);
     
     if (err != errSecSuccess) {
-        if (error) *error = [(NSError *)SJBXCreateCFErrorFromSecurityError(err) autorelease];
-        [self release];
+        if (error) *error = (NSError *)BRIDGING_RELEASE(SJBXCreateCFErrorFromSecurityError(err));
+        RELEASE(self);
         return nil;
     }
     
     if (_authRef == NULL || helperID == nil || commands == NULL || commands[0].commandName == NULL) { // there must be at least one command
         if (error) *error = [NSError errorWithDomain:NSPOSIXErrorDomain code:EINVAL userInfo:nil];
-        [self release];
+        RELEASE(self);
         return nil;
     }
     
@@ -92,10 +120,9 @@
 - (void)dealloc {
     [self cleanUp];
     
-    [_helperID release];
-    _helperID = nil;
+    RELEASE(_helperID);
     
-    [super dealloc];
+    SUPER_DEALLOC;
 }
 
 - (void)cleanUp {
@@ -119,23 +146,22 @@
 	/* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
 	OSStatus status = AuthorizationCreate(&authRights, kAuthorizationEmptyEnvironment, flags, &_authRef);
 	if (status != errAuthorizationSuccess) {
-        if (error) *error = [(NSError *)SJBXCreateCFErrorFromSecurityError(status) autorelease];
+        if (error) *error = (NSError *)BRIDGING_RELEASE(SJBXCreateCFErrorFromSecurityError(status));
         success = NO;
 	} else {
         CFErrorRef smError = NULL;
         
-        SMJobRemove(kSMDomainSystemLaunchd, (CFStringRef)self.helperID, _authRef, YES, NULL);
+        SMJobRemove(kSMDomainSystemLaunchd, BRIDGE(CFStringRef, self.helperID), _authRef, YES, NULL);
         
         /* This does all the work of verifying the helper tool against the application
 		 * and vice-versa. Once verification has passed, the embedded launchd.plist
 		 * is extracted and placed in /Library/LaunchDaemons and then loaded. The
 		 * executable is placed in /Library/PrivilegedHelperTools.
 		 */
-		success = SMJobBless(kSMDomainSystemLaunchd, (CFStringRef)self.helperID, _authRef, &smError);
+		success = SMJobBless(kSMDomainSystemLaunchd, BRIDGE(CFStringRef, self.helperID), _authRef, &smError);
         
         if (!success) {
-            if (error) *error = (NSError *)smError;
-            [(NSError *)smError autorelease];
+            if (error) *error = BRIDGING_RELEASE(smError);
         }
     }
 	
@@ -164,7 +190,7 @@
     // single threaded, so if it's waiting for an authentication dialog for user A
     // it can't handle requests from user B.
     
-    success = FindCommand((CFDictionaryRef)request, _commands, &commandIndex, &error);
+    success = FindCommand(BRIDGE(CFDictionaryRef, request), _commands, &commandIndex, &error);
     
     if ( success && (_commands[commandIndex].rightName != NULL) ) {
         AuthorizationItem   item   = { _commands[commandIndex].rightName, 0, NULL, 0 };
@@ -200,7 +226,7 @@
                     
                 } else if (event == XPC_ERROR_CONNECTION_INVALID) {
                     //[self appendLog:@"XPC connection invalid, releasing."];
-                    xpc_release(connection);
+                    RELEASE_XPC(connection);
                     
                 } else {
                     //[self appendLog:@"Unexpected XPC connection error."];
@@ -243,7 +269,7 @@
     // Write the request.
     
 	if (success) {
-		success = SJBXWriteDictionary((CFDictionaryRef)request, message, (CFErrorRef *)&error);
+		success = SJBXWriteDictionary(BRIDGE(CFDictionaryRef, request), message, (CFErrorRef *)&error);
 	}
 	
     // Send request.
@@ -267,10 +293,10 @@
             }
             
             if (sendSuccess) {
-                responseHandler((NSDictionary *)sendResponse);
+                responseHandler(BRIDGE(NSDictionary *, sendResponse));
                 CFRelease(sendResponse);
             } else {
-                errorHandler((NSError *)sendError);
+                errorHandler(BRIDGE(NSError *, sendError));
                 CFRelease(sendError);
             }
         });
@@ -279,7 +305,7 @@
     // If something failed, let the user know.
     
     if (!success) {
-        errorHandler((NSError *)error);
+        errorHandler(BRIDGE(NSError *, error));
         CFRelease(error);
     }
 }
