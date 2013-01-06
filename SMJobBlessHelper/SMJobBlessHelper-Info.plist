@@ -12,7 +12,7 @@
 	<string>1.0</string>
 	<key>SMAuthorizedClients</key>
 	<array>
-		<string>identifier com.charlessoft.SMJobBlessXPC and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
+		<string>anchor apple generic and identifier com.charlessoft.SMJobBlessXPC and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
 	</array>
 </dict>
 </plist>

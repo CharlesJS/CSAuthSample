@@ -23,7 +23,7 @@
 	<key>SMPrivilegedExecutables</key>
 	<dict>
 		<key>com.charlessoft.SMJobBlessXPC.helper</key>
-		<string>identifier com.charlessoft.SMJobBlessXPC.helper and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
+		<string>anchor apple generic and identifier com.charlessoft.SMJobBlessXPC.helper and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
 	</dict>
 </dict>
 </plist>
