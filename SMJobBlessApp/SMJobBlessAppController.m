@@ -48,8 +48,6 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
  
 */
 
-#import <ServiceManagement/ServiceManagement.h>
-#import <Security/Authorization.h>
 #import "SMJobBlessAppController.h"
 #include "SMJobBlessXPCAppLib.h"
 #include "SampleCommon.h"
@@ -58,10 +56,10 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 @property (nonatomic, assign)	IBOutlet NSTextField* textField;
 
+@property (retain)              SJBXCommandSender *commandSender;
+
 - (IBAction)getVersion:(id)sender;
 - (IBAction)doSecretSpyStuff:(id)sender;
-
-- (BOOL)blessHelperWithLabel:(NSString *)label error:(NSError **)error;
 
 - (void)requestHelperVersion:(void (^)(int64_t version, NSError *error))handler;
 
@@ -76,15 +74,22 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
     AuthorizationRef _authRef;
 }
 
+- (void)dealloc {
+    [_commandSender release];
+    [super dealloc];
+}
+
 - (void)appendLog:(NSString *)log {
     self.textField.stringValue = [self.textField.stringValue stringByAppendingFormat:@"\n%@", log];
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
-    OSStatus err = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &_authRef);
+    NSError *error = nil;
     
-    if (err != errAuthorizationSuccess) {
-        [self appendLog:[NSString stringWithFormat:@"Failed to create AuthorizationRef. Error %ld", (long)err]];
+    self.commandSender = [[SJBXCommandSender alloc] initWithCommandSet:kSampleCommandSet helperID:@kSampleHelperID error:&error];
+    
+    if (self.commandSender == nil) {
+        [self appendLog:[NSString stringWithFormat:@"Failed to create AuthorizationRef. Error %@", error]];
         return;
     }
     
@@ -92,7 +97,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         if (error != nil || version != SMJOBBLESSHELPER_VERSION) {
             NSError *blessError = nil;
             
-            if (![self blessHelperWithLabel:@kSampleHelperID error:&blessError]) {
+            if (![self.commandSender blessHelperToolAndReturnError:&blessError]) {
                 [self appendLog:[NSString stringWithFormat:@"Failed to bless helper. Error: %@", blessError]];
                 return;
             }
@@ -103,38 +108,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
-    if (_authRef != NULL) {
-        AuthorizationFree(_authRef, kAuthorizationFlagDestroyRights);
-        _authRef = NULL;
-    }
-}
-
-- (BOOL)blessHelperWithLabel:(NSString *)label error:(NSError **)error {
-	BOOL result = NO;
-
-	AuthorizationItem authItem		= { kSMRightBlessPrivilegedHelper, 0, NULL, 0 };
-	AuthorizationRights authRights	= { 1, &authItem };
-	AuthorizationFlags flags		=	kAuthorizationFlagDefaults				| 
-										kAuthorizationFlagInteractionAllowed	|
-										kAuthorizationFlagPreAuthorize			|
-										kAuthorizationFlagExtendRights;
-	
-	/* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
-	OSStatus status = AuthorizationCreate(&authRights, kAuthorizationEmptyEnvironment, flags, &_authRef);
-	if (status != errAuthorizationSuccess) {
-        [self appendLog:[NSString stringWithFormat:@"Failed to create AuthorizationRef. Error code: %ld", (long)status]];
-	} else {
-        SMJobRemove(kSMDomainSystemLaunchd, (CFStringRef)label, _authRef, YES, NULL);
-    
-        /* This does all the work of verifying the helper tool against the application
-		 * and vice-versa. Once verification has passed, the embedded launchd.plist
-		 * is extracted and placed in /Library/LaunchDaemons and then loaded. The
-		 * executable is placed in /Library/PrivilegedHelperTools.
-		 */
-		result = SMJobBless(kSMDomainSystemLaunchd, (CFStringRef)label, _authRef, (CFErrorRef *)error);
-    }
-	
-	return result;
+    [self.commandSender cleanUp];
 }
 
 - (void)sendRequest:(NSDictionary *)request {
@@ -158,7 +132,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 - (void)sendRequest:(NSDictionary *)request errorHandler:(void (^)(NSError *))errorHandler replyHandler:(void (^)(NSDictionary *))replyHandler {
     [self appendLog:[NSString stringWithFormat:@"Sending request: %@", request[@kSJBXCommandKey]]];
     
-    SJBXExecuteRequestInHelperTool(_authRef, kSampleCommandSet, @kSampleHelperID, request, errorHandler, replyHandler);
+    [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:replyHandler];
 }
 
 - (void)requestHelperVersion:(void (^)(int64_t, NSError *))handler {

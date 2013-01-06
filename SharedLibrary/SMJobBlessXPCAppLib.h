@@ -49,12 +49,17 @@
 #import <Foundation/Foundation.h>
 #include "SMJobBlessXPCCommonLib.h"
 
-/////////////////////////////////////////////////////////////////
-#pragma mark ***** Application Routines
+typedef void (^SJBXErrorHandler)(NSError *error);
+typedef void (^SJBXResponseHandler)(NSDictionary *response);
 
-/*!
- @functiongroup  Application Routines
- */
+@interface SJBXCommandSender : NSObject
+
+- (instancetype)initWithCommandSet:(const SJBXCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error;
+
+// Make sure this is called before your application exits.
+- (void)cleanUp;
+
+- (BOOL)blessHelperToolAndReturnError:(NSError **)error;
 
 /*!
  @function       SJBXExecuteRequestInHelperTool
@@ -110,11 +115,6 @@
  @result			An OSStatus code (see SJBXErrnoToOSStatus and SJBXOSStatusToErrno).
  */
 
-extern void SJBXExecuteRequestInHelperTool(
-                                           AuthorizationRef			auth,
-                                           const SJBXCommandSpec	commands[],
-                                           NSString *				bundleID,
-                                           NSDictionary *			request,
-                                           void                      (^errorHandler)(NSError *error),
-                                           void                      (^replyHandler)(NSDictionary *response)
-                                           );
+- (void)executeRequestInHelperTool:(NSDictionary *)request errorHandler:(SJBXErrorHandler)errorHandler responseHandler:(SJBXResponseHandler)responseHandler;
+
+@end

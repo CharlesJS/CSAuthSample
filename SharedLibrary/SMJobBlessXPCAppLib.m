@@ -47,17 +47,102 @@
  */
 
 #import "SMJobBlessXPCAppLib.h"
+#import <ServiceManagement/ServiceManagement.h>
+#import <Security/Authorization.h>
 
-extern void SJBXExecuteRequestInHelperTool(
-                                           AuthorizationRef			auth,
-                                           const SJBXCommandSpec	commands[],
-                                           NSString *				bundleID,
-                                           NSDictionary *			request,
-                                           void                      (^errorHandler)(NSError *error),
-                                           void                      (^replyHandler)(NSDictionary *response)
-                                           )
-// See comment in header.
-{
+@interface SJBXCommandSender ()
+
+@property (copy) NSString *helperID;
+
+@end
+
+@implementation SJBXCommandSender {
+    AuthorizationRef _authRef;
+    const SJBXCommandSpec *_commands;
+}
+
+- (instancetype)initWithCommandSet:(const SJBXCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error {
+    self = [super init];
+    
+    if (self == nil) {
+        if (error) *error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileReadUnknownError userInfo:nil];
+        return nil;
+    }
+    
+    OSStatus err = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &_authRef);
+    
+    if (err != errSecSuccess) {
+        if (error) *error = [(NSError *)SJBXCreateCFErrorFromSecurityError(err) autorelease];
+        [self release];
+        return nil;
+    }
+    
+    if (_authRef == NULL || helperID == nil || commands == NULL || commands[0].commandName == NULL) { // there must be at least one command
+        if (error) *error = [NSError errorWithDomain:NSPOSIXErrorDomain code:EINVAL userInfo:nil];
+        [self release];
+        return nil;
+    }
+    
+    _commands = commands;
+    _helperID = [helperID copy];
+    
+    return self;
+}
+
+- (void)dealloc {
+    [self cleanUp];
+    
+    [_helperID release];
+    _helperID = nil;
+    
+    [super dealloc];
+}
+
+- (void)cleanUp {
+    if (_authRef != NULL) {
+        // destroy rights for a little added security
+        AuthorizationFree(_authRef, kAuthorizationFlagDestroyRights);
+    }
+}
+
+- (BOOL)blessHelperToolAndReturnError:(NSError **)error {
+	BOOL success = NO;
+    
+	AuthorizationItem authItem		= { kSMRightBlessPrivilegedHelper, 0, NULL, 0 };
+	AuthorizationRights authRights	= { 1, &authItem };
+	AuthorizationFlags flags		= (kAuthorizationFlagDefaults             |
+                                       kAuthorizationFlagInteractionAllowed	|
+                                       kAuthorizationFlagPreAuthorize			|
+                                       kAuthorizationFlagExtendRights
+                                       );
+	
+	/* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
+	OSStatus status = AuthorizationCreate(&authRights, kAuthorizationEmptyEnvironment, flags, &_authRef);
+	if (status != errAuthorizationSuccess) {
+        if (error) *error = [(NSError *)SJBXCreateCFErrorFromSecurityError(status) autorelease];
+        success = NO;
+	} else {
+        CFErrorRef smError = NULL;
+        
+        SMJobRemove(kSMDomainSystemLaunchd, (CFStringRef)self.helperID, _authRef, YES, NULL);
+        
+        /* This does all the work of verifying the helper tool against the application
+		 * and vice-versa. Once verification has passed, the embedded launchd.plist
+		 * is extracted and placed in /Library/LaunchDaemons and then loaded. The
+		 * executable is placed in /Library/PrivilegedHelperTools.
+		 */
+		success = SMJobBless(kSMDomainSystemLaunchd, (CFStringRef)self.helperID, _authRef, &smError);
+        
+        if (!success) {
+            if (error) *error = (NSError *)smError;
+            [(NSError *)smError autorelease];
+        }
+    }
+	
+	return success;
+}
+
+- (void)executeRequestInHelperTool:(NSDictionary *)request errorHandler:(SJBXErrorHandler)errorHandler responseHandler:(SJBXResponseHandler)responseHandler {
     bool                        success = true;
     size_t                      commandIndex;
 	AuthorizationExternalForm	extAuth;
@@ -67,11 +152,7 @@ extern void SJBXExecuteRequestInHelperTool(
 	
 	// Pre-conditions
 	
-	assert(auth != NULL);
-	assert(commands != NULL);
-	assert(commands[0].commandName != NULL);        // there must be at least one command
-    assert(bundleID != NULL);
-	assert(request != NULL);
+	assert(request != nil);
     
 	// For debugging.
     
@@ -83,13 +164,13 @@ extern void SJBXExecuteRequestInHelperTool(
     // single threaded, so if it's waiting for an authentication dialog for user A
     // it can't handle requests from user B.
     
-    success = FindCommand((CFDictionaryRef)request, commands, &commandIndex, &error);
+    success = FindCommand((CFDictionaryRef)request, _commands, &commandIndex, &error);
     
-    if ( success && (commands[commandIndex].rightName != NULL) ) {
-        AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
+    if ( success && (_commands[commandIndex].rightName != NULL) ) {
+        AuthorizationItem   item   = { _commands[commandIndex].rightName, 0, NULL, 0 };
         AuthorizationRights rights = { 1, &item };
         
-        OSStatus authErr = AuthorizationCopyRights(auth, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagPreAuthorize, NULL);
+        OSStatus authErr = AuthorizationCopyRights(_authRef, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagPreAuthorize, NULL);
         
         if (authErr != errSecSuccess) {
             success = false;
@@ -100,7 +181,7 @@ extern void SJBXExecuteRequestInHelperTool(
     // Open the XPC connection.
         
 	if (success) {
-		connection = xpc_connection_create_mach_service(bundleID.fileSystemRepresentation, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
+		connection = xpc_connection_create_mach_service(self.helperID.fileSystemRepresentation, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
 		if (connection == NULL) {
             success = false;
             error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
@@ -147,7 +228,7 @@ extern void SJBXExecuteRequestInHelperTool(
     // Send the flattened AuthorizationRef to the tool.
     
     if (success) {
-        OSStatus authErr = AuthorizationMakeExternalForm(auth, &extAuth);
+        OSStatus authErr = AuthorizationMakeExternalForm(_authRef, &extAuth);
         
         if (authErr != errSecSuccess) {
             success = false;
@@ -186,7 +267,7 @@ extern void SJBXExecuteRequestInHelperTool(
             }
             
             if (sendSuccess) {
-                replyHandler((NSDictionary *)sendResponse);
+                responseHandler((NSDictionary *)sendResponse);
                 CFRelease(sendResponse);
             } else {
                 errorHandler((NSError *)sendError);
@@ -202,3 +283,5 @@ extern void SJBXExecuteRequestInHelperTool(
         CFRelease(error);
     }
 }
+
+@end
