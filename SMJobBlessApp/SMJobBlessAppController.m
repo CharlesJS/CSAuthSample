@@ -58,6 +58,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 @property (strong)              SJBXCommandSender *commandSender;
 @property                       BOOL helperIsReady;
+@property                       BOOL alreadyBlessingHelper;
 
 - (IBAction)getVersion:(id)sender;
 - (IBAction)doSecretSpyStuff:(id)sender;
@@ -93,19 +94,30 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
     
     [self requestHelperVersion:^(int64_t version, NSError *error) {
         if (error == nil && version == SMJOBBLESSHELPER_VERSION) {
+            self.textField.stringValue = @"Helper available.";
             self.helperIsReady = YES;
         } else {
-            NSError *blessError = nil;
-            
-            if (![self.commandSender blessHelperToolAndReturnError:&blessError]) {
-                [self appendLog:[NSString stringWithFormat:@"Failed to bless helper. Error: %@", blessError]];
-                return;
-            }
-            
-            self.helperIsReady = YES;
+            [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+                // To prevent a re-bless if the connection happens to throw more errors and invoke this block again.
+                // Running this on the main queue will prevent any race conditions that could be caused by having two
+                // iterations of this block running at the same time.
+                if (self.alreadyBlessingHelper) {
+                    return;
+                }
+                
+                self.alreadyBlessingHelper = YES;
+                
+                NSError *blessError = nil;
+                
+                if (![self.commandSender blessHelperToolAndReturnError:&blessError]) {
+                    [self appendLog:[NSString stringWithFormat:@"Failed to bless helper. Error: %@", blessError]];
+                    return;
+                }
+                
+                self.textField.stringValue = @"Helper available.";
+                self.helperIsReady = YES;
+            }];
         }
-    
-        self.textField.stringValue = @"Helper available.";
     }];
 }
 
