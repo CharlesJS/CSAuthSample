@@ -416,10 +416,11 @@ CFErrorRef *				error
  */
 
 extern int SJBXHelperToolMain(
-                                 CFStringRef                    helperID,
-                                 const SJBXCommandSpec		commands[],
-                                 const SJBXCommandProc		commandProcs[]
-                                 );
+                              CFStringRef               helperID,
+                              CFStringRef               appID,
+                              const SJBXCommandSpec		commands[],
+                              const SJBXCommandProc		commandProcs[]
+                              );
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Application Routines
@@ -427,59 +428,6 @@ extern int SJBXHelperToolMain(
 /*!
  @functiongroup  Application Routines
  */
-
-/*!
- @function       SJBXSetDefaultRules
- 
- @abstract       Creates default right specifications in the policy database.
- 
- @discussion     This routine ensures that the policy database (currently
- "/etc/authorization") contains right specifications for all of the rights
- that you use (as specified by the commands array).  This has two important
- consequences:
- 
- 1. It makes the rights that you use visible to the system administrator.
- All they have to do is run your program once and they can see your default
- right specifications in the policy database.
- 
- 2. It means that, when the privileged helper tool tries to acquire the right,
- it will use your specification of the right (as modified by the system
- administrator) rather than the default right specification.
- 
- You must call this function before calling SJBXExecuteRequestInHelperTool.
- Typically you would call it at application startup time, or lazily, immediately
- before calling SJBXExecuteRequestInHelperTool.
- 
- @param auth     A reference to your program's authorization instance; you typically get this
- by calling AuthorizationCreate.
- 
- This must not be NULL.
- 
- @param commands An array that describes the commands that you implement, and their associated
- rights.  There must be at least one valid command.
- 
- @param bundleID The bundle identifier for your program.
- 
- This must not be NULL.
- 
- @param descriptionStringTableName
- The name of the .strings file from which to fetch the localised custom
- prompts for the rights in the commands array (if any).  A NULL value is
- equivalent to passing "Localizable" (that is, it gets the prompts from
- "Localizable.strings").
- 
- For example, imagine you have a command for which you require a custom prompt.
- You should put the custom prompt in a .strings file, let's call it
- "AuthPrompts.strings".  You should then pass "AuthPrompts" to this parameter
- and put the key that gets the prompt into the rightDescriptionKey of the command.
- */
-
-extern void SJBXSetDefaultRules(
-                               AuthorizationRef			auth,
-                               const SJBXCommandSpec		commands[],
-                               CFStringRef					bundleID,
-                               CFStringRef					descriptionStringTableName
-                               );
 
 /*!
  @function       SJBXExecuteRequestInHelperTool

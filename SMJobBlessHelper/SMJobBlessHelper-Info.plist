@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>com.apple.bsd.SMJobBlessHelper</string>
+	<string>com.charlessoft.SMJobBlessXPC.helper</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -12,7 +12,7 @@
 	<string>1.0</string>
 	<key>SMAuthorizedClients</key>
 	<array>
-		<string>identifier com.apple.bsd.SMJobBlessApp and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
+		<string>identifier com.charlessoft.SMJobBlessXPC and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
 	</array>
 </dict>
 </plist>

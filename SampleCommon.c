@@ -77,8 +77,8 @@
 
 const SJBXCommandSpec kSampleCommandSet[] = {
     {	kSampleGetVersionCommand,               // commandName
-        kSampleGetVersionRightName,                      // rightName           -- never authorize
-        kSJBXRuleAllow,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
+        NULL,                                   // rightName           -- never authorize
+        NULL,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
         NULL,									// rightDescriptionKey -- not applicable if rightName is NULL
         NULL                                    // userData
 	},

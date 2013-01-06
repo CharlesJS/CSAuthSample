@@ -103,6 +103,6 @@ static const SJBXCommandProc kSampleCommandProcs[] = {
 int main(int argc, const char *argv[]) {
     // Go directly into SMJobBlessXPCLib code.
 	
-	return SJBXHelperToolMain(CFSTR(kSampleHelperID), kSampleCommandSet, kSampleCommandProcs);
+	return SJBXHelperToolMain(CFSTR(kSampleHelperID), CFSTR(kSampleAppID), kSampleCommandSet, kSampleCommandProcs);
 }
 

@@ -88,8 +88,6 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         return;
     }
     
-    SJBXSetDefaultRules(_authRef, kSampleCommandSet, (CFStringRef)[NSBundle mainBundle].bundleIdentifier, NULL);
-    
     [self requestHelperVersion:^(int64_t version, NSError *error) {
         if (error != nil || version != SMJOBBLESSHELPER_VERSION) {
             NSError *blessError = nil;

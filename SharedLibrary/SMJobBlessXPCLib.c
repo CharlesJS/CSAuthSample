@@ -675,86 +675,32 @@ static bool HandleEvent(
     return success;
 }
 
-extern int SJBXHelperToolMain(
-                                 CFStringRef                    helperID,
-                                 const SJBXCommandSpec		commands[],
-                                 const SJBXCommandProc		commandProcs[]
-                                 )
+static void SJBXSetDefaultRules(
+                                const SJBXCommandSpec		commands[],
+                                CFStringRef					bundleID,
+                                CFStringRef					descriptionStringTableName
+                                )
 // See comment in header.
 {
-    char                        helperIDC[PATH_MAX];
-	
-	// Pre-conditions
-	
-	assert(commands != NULL);
-	assert(commands[0].commandName != NULL);        // there must be at least one command
-	assert(commandProcs != NULL);
-    assert( CommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
-    
-    // Set up XPC service.
-    
-    if ( ! CFStringGetFileSystemRepresentation(helperID, helperIDC, sizeof(helperIDC)) ) {
-        return EXIT_FAILURE;
-    }
-    
-    xpc_connection_t service = xpc_connection_create_mach_service(helperIDC, dispatch_get_main_queue(), XPC_CONNECTION_MACH_SERVICE_LISTENER);
-
-    if (!service) {
-        syslog(LOG_NOTICE, "Failed to create service.");
-        return EXIT_FAILURE;
-    }
-
-    xpc_connection_set_event_handler(service, ^(xpc_object_t connection) {
-        xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
-            CFErrorRef thisConnectionError = NULL;
-            bool success = HandleEvent(commands, commandProcs, event, &thisConnectionError);
-            
-            if (!success) {
-                CFStringRef errorDesc = CFCopyDescription(thisConnectionError);
-                
-                syslog(LOG_NOTICE, "Request failed: %s", CFStringGetCStringPtr(errorDesc, kCFStringEncodingUTF8));
-                
-                CFRelease(errorDesc);
-            }
-        });
-        
-        xpc_connection_resume(connection);
-	});
-    
-    xpc_connection_resume(service);
-
-    dispatch_main();
-    
-    xpc_release(service);
-    
-    return EXIT_SUCCESS;
-}
-
-/////////////////////////////////////////////////////////////////
-#pragma mark ***** App Code
-
-extern void SJBXSetDefaultRules(
-                                   AuthorizationRef			auth,
-                                   const SJBXCommandSpec		commands[],
-                                   CFStringRef					bundleID,
-                                   CFStringRef					descriptionStringTableName
-                                   )
-// See comment in header.
-{
+    AuthorizationRef            auth;
 	OSStatus					err;
-    CFBundleRef                 bundle;
+    CFBundleRef                 bundle = NULL;
 	size_t						commandIndex;
 	
 	// Pre-conditions
 	
-	assert(auth != NULL);
 	assert(commands != NULL);
 	assert(commands[0].commandName != NULL);        // there must be at least one command
-	assert(bundleID != NULL);
+	// it's not the end of the world if bundleID is NULL
     // descriptionStringTableName may be NULL
     
-    bundle = CFBundleGetBundleWithIdentifier(bundleID);
-    assert(bundle != NULL);
+    if (bundleID != NULL) {
+        bundle = CFBundleGetBundleWithIdentifier(bundleID);
+    }
+    
+    // set up the AuthorizationRef
+    
+    assert(AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &auth) == errSecSuccess);
 	
     // For each command, set up the default authorization right specification, as
     // indicated by the command specification.
@@ -789,7 +735,9 @@ extern void SJBXSetDefaultRules(
             // (even if they're to wrong or outdated rights), the rights will not be corrected.
             // I, however, want to change the rights if they're not what I want them to be, so check against
             // that and set the rights if something's amiss. Note that the drawback of this is that it can
-            // cause annoying password prompts to show up.
+            // cause annoying password prompts to show up if run from the app, so do this in the helper tool
+            // instead. This should be more secure anyway, as it is only run from the (hopefully) incorruptible
+            // helper tool code.
             
             if (err == errAuthorizationDenied) {
                 rightNeedsChanging = true;
@@ -854,7 +802,72 @@ extern void SJBXSetDefaultRules(
         }
         commandIndex += 1;
 	}
+    
+    AuthorizationFree(auth, kAuthorizationFlagDefaults);
 }
+
+extern int SJBXHelperToolMain(
+                              CFStringRef               helperID,
+                              CFStringRef               appID,
+                              const SJBXCommandSpec		commands[],
+                              const SJBXCommandProc		commandProcs[]
+                              )
+// See comment in header.
+{
+    char                        helperIDC[PATH_MAX];
+	
+	// Pre-conditions
+	
+	assert(commands != NULL);
+	assert(commands[0].commandName != NULL);        // there must be at least one command
+	assert(commandProcs != NULL);
+    assert( CommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
+    
+    // Set up default rules which other processes must follow to communicate with this tool.
+    
+    SJBXSetDefaultRules(commands, appID, NULL);
+    
+    // Set up XPC service.
+    
+    if ( ! CFStringGetFileSystemRepresentation(helperID, helperIDC, sizeof(helperIDC)) ) {
+        return EXIT_FAILURE;
+    }
+    
+    xpc_connection_t service = xpc_connection_create_mach_service(helperIDC, dispatch_get_main_queue(), XPC_CONNECTION_MACH_SERVICE_LISTENER);
+
+    if (!service) {
+        syslog(LOG_NOTICE, "Failed to create service.");
+        return EXIT_FAILURE;
+    }
+
+    xpc_connection_set_event_handler(service, ^(xpc_object_t connection) {
+        xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
+            CFErrorRef thisConnectionError = NULL;
+            bool success = HandleEvent(commands, commandProcs, event, &thisConnectionError);
+            
+            if (!success) {
+                CFStringRef errorDesc = CFCopyDescription(thisConnectionError);
+                
+                syslog(LOG_NOTICE, "Request failed: %s", CFStringGetCStringPtr(errorDesc, kCFStringEncodingUTF8));
+                
+                CFRelease(errorDesc);
+            }
+        });
+        
+        xpc_connection_resume(connection);
+	});
+    
+    xpc_connection_resume(service);
+
+    dispatch_main();
+    
+    xpc_release(service);
+    
+    return EXIT_SUCCESS;
+}
+
+/////////////////////////////////////////////////////////////////
+#pragma mark ***** App Code
 
 extern void SJBXExecuteRequestInHelperTool(
                                            AuthorizationRef			auth,

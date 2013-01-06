@@ -53,7 +53,8 @@
 
 #define SMJOBBLESSHELPER_VERSION	0
 
-#define kSampleHelperID                 "com.apple.bsd.SMJobBlessHelper"
+#define kSampleAppID                    "com.charlessoft.SMJobBlessXPC"
+#define kSampleHelperID                 "com.charlessoft.SMJobBlessXPC.helper"
 
 /////////////////////////////////////////////////////////////////
 

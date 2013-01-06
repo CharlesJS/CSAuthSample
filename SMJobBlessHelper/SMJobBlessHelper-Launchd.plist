@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.apple.bsd.SMJobBlessHelper</string>
+	<string>com.charlessoft.SMJobBlessXPC.helper</string>
 	<key>MachServices</key>
 	<dict>
-		<key>com.apple.bsd.SMJobBlessHelper</key>
+		<key>com.charlessoft.SMJobBlessXPC.helper</key>
 		<true/>
 	</dict>
 </dict>
