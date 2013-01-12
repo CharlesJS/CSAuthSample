@@ -98,4 +98,7 @@ extern int SJBXHelperToolMain(
                               unsigned int              timeoutInterval
                               );
 
+extern void WatchdogEnableAutomaticTermination();
+extern void WatchdogDisableAutomaticTermination();
+
 #endif

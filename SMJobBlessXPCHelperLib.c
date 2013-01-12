@@ -76,12 +76,6 @@ static void InitWatchdog(unsigned int timeoutInterval) {
     gWatchdogQueue = dispatch_queue_create("gWatchdogQueue", DISPATCH_QUEUE_SERIAL);
 }
 
-static void CleanupWatchdog() {
-    CancelWatchdog();
-    dispatch_release(gWatchdogQueue);
-    gWatchdogQueue = NULL;
-}
-
 static void ExitIfNoConnections() {
     if (gNumConnections == 0) {
         exit(0);
@@ -96,6 +90,12 @@ static void CancelWatchdog() {
     }
 }
 
+static void CleanupWatchdog() {
+    CancelWatchdog();
+    dispatch_release(gWatchdogQueue);
+    gWatchdogQueue = NULL;
+}
+
 static void RestartWatchdog() {
     if (gTimeoutInterval != 0) {
         gWatchdogSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, gWatchdogQueue);
@@ -108,28 +108,6 @@ static void RestartWatchdog() {
         
         dispatch_resume(gWatchdogSource);
     }
-}
-
-static void ConnectionOpened() {
-    dispatch_sync(gWatchdogQueue, ^{
-        CancelWatchdog();
-        
-        gNumConnections++;
-    });
-}
-
-static void ConnectionFinished() {
-    dispatch_sync(gWatchdogQueue, ^{
-        CancelWatchdog();
-        
-        if (gNumConnections > 0) {
-            gNumConnections--;
-        }
-        
-        if (gNumConnections == 0) {
-            RestartWatchdog();
-        }
-    });
 }
 
 // for serializing / deserializing errors
@@ -566,10 +544,10 @@ extern int SJBXHelperToolMain(
     }
     
     xpc_connection_set_event_handler(service, ^(xpc_object_t connection) {
-        ConnectionOpened();
+        WatchdogDisableAutomaticTermination();
         
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
-            ConnectionOpened();
+            WatchdogDisableAutomaticTermination();
             
             CFErrorRef thisConnectionError = NULL;
             bool success = HandleEvent(commands, commandProcs, event, &thisConnectionError);
@@ -582,12 +560,12 @@ extern int SJBXHelperToolMain(
                 CFRelease(errorDesc);
             }
             
-            ConnectionFinished();
+            WatchdogEnableAutomaticTermination();
         });
         
         xpc_connection_resume(connection);
         
-        ConnectionFinished();
+        WatchdogEnableAutomaticTermination();
 	});
     
     xpc_connection_resume(service);
@@ -601,4 +579,26 @@ extern int SJBXHelperToolMain(
     CleanupWatchdog();
     
     return EXIT_SUCCESS;
+}
+
+extern void WatchdogEnableAutomaticTermination() {
+    dispatch_sync(gWatchdogQueue, ^{
+        CancelWatchdog();
+        
+        if (gNumConnections > 0) {
+            gNumConnections--;
+        }
+        
+        if (gNumConnections == 0) {
+            RestartWatchdog();
+        }
+    });
+}
+
+extern void WatchdogDisableAutomaticTermination() {
+    dispatch_sync(gWatchdogQueue, ^{
+        CancelWatchdog();
+        
+        gNumConnections++;
+    });
 }
