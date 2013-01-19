@@ -72,9 +72,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 @end
 
 
-@implementation SMJobBlessAppController {
-    AuthorizationRef _authRef;
-}
+@implementation SMJobBlessAppController
 
 - (void)appendLog:(NSString *)log {
     self.textField.stringValue = [self.textField.stringValue stringByAppendingFormat:@"\n%@", log];
@@ -82,7 +80,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
     NSError *error = nil;
-    
+        
     self.helperIsReady = NO;
     
     self.commandSender = [[SJBXCommandSender alloc] initWithCommandSet:kSampleCommandSet helperID:@kSampleHelperID error:&error];
