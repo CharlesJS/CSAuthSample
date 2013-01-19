@@ -217,9 +217,6 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
 
 /*!
  Some constants defining authorization rules, for use in SampleCommon.h.
- 
- I'm not sure why SJBX never provided any of these, to be honest. They're quite handy.
- 
  */
 
 // Default rule. Credentials remain valid for 5 minutes after they've been obtained.
@@ -227,20 +224,23 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
 #define kSJBXRuleDefault                         "default"
 
 // Allow anyone.
-#define kSJBXRuleAllow                           "allow"
+#define kSJBXRuleAllow                           kAuthorizationRuleClassAllow
+
+// Deny anyone.
+#define kSJBXRuleDeny                            kAuthorizationRuleClassDeny
 
 // Authenticate as an administrator.
-#define kSJBXRuleAuthenticateAdmin               "authenticate-admin"
+#define kSJBXRuleAuthenticateAdmin               kAuthorizationRuleAuthenticateAsAdmin
 
 // Like the default rule, but credentials remain valid for only 30 seconds after they've been obtained.
 // An acquired credential is shared by all clients.
-#define kSJBXRuleAuthenticateAdmin30        	    "authenticate-admin-30"
+#define kSJBXRuleAuthenticateAdmin30        	 "authenticate-admin-30"
 
 // Authenticate as a developer.
 #define kSJBXRuleAuthenticateDeveloper           "authenticate-developer"
 
 // Authenticate as the session owner.
-#define kSJBXRuleAuthenticateSessionOwner        "authenticate-session-owner"
+#define kSJBXRuleAuthenticateSessionOwner        kAuthorizationRuleAuthenticateAsSessionUser
 
 // Authenticate either as the owner or as an administrator.
 #define kSJBXRuleAuthenticateSessionOwnerOrAdmin "authenticate-session-owner-or-admin"
@@ -249,7 +249,7 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
 #define kSJBXRuleAuthenticateSessionUser         "authenticate-session-user"
 
 // Verify that the user asking for authorization is an administrator.
-#define kSJBXRuleIsAdmin                         "is-admin"
+#define kSJBXRuleIsAdmin                         kAuthorizationRuleIsAdmin
 
 // Verify that the user asking for authorization is a developer.
 #define kSJBXRuleIsDeveloper                     "is-developer"
