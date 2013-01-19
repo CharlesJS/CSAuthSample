@@ -144,7 +144,7 @@
                                        );
 	
 	/* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
-	OSStatus status = AuthorizationCreate(&authRights, kAuthorizationEmptyEnvironment, flags, &_authRef);
+    OSStatus status = AuthorizationCopyRights(_authRef, &authRights, kAuthorizationEmptyEnvironment, flags, NULL);
 	if (status != errAuthorizationSuccess) {
         if (error) *error = (NSError *)BRIDGING_RELEASE(SJBXCreateCFErrorFromSecurityError(status));
         success = NO;
