@@ -332,7 +332,7 @@ extern bool FindCommand(
 	bool                        success = true;
     CFStringRef                 commandStr;
     char *                      command;
-	UInt32						commandSize = 0;
+	CFIndex						commandSize = 0;
 	size_t						index = 0;
 	
 	// Pre-conditions
