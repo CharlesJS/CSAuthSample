@@ -558,6 +558,7 @@ extern int CSASHelperToolMain(
                 syslog(LOG_NOTICE, "Request failed: %s", CFStringGetCStringPtr(errorDesc, kCFStringEncodingUTF8));
                 
                 CFRelease(errorDesc);
+                CFRelease(thisConnectionError);
             }
             
             WatchdogEnableAutomaticTermination();

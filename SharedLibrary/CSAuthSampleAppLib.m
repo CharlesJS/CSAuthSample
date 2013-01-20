@@ -297,6 +297,8 @@
                 errorHandler(BRIDGE(NSError *, sendError));
                 CFRelease(sendError);
             }
+            
+            RELEASE_XPC(connection);
         });
     }
     
@@ -305,6 +307,7 @@
     if (!success) {
         errorHandler(BRIDGE(NSError *, error));
         CFRelease(error);
+        RELEASE_XPC(connection);
     }
 }
 
