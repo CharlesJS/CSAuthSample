@@ -49,7 +49,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 */
 
 #import "CSASAppController.h"
-#include "CSAuthorizationSampleAppLib.h"
+#include "CSAuthSampleAppLib.h"
 #include "SampleCommon.h"
 
 @interface CSASAppController ()

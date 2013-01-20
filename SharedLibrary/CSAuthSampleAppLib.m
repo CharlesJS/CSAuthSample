@@ -46,7 +46,7 @@
  
  */
 
-#import "CSAuthorizationSampleAppLib.h"
+#import "CSAuthSampleAppLib.h"
 #import <ServiceManagement/ServiceManagement.h>
 #import <Security/Authorization.h>
 

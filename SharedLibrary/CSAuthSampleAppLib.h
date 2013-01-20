@@ -47,7 +47,7 @@
  */
 
 #import <Foundation/Foundation.h>
-#include "CSAuthorizationSampleCommonLib.h"
+#include "CSAuthSampleCommonLib.h"
 
 typedef void (^CSASErrorHandler)(NSError *error);
 typedef void (^CSASResponseHandler)(NSDictionary *response);

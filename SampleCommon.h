@@ -49,12 +49,12 @@
 #ifndef SampleCommon_h
 #define SampleCommon_h
 
-#include "CSAuthorizationSampleCommonLib.h"
+#include "CSAuthSampleCommonLib.h"
 
 #define kCSASHelperVersion	0
 
-#define kSampleAppID                "com.charlessoft.CSAuthorizationSample"
-#define kSampleHelperID             "com.charlessoft.CSAuthorizationSample.helper"
+#define kSampleAppID                "com.charlessoft.CSAuthSample"
+#define kSampleHelperID             "com.charlessoft.CSAuthSample.helper"
 
 #define kSampleTimeoutInterval      120
 
@@ -66,7 +66,7 @@
 
 #define kSampleGetVersionCommand        "GetVersion"
 
-#define kSampleGetVersionRightName      "com.example.CSAuthorizationSample.GetVersion"
+#define kSampleGetVersionRightName      "com.example.CSAuthSample.GetVersion"
 
 // request keys (none)
 
@@ -80,7 +80,7 @@
 
 // authorization right name
 
-#define kSampleSecretSpyStuffRightName	"com.example.CSAuthorizationSample.SecretSpyStuff"
+#define kSampleSecretSpyStuffRightName	"com.example.CSAuthSample.SecretSpyStuff"
 
 // request keys (none)
 

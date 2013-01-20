@@ -46,10 +46,10 @@
  
  */
 
-#ifndef CSAuthorizationSampleHelperLib_h
-#define CSAuthorizationSampleHelperLib_h
+#ifndef CSAuthSampleHelperLib_h
+#define CSAuthSampleHelperLib_h
 
-#include "CSAuthorizationSampleCommonLib.h"
+#include "CSAuthSampleCommonLib.h"
 #include <CoreFoundation/CoreFoundation.h>
 
 /*!

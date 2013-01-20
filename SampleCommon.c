@@ -1,6 +1,6 @@
 //
 //  SampleCommon.c
-//  CSAuthorizationSample
+//  CSAuthSample
 //
 //  Created by Charles Srstka on 12/31/12.
 //

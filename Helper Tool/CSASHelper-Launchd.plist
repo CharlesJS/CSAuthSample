@@ -3,10 +3,10 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>com.charlessoft.CSAuthorizationSample.helper</string>
+	<string>com.charlessoft.CSAuthSample.helper</string>
 	<key>MachServices</key>
 	<dict>
-		<key>com.charlessoft.CSAuthorizationSample.helper</key>
+		<key>com.charlessoft.CSAuthSample.helper</key>
 		<true/>
 	</dict>
 </dict>

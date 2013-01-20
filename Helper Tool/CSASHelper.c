@@ -54,7 +54,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 #include <syslog.h>
 #include <xpc/xpc.h>
 #include "SampleCommon.h"
-#include "CSAuthorizationSampleHelperLib.h"
+#include "CSAuthSampleHelperLib.h"
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command
@@ -102,7 +102,7 @@ static const CSASCommandProc kSampleCommandProcs[] = {
 };
 
 int main(int argc, const char *argv[]) {
-    // Go directly into CSAuthorizationSampleHelperLib code.
+    // Go directly into CSAuthSampleHelperLib code.
 	
 	return CSASHelperToolMain(CFSTR(kSampleHelperID), CFSTR(kSampleAppID), kSampleCommandSet, kSampleCommandProcs, kSampleTimeoutInterval);
 }

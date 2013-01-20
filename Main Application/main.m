@@ -1,7 +1,7 @@
 /*
 
      File: main.m
- Abstract: Main function for CSAuthorizationSampleApp.
+ Abstract: Main function for CSAuthSampleApp.
   Version: 1.2
  
  Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple

@@ -46,7 +46,7 @@
  
  */
 
-#include "CSAuthorizationSampleHelperLib.h"
+#include "CSAuthSampleHelperLib.h"
 
 // At runtime CSAS only requires CoreFoundation.  However, at build time we need
 // CoreServices for the various OSStatus error codes in "MacErrors.h".  Thus, by default,

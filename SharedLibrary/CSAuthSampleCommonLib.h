@@ -46,8 +46,8 @@
  
  */
 
-#ifndef CSAuthorizationSampleCommonLib_h
-#define CSAuthorizationSampleCommonLib_h
+#ifndef CSAuthSampleCommonLib_h
+#define CSAuthSampleCommonLib_h
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
@@ -55,9 +55,8 @@
 
 #ifdef __cplusplus
 extern "C" {
-    // get rid of the annoying auto-indent
 #if 0
-}
+}     // get rid of the annoying auto-indent
 #endif
 #endif
 
