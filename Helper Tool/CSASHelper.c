@@ -50,9 +50,6 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 */
 
 #include <CoreFoundation/CoreFoundation.h>
-#include <Security/Security.h>
-#include <syslog.h>
-#include <xpc/xpc.h>
 #include "SampleCommon.h"
 #include "CSAuthSampleHelperLib.h"
 
