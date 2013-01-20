@@ -1,6 +1,6 @@
 //
 //  SampleCommon.c
-//  SMJobBlessXPC test
+//  CSAuthorizationSample
 //
 //  Created by Charles Srstka on 12/31/12.
 //
@@ -72,10 +72,10 @@
  IMPORTANT
  ---------
  This array must be exactly parallel to the kSampleCommandProcs array
- in "SMJobBlessHelper.c".
+ in "CSASHelper.c".
  */
 
-const SJBXCommandSpec kSampleCommandSet[] = {
+const CSASCommandSpec kSampleCommandSet[] = {
     {	kSampleGetVersionCommand,               // commandName
         NULL,                                   // rightName           -- never authorize
         NULL,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
@@ -85,7 +85,7 @@ const SJBXCommandSpec kSampleCommandSet[] = {
     
     {	kSampleSecretSpyStuffCommand,           // commandName
         kSampleSecretSpyStuffRightName,         // rightName
-        kSJBXRuleAuthenticateAdmin,          // rightDefaultRule    -- authenticate as admin
+        kCSASRuleAuthenticateAdmin,          // rightDefaultRule    -- authenticate as admin
         "Please identify yourself",  			// rightDescriptionKey -- haven't bothered trying this yet
         NULL                                    // userData
 	},

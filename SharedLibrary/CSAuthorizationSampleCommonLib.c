@@ -48,9 +48,9 @@
  
  */
 
-#include "SMJobBlessXPCCommonLib.h"
+#include "CSAuthorizationSampleCommonLib.h"
 
-// At runtime SJBX only requires CoreFoundation.  However, at build time we need
+// At runtime CSAS only requires CoreFoundation.  However, at build time we need
 // CoreServices for the various OSStatus error codes in "MacErrors.h".  Thus, by default,
 // we include CoreServices at build time.  However, you can flip this switch to check
 // that you're not accidentally using any other CoreServices things.
@@ -66,7 +66,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 #pragma mark ***** Constants
 
-// kSJBXMaxNumberOfKBytes has two uses:
+// kCSASMaxNumberOfKBytes has two uses:
 //
 // 1. When receiving a dictionary, it is used to limit the size of the incoming
 //    data.  This ensures that a non-privileged client can't exhaust the
@@ -75,28 +75,28 @@
 // 2. Because it's less than 4 GB, this limit ensures that the dictionary size
 //    can be sent as an architecture-neutral uint32_t.
 
-#define kSJBXMaxNumberOfKBytes			(1024 * 1024)
+#define kCSASMaxNumberOfKBytes			(1024 * 1024)
 
-CFStringRef const kSJBXErrorDomainSecurity = CFSTR("kSJBXDomainAuthorization");
-CFStringRef const kSJBXErrorDomain = CFSTR("kSJBXErrorDomain");
+CFStringRef const kCSASErrorDomainSecurity = CFSTR("kCSASDomainAuthorization");
+CFStringRef const kCSASErrorDomain = CFSTR("kCSASErrorDomain");
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Common Code
 
-static Boolean SJBXIsBinaryPropertyListData(const void * plistBuffer, size_t plistSize)
+static Boolean CSASIsBinaryPropertyListData(const void * plistBuffer, size_t plistSize)
 // Make sure that whatever is passed into the buffer that will
 // eventually become a plist (and then sequentially a dictionary)
 // is NOT in binary format.
 {
-    static const char kSJBXBinaryPlistWatermark[6] = "bplist";
+    static const char kCSASBinaryPlistWatermark[6] = "bplist";
     
     assert(plistBuffer != NULL);
 	
-	return (plistSize >= sizeof(kSJBXBinaryPlistWatermark))
-    && (memcmp(plistBuffer, kSJBXBinaryPlistWatermark, sizeof(kSJBXBinaryPlistWatermark)) == 0);
+	return (plistSize >= sizeof(kCSASBinaryPlistWatermark))
+    && (memcmp(plistBuffer, kCSASBinaryPlistWatermark, sizeof(kCSASBinaryPlistWatermark)) == 0);
 }
 
-static bool SJBXOSStatusToErrno(OSStatus errNum, int *posixErr)
+static bool CSASOSStatusToErrno(OSStatus errNum, int *posixErr)
 {
     bool converted = true;
     
@@ -125,27 +125,27 @@ static bool SJBXOSStatusToErrno(OSStatus errNum, int *posixErr)
     return converted;
 }
 
-extern CFErrorRef SJBXCreateCFErrorFromErrno(int errNum) {
+extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum) {
     return CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainPOSIX, errNum, NULL);
 }
 
-extern CFErrorRef SJBXCreateCFErrorFromCarbonError(OSStatus err) {
+extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err) {
     // Prefer POSIX errors over OSStatus ones if possible, as they tend to present nicer error messages to the end user.
     
     int posixErr;
     
-    if (SJBXOSStatusToErrno(err, &posixErr)) {
-        return SJBXCreateCFErrorFromErrno(posixErr);
+    if (CSASOSStatusToErrno(err, &posixErr)) {
+        return CSASCreateCFErrorFromErrno(posixErr);
     } else {
         return CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainOSStatus, err, NULL);
     }
 }
 
-extern CFErrorRef SJBXCreateCFErrorFromSecurityError(OSStatus err) {
+extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err) {
     if (err == errAuthorizationCanceled) {
-        return SJBXCreateCFErrorFromErrno(ECANCELED);
+        return CSASCreateCFErrorFromErrno(ECANCELED);
     } else if (err >= errSecErrnoBase && err <= errSecErrnoLimit) {
-        return SJBXCreateCFErrorFromErrno(err - errSecErrnoBase);
+        return CSASCreateCFErrorFromErrno(err - errSecErrnoBase);
     } else {
         CFStringRef errStr = SecCopyErrorMessageString(err, NULL);
         CFDictionaryRef userInfo = CFDictionaryCreate(kCFAllocatorDefault,
@@ -155,7 +155,7 @@ extern CFErrorRef SJBXCreateCFErrorFromSecurityError(OSStatus err) {
                                                       &kCFTypeDictionaryKeyCallBacks,
                                                       &kCFTypeDictionaryValueCallBacks);
         
-        CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kSJBXErrorDomainSecurity, err, userInfo);
+        CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kCSASErrorDomainSecurity, err, userInfo);
         
         CFRelease(userInfo);
         CFRelease(errStr);
@@ -164,21 +164,21 @@ extern CFErrorRef SJBXCreateCFErrorFromSecurityError(OSStatus err) {
     }
 }
 
-extern CFErrorRef SJBXCreateErrorFromResponse(CFDictionaryRef response) {
+extern CFErrorRef CSASCreateErrorFromResponse(CFDictionaryRef response) {
     CFErrorRef error = NULL;
     CFDictionaryRef errorDict = NULL;
     
     if (response == NULL) {
-        error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
     } else {
-        errorDict = CFDictionaryGetValue(response, CFSTR(kSJBXErrorKey));
+        errorDict = CFDictionaryGetValue(response, CFSTR(kCSASErrorKey));
     }
     
     if (errorDict != NULL) {
-        CFStringRef domain = CFDictionaryGetValue(errorDict, CFSTR(kSJBXErrorDomainKey));
+        CFStringRef domain = CFDictionaryGetValue(errorDict, CFSTR(kCSASErrorDomainKey));
         CFIndex code = 0;
-        CFNumberRef codeNum = CFDictionaryGetValue(errorDict, CFSTR(kSJBXErrorCodeKey));
-        CFDictionaryRef userInfo = CFDictionaryGetValue(errorDict, CFSTR(kSJBXErrorUserInfoKey));
+        CFNumberRef codeNum = CFDictionaryGetValue(errorDict, CFSTR(kCSASErrorCodeKey));
+        CFDictionaryRef userInfo = CFDictionaryGetValue(errorDict, CFSTR(kCSASErrorUserInfoKey));
         
         if (!CFNumberGetValue(codeNum, kCFNumberCFIndexType, &code)) {
             code = -1;
@@ -190,14 +190,14 @@ extern CFErrorRef SJBXCreateErrorFromResponse(CFDictionaryRef response) {
     return error;
 }
 
-extern bool SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFErrorRef *errorPtr)
+extern bool CSASReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFErrorRef *errorPtr)
 // Create a CFDictionary by reading the XML data from xpcIn.
 // It first reads the data in, and then
 // unflattens the data into a CFDictionary.
 //
 // On success, the caller is responsible for releasing *dictPtr.
 //
-// See also the companion routine, SJBXWriteDictionary, below.
+// See also the companion routine, CSASWriteDictionary, below.
 {
     bool                success = true;
 	size_t				dictSize;
@@ -218,34 +218,34 @@ extern bool SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFE
 	// Read the data and unflatten.
 	
 	if (success) {
-        dictBuffer = xpc_dictionary_get_data(xpcIn, kSJBXRequestKey, &dictSize);
+        dictBuffer = xpc_dictionary_get_data(xpcIn, kCSASRequestKey, &dictSize);
         
         if (dictBuffer == NULL) {
             success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
 	}
-	if ( success && SJBXIsBinaryPropertyListData(dictBuffer, dictSize) ) {
+	if ( success && CSASIsBinaryPropertyListData(dictBuffer, dictSize) ) {
         success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 	}
 	if (success) {
 		dictData = CFDataCreateWithBytesNoCopy(NULL, dictBuffer, dictSize, kCFAllocatorNull);
 		if (dictData == NULL) {
             success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 		}
 	}
 	if (success) {
 		dict = CFPropertyListCreateFromXMLData(NULL, dictData, kCFPropertyListImmutable, NULL);
 		if (dict == NULL) {
             success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 		}
 	}
 	if ( success && (CFGetTypeID(dict) != CFDictionaryGetTypeID()) ) {
         success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL); // only CFDictionaries need apply
+        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL); // only CFDictionaries need apply
 	}
 	// CFShow(dict);
 	
@@ -268,11 +268,11 @@ extern bool SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFE
 	return success;
 }
 
-extern bool SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFErrorRef *errorPtr)
+extern bool CSASWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFErrorRef *errorPtr)
 // Write a dictionary to an XPC message by flattening
 // it into XML.
 //
-// See also the companion routine, SJBXReadDictionary, above.
+// See also the companion routine, CSASReadDictionary, above.
 {
     bool                success = true;
 	CFDataRef			dictData;
@@ -289,7 +289,7 @@ extern bool SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFEr
 	dictData = CFPropertyListCreateXMLData(NULL, dict);
 	if (dictData == NULL) {
         success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 	}
     
     // Send the length, then send the data.  Always send the length as a big-endian
@@ -300,13 +300,13 @@ extern bool SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFEr
     // CFDataGetBytePtr can't fail, so this version of the code doesn't do the unnecessary
     // allocation.
     
-    if ( success && (CFDataGetLength(dictData) > kSJBXMaxNumberOfKBytes) ) {
+    if ( success && (CFDataGetLength(dictData) > kCSASMaxNumberOfKBytes) ) {
         success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL);
+        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL);
     }
     
 	if (success) {
-        xpc_dictionary_set_data(message, kSJBXRequestKey, CFDataGetBytePtr(dictData), CFDataGetLength(dictData));
+        xpc_dictionary_set_data(message, kCSASRequestKey, CFDataGetBytePtr(dictData), CFDataGetLength(dictData));
 	}
     
 	if (dictData != NULL) {
@@ -318,13 +318,13 @@ extern bool SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFEr
 
 extern bool FindCommand(
                         CFDictionaryRef             request,
-                        const SJBXCommandSpec		commands[],
+                        const CSASCommandSpec		commands[],
                         size_t *                    commandIndexPtr,
                         CFErrorRef *                errorPtr
                         )
 // FindCommand is a simple utility routine for checking that the
 // command name within a request is valid (that is, matches one of the command
-// names in the SJBXCommandSpec array).
+// names in the CSASCommandSpec array).
 //
 // On success, *commandIndexPtr will be the index of the requested command
 // in the commands array.  On error, the value in *commandIndexPtr is undefined.
@@ -347,15 +347,15 @@ extern bool FindCommand(
     // Get the command as a C string.  To prevent untrusted command string from
 	// trying to run us out of memory, we limit its length to 1024 UTF-16 values.
     
-    commandStr = CFDictionaryGetValue(request, CFSTR(kSJBXCommandKey));
+    commandStr = CFDictionaryGetValue(request, CFSTR(kCSASCommandKey));
     if ( (commandStr == NULL) || (CFGetTypeID(commandStr) != CFStringGetTypeID()) ) {
         success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL);
+        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL);
     }
 	commandSize = CFStringGetLength(commandStr);
 	if ( (success) && (commandSize > 1024) ) {
 		success = false;
-        if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(EINVAL);
+        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL);
 	}
     if (success) {
         size_t      bufSize;
@@ -365,10 +365,10 @@ extern bool FindCommand(
         
         if (command == NULL) {
             success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(ENOMEM);
+            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOMEM);
         } else if ( ! CFStringGetCString(commandStr, command, bufSize, kCFStringEncodingUTF8) ) {
             success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
     }
     
@@ -383,7 +383,7 @@ extern bool FindCommand(
             index += 1;
             if (commands[index].commandName == NULL) {
                 success = false;
-                if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromErrno(ENOENT);
+                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOENT);
                 break;
             }
         } while (true);

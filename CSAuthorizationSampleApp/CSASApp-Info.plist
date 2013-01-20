@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.charlessoft.SMJobBlessXPC</string>
+	<string>com.charlessoft.CSAuthorizationSample</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>
@@ -22,8 +22,8 @@
 	<string>NSApplication</string>
 	<key>SMPrivilegedExecutables</key>
 	<dict>
-		<key>com.charlessoft.SMJobBlessXPC.helper</key>
-		<string>anchor apple generic and identifier com.charlessoft.SMJobBlessXPC.helper and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
+		<key>com.charlessoft.CSAuthorizationSample.helper</key>
+		<string>anchor apple generic and identifier com.charlessoft.CSAuthorizationSample.helper and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
 	</dict>
 </dict>
 </plist>

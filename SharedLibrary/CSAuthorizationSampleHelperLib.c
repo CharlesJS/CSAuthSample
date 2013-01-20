@@ -46,9 +46,9 @@
  
  */
 
-#include "SMJobBlessXPCHelperLib.h"
+#include "CSAuthorizationSampleHelperLib.h"
 
-// At runtime SJBX only requires CoreFoundation.  However, at build time we need
+// At runtime CSAS only requires CoreFoundation.  However, at build time we need
 // CoreServices for the various OSStatus error codes in "MacErrors.h".  Thus, by default,
 // we include CoreServices at build time.  However, you can flip this switch to check
 // that you're not accidentally using any other CoreServices things.
@@ -112,7 +112,7 @@ static void RestartWatchdog() {
 
 // for serializing / deserializing errors
 
-static CFDictionaryRef SJBXCreateErrorDictFromCFError(CFErrorRef error) {
+static CFDictionaryRef CSASCreateErrorDictFromCFError(CFErrorRef error) {
     CFMutableDictionaryRef errorDict = CFDictionaryCreateMutable(kCFAllocatorDefault,
                                                                  0,
                                                                  &kCFTypeDictionaryKeyCallBacks,
@@ -128,14 +128,14 @@ static CFDictionaryRef SJBXCreateErrorDictFromCFError(CFErrorRef error) {
     CFDictionaryRef userInfo = CFErrorCopyUserInfo(error);
     
     if (domain != NULL) {
-        CFDictionarySetValue(errorDict, CFSTR(kSJBXErrorDomainKey), domain);
+        CFDictionarySetValue(errorDict, CFSTR(kCSASErrorDomainKey), domain);
     }
     
-    CFDictionarySetValue(errorDict, CFSTR(kSJBXErrorCodeKey), codeNum);
+    CFDictionarySetValue(errorDict, CFSTR(kCSASErrorCodeKey), codeNum);
     CFRelease(codeNum);
     
     if (userInfo != NULL) {
-        CFDictionarySetValue(errorDict, CFSTR(kSJBXErrorUserInfoKey), userInfo);
+        CFDictionarySetValue(errorDict, CFSTR(kCSASErrorUserInfoKey), userInfo);
         CFRelease(userInfo);
     }
     
@@ -145,8 +145,8 @@ static CFDictionaryRef SJBXCreateErrorDictFromCFError(CFErrorRef error) {
 #if ! defined(NDEBUG)
 
 static bool CommandArraySizeMatchesCommandProcArraySize(
-                                                        const SJBXCommandSpec		commands[],
-                                                        const SJBXCommandProc		commandProcs[]
+                                                        const CSASCommandSpec		commands[],
+                                                        const CSASCommandProc		commandProcs[]
                                                         )
 {
     size_t  commandCount;
@@ -168,8 +168,8 @@ static bool CommandArraySizeMatchesCommandProcArraySize(
 #endif
 
 static bool HandleCommand(
-                          const SJBXCommandSpec		commands[],
-                          const SJBXCommandProc		commandProcs[],
+                          const CSASCommandSpec		commands[],
+                          const CSASCommandProc		commandProcs[],
                           CFDictionaryRef                request,
                           CFDictionaryRef *              responsePtr,
                           AuthorizationRef               authRef,
@@ -198,16 +198,16 @@ static bool HandleCommand(
         response = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         if (response == NULL) {
             success = false;
-            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
     }
     
     // Errors that occur within this block are considered command errors, that is, they're
-    // reported to the client in the kSJBXErrorKey value of the response dictionary
-    // (that is, SJBXExecuteRequestInHelperTool returns noErr and valid response dictionary with
-    // an error value in the kSJBXErrorKey entry of the dictionary).  In contrast, other errors
+    // reported to the client in the kCSASErrorKey value of the response dictionary
+    // (that is, CSASExecuteRequestInHelperTool returns noErr and valid response dictionary with
+    // an error value in the kCSASErrorKey entry of the dictionary).  In contrast, other errors
     // are considered IPC errors and generally result in a the client getting an error status
-    // back from SJBXExecuteRequestInHelperTool.
+    // back from CSASExecuteRequestInHelperTool.
     //
     // Notably a request with an unrecognised command string will return an error code
     // in the response, as opposed to an IPC error.  This means that a client can check
@@ -215,7 +215,7 @@ static bool HandleCommand(
     
     if (success) {
         // Get the command name from the request dictionary and check to see whether or
-        // not the command is valid by comparing with the SJBXCommandSpec array.  Also,
+        // not the command is valid by comparing with the CSASCommandSpec array.  Also,
         // if the command is valid, return the associated right (if any).
         
         success = FindCommand(request, commands, &commandIndex, &error);
@@ -240,7 +240,7 @@ static bool HandleCommand(
             if (authErr != noErr) {
                 success = false;
                 
-                error = SJBXCreateCFErrorFromSecurityError(authErr);
+                error = CSASCreateCFErrorFromSecurityError(authErr);
             }
         }
     }
@@ -253,10 +253,10 @@ static bool HandleCommand(
         // If the command didn't insert its own error value, we use its function
         // result as the error value.
         
-        if ( (error != NULL) && !CFDictionaryContainsKey(response, CFSTR(kSJBXErrorKey)) ) {
-            CFDictionaryRef errorDict = SJBXCreateErrorDictFromCFError(error);
+        if ( (error != NULL) && !CFDictionaryContainsKey(response, CFSTR(kCSASErrorKey)) ) {
+            CFDictionaryRef errorDict = CSASCreateErrorDictFromCFError(error);
             
-            CFDictionaryAddValue(response, CFSTR(kSJBXErrorKey), errorDict);
+            CFDictionaryAddValue(response, CFSTR(kCSASErrorKey), errorDict);
             CFRelease(errorDict);
         }
     }
@@ -276,8 +276,8 @@ static bool HandleCommand(
 }
 
 static bool HandleEvent(
-                        const SJBXCommandSpec		commands[],
-                        const SJBXCommandProc		commandProcs[],
+                        const CSASCommandSpec		commands[],
+                        const CSASCommandProc		commandProcs[],
                         xpc_object_t                event,
                         CFErrorRef *                errorPtr
                         )
@@ -308,11 +308,11 @@ static bool HandleEvent(
         size_t authExtFormSize = 0;
         AuthorizationRef authRef = NULL;
         
-        authExtFormData = xpc_dictionary_get_data(event, kSJBXAuthorizationRefKey, &authExtFormSize);
+        authExtFormData = xpc_dictionary_get_data(event, kCSASAuthorizationRefKey, &authExtFormSize);
         
         if (authExtFormData == NULL || authExtFormSize > sizeof(authExtForm)) {
             success = false;
-            if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
         
         if (success) {
@@ -322,15 +322,15 @@ static bool HandleEvent(
             
             if (authErr != errSecSuccess) {
                 success = false;
-                if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromSecurityError(authErr);
+                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromSecurityError(authErr);
             } else if (authRef == NULL) {
                 success = false;
-                if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
             }
         }
         
         if (success) {
-            success = SJBXReadDictionary(event, &request, errorPtr);
+            success = CSASReadDictionary(event, &request, errorPtr);
         }
         
         if (success) {
@@ -340,7 +340,7 @@ static bool HandleEvent(
         if (success) {
             reply = xpc_dictionary_create_reply(event);
             
-            success = SJBXWriteDictionary(response, reply, errorPtr);
+            success = CSASWriteDictionary(response, reply, errorPtr);
         }
         
         if (success) {
@@ -348,7 +348,7 @@ static bool HandleEvent(
             
             if (remote == NULL) {
                 success = false;
-                if (errorPtr != NULL) *errorPtr = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
             }
         }
         
@@ -374,8 +374,8 @@ static bool HandleEvent(
     return success;
 }
 
-static void SJBXSetDefaultRules(
-                                const SJBXCommandSpec		commands[],
+static void CSASSetDefaultRules(
+                                const CSASCommandSpec		commands[],
                                 CFStringRef					bundleID,
                                 CFStringRef					descriptionStringTableName
                                 )
@@ -505,11 +505,11 @@ static void SJBXSetDefaultRules(
     AuthorizationFree(auth, kAuthorizationFlagDefaults);
 }
 
-extern int SJBXHelperToolMain(
+extern int CSASHelperToolMain(
                               CFStringRef               helperID,
                               CFStringRef               appID,
-                              const SJBXCommandSpec		commands[],
-                              const SJBXCommandProc		commandProcs[],
+                              const CSASCommandSpec		commands[],
+                              const CSASCommandProc		commandProcs[],
                               unsigned int              timeoutInterval
                               )
 // See comment in header.
@@ -525,7 +525,7 @@ extern int SJBXHelperToolMain(
     
     // Set up default rules which other processes must follow to communicate with this tool.
     
-    SJBXSetDefaultRules(commands, appID, NULL);
+    CSASSetDefaultRules(commands, appID, NULL);
     
     // set up the watchdog stuff
     InitWatchdog(timeoutInterval);

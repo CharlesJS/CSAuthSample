@@ -46,8 +46,8 @@
  
  */
 
-#ifndef _SMJobBlessXPCLib_h
-#define _SMJobBlessXPCLib_h
+#ifndef CSAuthorizationSampleCommonLib_h
+#define CSAuthorizationSampleCommonLib_h
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <Security/Security.h>
@@ -88,15 +88,15 @@ extern "C" {
  installing the helper tool and communicating with it.  Specifically, it
  has routines that your application can call to:
  
- 1. send requests to a helper tool (SJBXExecuteRequestInHelperTool)
+ 1. send requests to a helper tool (CSASExecuteRequestInHelperTool)
  
  2. install the helper tool if it's not installed, or fix an installation if
- it's broken (SJBXDiagnoseFailure and SJBXFixFailure)
+ it's broken (CSASDiagnoseFailure and CSASFixFailure)
  
  BetterAuthorizationSampleLib also helps you implement the helper tool.
- Specifically, you call the routine SJBXHelperToolMain in the main entry
+ Specifically, you call the routine CSASHelperToolMain in the main entry
  point for your helper tool, passing it an array of command callbacks (of
- type SJBXCommandProc).  SJBXHelperToolMain will take care of all the details
+ type CSASCommandProc).  CSASHelperToolMain will take care of all the details
  of communication with the application and only call your callback to
  execute the actual command.
  
@@ -104,14 +104,14 @@ extern "C" {
  NSDictionaries).  BetterAuthorizationSampleLib defines three special keys for
  these dictionaries:
  
- 1. kSJBXCommandKey -- In the request dictionary, this is the name of the
+ 1. kCSASCommandKey -- In the request dictionary, this is the name of the
  command. Its value is a string that uniquely identifies the command within
  your program.
  
- 2. kSJBXErrorKey -- In the response dictionary, this is the error result for
+ 2. kCSASErrorKey -- In the response dictionary, this is the error result for
  the request. Its value is an OSStatus-style error code.
  
- 3. kSJBXDescriptorArrayKey -- In the response dictionary, if present, this is
+ 3. kCSASDescriptorArrayKey -- In the response dictionary, if present, this is
  an array of file descriptors being returned from the helper tool.
  
  You can use any other key to represent addition parameters (or return values)
@@ -120,9 +120,9 @@ extern "C" {
  
  BetterAuthorizationSampleLib requires that you tell it about the list of commands
  that you support.  Each command is represented by a command specification
- (SJBXCommandSpec).  The command specification includes the following information:
+ (CSASCommandSpec).  The command specification includes the following information:
  
- 1. The name of the command.  This is the same as the kSJBXCommandKey value in
+ 1. The name of the command.  This is the same as the kCSASCommandKey value in
  the request dictionary.
  
  2. The authorization right associated with the command.  BetterAuthorizationSampleLib
@@ -130,24 +130,24 @@ extern "C" {
  it calls your command callback in the privileged helper tool.
  
  3. Information to create the command's authorization right specification in the
- policy database.  The is used by the SJBXSetDefaultRules function.
+ policy database.  The is used by the CSASSetDefaultRules function.
  
  Finally, BetterAuthorizationSampleLib includes a number of utilities routines to help
- wrangle error codes (SJBXErrnoToOSStatus, SJBXOSStatusToErrno, and SJBXGetErrorFromResponse)
- and file descriptors (SJBXCloseDescriptorArray).
+ wrangle error codes (CSASErrnoToOSStatus, CSASOSStatusToErrno, and CSASGetErrorFromResponse)
+ and file descriptors (CSASCloseDescriptorArray).
  */
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Command Description
 
 /*!
- @struct         SJBXCommandSpec
+ @struct         CSASCommandSpec
  
  @abstract       Describes a privileged operation to BetterAuthorizationSampleLib.
  
  @discussion     Both the application and the tool must tell BetterAuthorizationSampleLib about
  the operations (that is, commands) that they support.  They do this by passing
- in an array of SJBXCommandSpec structures.  Each element describes one command.
+ in an array of CSASCommandSpec structures.  Each element describes one command.
  The array is terminated by a command whose commandName field is NULL.
  
  In general the application and tool should use the same array definition.
@@ -181,7 +181,7 @@ extern "C" {
  @field rightDescriptionKey
  This is a key used to form a custom prompt for the right.  The value of this
  string should be a key into a .strings file whose name you supply to
- SJBXSetDefaultRules.  When BetterAuthorizationSampleLib creates the right specification,
+ CSASSetDefaultRules.  When BetterAuthorizationSampleLib creates the right specification,
  it uses this key to get all of the localised prompt strings for the right.
  
  This must be NULL if rightName is NULL.  Otherwise, this may be NULL if you
@@ -192,25 +192,25 @@ extern "C" {
  does not use it in any way.
  */
 
-struct SJBXCommandSpec {
+struct CSASCommandSpec {
     const char *	commandName;
     const char *	rightName;
     const char *	rightDefaultRule;
     const char *	rightDescriptionKey;
     const void *    userData;
 };
-typedef struct SJBXCommandSpec SJBXCommandSpec;
+typedef struct CSASCommandSpec CSASCommandSpec;
 
 //////////////////////////////////////////////////////////////////////////////////
 #pragma mark ***** Constants
 
 // The key used to get the request dictionary in the XPC request.
 
-#define kSJBXRequestKey              "Request"
+#define kCSASRequestKey              "Request"
 
 // The key used to get our flattened AuthorizationRef in the XPC request.
 
-#define kSJBXAuthorizationRefKey     "AuthorizationRef"
+#define kCSASAuthorizationRefKey     "AuthorizationRef"
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Authorization Rules
@@ -221,44 +221,44 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
 
 // Default rule. Credentials remain valid for 5 minutes after they've been obtained.
 // An acquired credential is shared by all clients.
-#define kSJBXRuleDefault                         "default"
+#define kCSASRuleDefault                         "default"
 
 // Allow anyone.
-#define kSJBXRuleAllow                           kAuthorizationRuleClassAllow
+#define kCSASRuleAllow                           kAuthorizationRuleClassAllow
 
 // Deny anyone.
-#define kSJBXRuleDeny                            kAuthorizationRuleClassDeny
+#define kCSASRuleDeny                            kAuthorizationRuleClassDeny
 
 // Authenticate as an administrator.
-#define kSJBXRuleAuthenticateAdmin               kAuthorizationRuleAuthenticateAsAdmin
+#define kCSASRuleAuthenticateAdmin               kAuthorizationRuleAuthenticateAsAdmin
 
 // Like the default rule, but credentials remain valid for only 30 seconds after they've been obtained.
 // An acquired credential is shared by all clients.
-#define kSJBXRuleAuthenticateAdmin30        	 "authenticate-admin-30"
+#define kCSASRuleAuthenticateAdmin30        	 "authenticate-admin-30"
 
 // Authenticate as a developer.
-#define kSJBXRuleAuthenticateDeveloper           "authenticate-developer"
+#define kCSASRuleAuthenticateDeveloper           "authenticate-developer"
 
 // Authenticate as the session owner.
-#define kSJBXRuleAuthenticateSessionOwner        kAuthorizationRuleAuthenticateAsSessionUser
+#define kCSASRuleAuthenticateSessionOwner        kAuthorizationRuleAuthenticateAsSessionUser
 
 // Authenticate either as the owner or as an administrator.
-#define kSJBXRuleAuthenticateSessionOwnerOrAdmin "authenticate-session-owner-or-admin"
+#define kCSASRuleAuthenticateSessionOwnerOrAdmin "authenticate-session-owner-or-admin"
 
 // Same as authenticate-session-owner.
-#define kSJBXRuleAuthenticateSessionUser         "authenticate-session-user"
+#define kCSASRuleAuthenticateSessionUser         "authenticate-session-user"
 
 // Verify that the user asking for authorization is an administrator.
-#define kSJBXRuleIsAdmin                         kAuthorizationRuleIsAdmin
+#define kCSASRuleIsAdmin                         kAuthorizationRuleIsAdmin
 
 // Verify that the user asking for authorization is a developer.
-#define kSJBXRuleIsDeveloper                     "is-developer"
+#define kCSASRuleIsDeveloper                     "is-developer"
 
 // Verify that the process that created this AuthorizationRef is running as root.
-#define kSJBXRuleIsRoot                          "is-root"
+#define kCSASRuleIsRoot                          "is-root"
 
 // Verify that the requesting process is running as the session owner.
-#define kSJBXRuleIsSessionOwner                  "is-session-owner"
+#define kCSASRuleIsSessionOwner                  "is-session-owner"
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Request/Response Keys
@@ -266,23 +266,23 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
 // Standard keys for the request dictionary
 
 /*!
- @define         kSJBXCommandKey
+ @define         kCSASCommandKey
  
  @abstract       Key for the command string within the request dictionary.
  
  @discussion     Within a request, this key must reference a string that is the name of the
  command to execute.  This must match one of the commands in the
- SJBXCommandSpec array.
+ CSASCommandSpec array.
  
  The length of a command name must not be greater than 1024 UTF-16 values.
  */
 
-#define kSJBXCommandKey      "com.apple.dts.BetterAuthorizationSample.command"			// CFString
+#define kCSASCommandKey      "com.apple.dts.BetterAuthorizationSample.command"			// CFString
 
 // Standard keys for the response dictionary
 
 /*!
- @define         kSJBXErrorKey
+ @define         kCSASErrorKey
  
  @abstract       Key for the error result within the response dictionary.
  
@@ -290,11 +290,11 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
  for the response, interpreted as an OSStatus.
  */
 
-#define kSJBXErrorKey         "com.apple.dts.BetterAuthorizationSample.error"				// CFDictionary
+#define kCSASErrorKey         "com.apple.dts.BetterAuthorizationSample.error"				// CFDictionary
 
-#define kSJBXErrorDomainKey   "com.apple.dts.BetterAuthorizationSample.error.domain"		// CFString
-#define kSJBXErrorCodeKey     "com.apple.dts.BetterAuthorizationSample.error.code"			// CFNumber
-#define kSJBXErrorUserInfoKey "com.apple.dts.BetterAuthorizationSample.error.userInfo"		// CFDictionary
+#define kCSASErrorDomainKey   "com.apple.dts.BetterAuthorizationSample.error.domain"		// CFString
+#define kCSASErrorCodeKey     "com.apple.dts.BetterAuthorizationSample.error.code"			// CFNumber
+#define kCSASErrorUserInfoKey "com.apple.dts.BetterAuthorizationSample.error.userInfo"		// CFDictionary
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Helper Tool Routines
@@ -304,18 +304,18 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
  */
 
 /*!
- @typedef        SJBXCommandProc
+ @typedef        CSASCommandProc
  
  @abstract       Command processing callback.
  
- @discussion     When your helper tool calls SJBXHelperToolMain, it passes in a pointer to an
- array of callback functions of this type.  When SJBXHelperToolMain receives a
+ @discussion     When your helper tool calls CSASHelperToolMain, it passes in a pointer to an
+ array of callback functions of this type.  When CSASHelperToolMain receives a
  valid command, it calls one of these function so that your program-specific
- code can process the request.  SJBX guarantees that the effective, save and
+ code can process the request.  CSAS guarantees that the effective, save and
  real user IDs (EUID, SUID, RUID) will all be zero at this point (that is,
  you're "running as root").
  
- By the time this callback is called, SJBXHelperToolMain has already verified that
+ By the time this callback is called, CSASHelperToolMain has already verified that
  this is a known command.  It also acquires the authorization right associated
  with the command, if any.  However, it does nothing to validate the other
  parameters in the request.  These parameters come from a non-privileged source
@@ -323,10 +323,10 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
  
  Your implementation should get any input parameters from the request and place
  any output parameters in the response.  It can also put an array of file
- descriptors into the response using the kSJBXDescriptorArrayKey key.
+ descriptors into the response using the kCSASDescriptorArrayKey key.
  
  If an error occurs, you should just return an appropriate error code.
- SJBXHelperToolMain will ensure that this gets placed in the response.
+ CSASHelperToolMain will ensure that this gets placed in the response.
  
  You should attempt to fail before adding any file descriptors to the response,
  or remove them once you know that you're going to fail.  If you put file
@@ -334,9 +334,9 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
  still be passed back to the client.  It's likely the client isn't expecting this.
  
  Calls to this function will be serialised; that is, once your callback is
- running, SJBXHelperToolMain won't call you again until you return.  Your callback
+ running, CSASHelperToolMain won't call you again until you return.  Your callback
  should avoid blocking for long periods of time.  If you block for too long, the
- SJBX watchdog will kill the entire helper tool process.
+ CSAS watchdog will kill the entire helper tool process.
  
  This callback runs in a daemon context; you must avoid doing things that require the
  user's context.  For example, launching a GUI application would be bad.  See
@@ -348,11 +348,11 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
  This will never be NULL.
  
  @param userData This is the value from the userData field of the corresponding entry in the
- SJBXCommandSpec array that you passed to SJBXHelperToolMain.
+ CSASCommandSpec array that you passed to CSASHelperToolMain.
  
  @param request  This dictionary contains the request.  It will have, at a bare minimum, a
- kSJBXCommandKey item whose value matches one of the commands in the
- SJBXCommandSpec array you passed to SJBXHelperToolMain.  It may also have
+ kCSASCommandKey item whose value matches one of the commands in the
+ CSASCommandSpec array you passed to CSASHelperToolMain.  It may also have
  other, command-specific parameters.
  
  This will never be NULL.
@@ -361,10 +361,10 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
  empty, and you can add any results you please to it.
  
  If you need to return file descriptors, place them in an array and place that
- array in the response using the kSJBXDescriptorArrayKey key.
+ array in the response using the kCSASDescriptorArrayKey key.
  
- There's no need to set the error result in the response.  SJBXHelperToolMain will
- do that for you.  However, if you do set a value for the kSJBXErrorKey key,
+ There's no need to set the error result in the response.  CSASHelperToolMain will
+ do that for you.  However, if you do set a value for the kCSASErrorKey key,
  that value will take precedence; in this case, the function result is ignored.
  
  This will never be NULL.
@@ -380,7 +380,7 @@ typedef struct SJBXCommandSpec SJBXCommandSpec;
  conditionalise your code.
  */
 
-typedef bool (*SJBXCommandProc)(
+typedef bool (*CSASCommandProc)(
 AuthorizationRef			auth,
 const void *                userData,
 CFDictionaryRef				request,
@@ -396,33 +396,33 @@ CFErrorRef *				error
  */
 
 // Error domain for errors originating in the Security framework.
-extern CFStringRef const kSJBXErrorDomainSecurity;
+extern CFStringRef const kCSASErrorDomainSecurity;
 
 // Our very own error domain.
-extern CFStringRef const kSJBXErrorDomain;
+extern CFStringRef const kCSASErrorDomain;
 
-// Possible errors that could be returned with kSJBXErrorDomain.
+// Possible errors that could be returned with kCSASErrorDomain.
 
 enum {
-    kSJBXErrorSuccess,
-    kSJBXErrorConnectionInterrupted,
-    kSJBXErrorConnectionInvalid,
-    kSJBXErrorUnexpectedConnection,
-    kSJBXErrorUnexpectedEvent
+    kCSASErrorSuccess,
+    kCSASErrorConnectionInterrupted,
+    kCSASErrorConnectionInvalid,
+    kCSASErrorUnexpectedConnection,
+    kCSASErrorUnexpectedEvent
 };
 
-extern CFErrorRef SJBXCreateCFErrorFromErrno(int errNum);
-extern CFErrorRef SJBXCreateCFErrorFromCarbonError(OSStatus err);
-extern CFErrorRef SJBXCreateCFErrorFromSecurityError(OSStatus err);
+extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum);
+extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err);
+extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err);
 
-extern bool SJBXReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFErrorRef *errorPtr);
-extern bool SJBXWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFErrorRef *errorPtr);
+extern bool CSASReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFErrorRef *errorPtr);
+extern bool CSASWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFErrorRef *errorPtr);
 
-extern CFErrorRef SJBXCreateErrorFromResponse(CFDictionaryRef response);
+extern CFErrorRef CSASCreateErrorFromResponse(CFDictionaryRef response);
 
 extern bool FindCommand(
                         CFDictionaryRef             request,
-                        const SJBXCommandSpec		commands[],
+                        const CSASCommandSpec		commands[],
                         size_t *                    commandIndexPtr,
                         CFErrorRef *                errorPtr
                         );

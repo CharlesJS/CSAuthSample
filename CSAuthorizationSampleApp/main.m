@@ -1,7 +1,7 @@
-/* 
- 
-     File: SMJobBlessAppController.h
- Abstract: The main application controller header.
+/*
+
+     File: main.m
+ Abstract: Main function for CSAuthorizationSampleApp.
   Version: 1.2
  
  Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple
@@ -45,10 +45,11 @@
  Copyright (C) 2011 Apple Inc. All Rights Reserved.
  
 
- */
+*/
 
 #import <Cocoa/Cocoa.h>
 
-@interface SMJobBlessAppController : NSObject
-
-@end
+int main(int argc, char *argv[])
+{
+    return NSApplicationMain(argc,  (const char **) argv);
+}

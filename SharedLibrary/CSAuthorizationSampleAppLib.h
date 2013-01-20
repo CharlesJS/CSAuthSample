@@ -47,14 +47,14 @@
  */
 
 #import <Foundation/Foundation.h>
-#include "SMJobBlessXPCCommonLib.h"
+#include "CSAuthorizationSampleCommonLib.h"
 
-typedef void (^SJBXErrorHandler)(NSError *error);
-typedef void (^SJBXResponseHandler)(NSDictionary *response);
+typedef void (^CSASErrorHandler)(NSError *error);
+typedef void (^CSASResponseHandler)(NSDictionary *response);
 
-@interface SJBXCommandSender : NSObject
+@interface CSASCommandSender : NSObject
 
-- (instancetype)initWithCommandSet:(const SJBXCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error;
+- (instancetype)initWithCommandSet:(const CSASCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error;
 
 // Make sure this is called before your application exits.
 - (void)cleanUp;
@@ -62,7 +62,7 @@ typedef void (^SJBXResponseHandler)(NSDictionary *response);
 - (BOOL)blessHelperToolAndReturnError:(NSError **)error;
 
 /*!
- @function       SJBXExecuteRequestInHelperTool
+ @function       CSASExecuteRequestInHelperTool
  
  @abstract       Executes a request in the privileged helper tool, returning the response.
  
@@ -76,10 +76,10 @@ typedef void (^SJBXResponseHandler)(NSDictionary *response);
  
  If the functions returns no error, the IPC between your application and the helper tool
  was successful.  However, the command may still have failed.  You must get the error
- value from the response (typically using SJBXGetErrorFromResponse) to see if the
+ value from the response (typically using CSASGetErrorFromResponse) to see if the
  command succeeded or not.
  
- On success the response dictionary may contain a value for the kSJBXDescriptorArrayKey key.
+ On success the response dictionary may contain a value for the kCSASDescriptorArrayKey key.
  If so, that will be a non-empty CFArray of CFNumbers, each of which can be accessed as an int.
  Each value is a descriptor that is being returned to you from the helper tool.  You are
  responsible for closing these descriptors when you're done with them.
@@ -97,7 +97,7 @@ typedef void (^SJBXResponseHandler)(NSDictionary *response);
  This must not be NULL.
  
  @param request  A dictionary describing the requested operation.  This must, at least, contain
- a string value for the kSJBXCommandKey.  Furthermore, this string must match
+ a string value for the kCSASCommandKey.  Furthermore, this string must match
  one of the commands in the array.
  
  The dictionary may also contain other values.  These are passed to the helper
@@ -112,9 +112,9 @@ typedef void (^SJBXResponseHandler)(NSDictionary *response);
  On success, you are responsible for disposing of *response.  You are also
  responsible for closing any descriptors returned in the response.
  
- @result			An OSStatus code (see SJBXErrnoToOSStatus and SJBXOSStatusToErrno).
+ @result			An OSStatus code (see CSASErrnoToOSStatus and CSASOSStatusToErrno).
  */
 
-- (void)executeRequestInHelperTool:(NSDictionary *)request errorHandler:(SJBXErrorHandler)errorHandler responseHandler:(SJBXResponseHandler)responseHandler;
+- (void)executeRequestInHelperTool:(NSDictionary *)request errorHandler:(CSASErrorHandler)errorHandler responseHandler:(CSASResponseHandler)responseHandler;
 
 @end

@@ -46,7 +46,7 @@
  
  */
 
-#import "SMJobBlessXPCAppLib.h"
+#import "CSAuthorizationSampleAppLib.h"
 #import <ServiceManagement/ServiceManagement.h>
 #import <Security/Authorization.h>
 
@@ -78,18 +78,18 @@
 #define RELEASE_XPC(x)      xpc_release(x)
 #endif
 
-@interface SJBXCommandSender ()
+@interface CSASCommandSender ()
 
 @property (copy) NSString *helperID;
 
 @end
 
-@implementation SJBXCommandSender {
+@implementation CSASCommandSender {
     AuthorizationRef _authRef;
-    const SJBXCommandSpec *_commands;
+    const CSASCommandSpec *_commands;
 }
 
-- (instancetype)initWithCommandSet:(const SJBXCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error {
+- (instancetype)initWithCommandSet:(const CSASCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error {
     self = [super init];
     
     if (self == nil) {
@@ -100,7 +100,7 @@
     OSStatus err = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &_authRef);
     
     if (err != errSecSuccess) {
-        if (error) *error = (NSError *)BRIDGING_RELEASE(SJBXCreateCFErrorFromSecurityError(err));
+        if (error) *error = (NSError *)BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(err));
         RELEASE(self);
         return nil;
     }
@@ -146,7 +146,7 @@
 	/* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
     OSStatus status = AuthorizationCopyRights(_authRef, &authRights, kAuthorizationEmptyEnvironment, flags, NULL);
 	if (status != errAuthorizationSuccess) {
-        if (error) *error = (NSError *)BRIDGING_RELEASE(SJBXCreateCFErrorFromSecurityError(status));
+        if (error) *error = (NSError *)BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(status));
         success = NO;
 	} else {
         CFErrorRef smError = NULL;
@@ -168,7 +168,7 @@
 	return success;
 }
 
-- (void)executeRequestInHelperTool:(NSDictionary *)request errorHandler:(SJBXErrorHandler)errorHandler responseHandler:(SJBXResponseHandler)responseHandler {
+- (void)executeRequestInHelperTool:(NSDictionary *)request errorHandler:(CSASErrorHandler)errorHandler responseHandler:(CSASResponseHandler)responseHandler {
     bool                        success = true;
     size_t                      commandIndex;
 	AuthorizationExternalForm	extAuth;
@@ -182,7 +182,7 @@
     
 	// For debugging.
     
-    assert([request[@kSJBXCommandKey] isKindOfClass:[NSString class]]);
+    assert([request[@kCSASCommandKey] isKindOfClass:[NSString class]]);
     
     // Look up the command and preauthorize.  This has the nice side effect that
     // the authentication dialog comes up, in the typical case, here, rather than
@@ -200,7 +200,7 @@
         
         if (authErr != errSecSuccess) {
             success = false;
-            error = SJBXCreateCFErrorFromSecurityError(authErr);
+            error = CSASCreateCFErrorFromSecurityError(authErr);
         }
     }
     
@@ -210,7 +210,7 @@
 		connection = xpc_connection_create_mach_service(self.helperID.fileSystemRepresentation, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
 		if (connection == NULL) {
             success = false;
-            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
 		}
 	}
     
@@ -222,16 +222,16 @@
             
             if (type == XPC_TYPE_ERROR) {
                 if (event == XPC_ERROR_CONNECTION_INTERRUPTED) {
-                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kSJBXErrorDomain) code:kSJBXErrorConnectionInterrupted userInfo:nil]);
+                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInterrupted userInfo:nil]);
                 } else if (event == XPC_ERROR_CONNECTION_INVALID) {
                     RELEASE_XPC(connection);
-                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kSJBXErrorDomain) code:kSJBXErrorConnectionInvalid userInfo:nil]);
+                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInvalid userInfo:nil]);
                 } else {
-                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kSJBXErrorDomain) code:kSJBXErrorUnexpectedConnection userInfo:nil]);
+                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorUnexpectedConnection userInfo:nil]);
                 }
                 
             } else {
-                errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kSJBXErrorDomain) code:kSJBXErrorUnexpectedEvent userInfo:nil]);
+                errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorUnexpectedEvent userInfo:nil]);
             }
         });
         
@@ -245,7 +245,7 @@
         
         if (message == NULL) {
             success = false;
-            error = SJBXCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
     }
 	
@@ -256,18 +256,18 @@
         
         if (authErr != errSecSuccess) {
             success = false;
-            error = SJBXCreateCFErrorFromSecurityError(authErr);
+            error = CSASCreateCFErrorFromSecurityError(authErr);
         }
     }
     
 	if (success) {
-        xpc_dictionary_set_data(message, kSJBXAuthorizationRefKey, &extAuth, sizeof(extAuth));
+        xpc_dictionary_set_data(message, kCSASAuthorizationRefKey, &extAuth, sizeof(extAuth));
 	}
 	
     // Write the request.
     
 	if (success) {
-		success = SJBXWriteDictionary(BRIDGE(CFDictionaryRef, request), message, (CFErrorRef *)&error);
+		success = CSASWriteDictionary(BRIDGE(CFDictionaryRef, request), message, (CFErrorRef *)&error);
 	}
 	
     // Send request.
@@ -279,10 +279,10 @@
             
             // Read response.
             
-            bool sendSuccess = SJBXReadDictionary(reply, &sendResponse, &sendError);
+            bool sendSuccess = CSASReadDictionary(reply, &sendResponse, &sendError);
             
             if (sendSuccess) {
-                sendError = SJBXCreateErrorFromResponse(sendResponse);
+                sendError = CSASCreateErrorFromResponse(sendResponse);
                 
                 if (sendError != NULL) {
                     CFRelease(sendResponse);

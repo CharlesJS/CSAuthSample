@@ -1095,7 +1095,7 @@
 				<nil key="NSViewClass"/>
 				<nil key="NSUserInterfaceItemIdentifier"/>
 				<object class="NSView" key="NSWindowView" id="414427165">
-					<reference key="NSNextResponder"/>
+					<nil key="NSNextResponder"/>
 					<int key="NSvFlags">256</int>
 					<object class="NSMutableArray" key="NSSubviews">
 						<bool key="EncodedWithXMLCoder">YES</bool>
@@ -1104,7 +1104,6 @@
 							<int key="NSvFlags">268</int>
 							<string key="NSFrame">{{20, 49}, {440, 230}}</string>
 							<reference key="NSSuperview" ref="414427165"/>
-							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="1067023413"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<string key="NSAntiCompressionPriority">{250, 750}</string>
@@ -1147,8 +1146,6 @@
 							<int key="NSvFlags">289</int>
 							<string key="NSFrame">{{353, 13}, {113, 32}}</string>
 							<reference key="NSSuperview" ref="414427165"/>
-							<reference key="NSWindow"/>
-							<reference key="NSNextKeyView"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSEnabled">YES</bool>
 							<object class="NSButtonCell" key="NSCell" id="852788238">
@@ -1172,7 +1169,6 @@
 							<int key="NSvFlags">289</int>
 							<string key="NSFrame">{{215, 13}, {138, 32}}</string>
 							<reference key="NSSuperview" ref="414427165"/>
-							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="267633926"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSEnabled">YES</bool>
@@ -1194,8 +1190,6 @@
 						</object>
 					</object>
 					<string key="NSFrameSize">{480, 299}</string>
-					<reference key="NSSuperview"/>
-					<reference key="NSWindow"/>
 					<reference key="NSNextKeyView" ref="986501705"/>
 				</object>
 				<string key="NSScreenRect">{{0, 0}, {1680, 1028}}</string>
@@ -1203,7 +1197,7 @@
 				<bool key="NSWindowIsRestorable">YES</bool>
 			</object>
 			<object class="NSCustomObject" id="327447578">
-				<string key="NSClassName">SMJobBlessAppController</string>
+				<string key="NSClassName">CSASAppController</string>
 			</object>
 		</object>
 		<object class="IBObjectContainer" key="IBDocument.Objects">
@@ -2990,7 +2984,7 @@
 			<object class="NSMutableArray" key="referencedPartialClassDescriptions">
 				<bool key="EncodedWithXMLCoder">YES</bool>
 				<object class="IBPartialClassDescription">
-					<string key="className">SMJobBlessAppController</string>
+					<string key="className">CSASAppController</string>
 					<string key="superclassName">NSObject</string>
 					<object class="NSMutableDictionary" key="actions">
 						<bool key="EncodedWithXMLCoder">YES</bool>
@@ -3037,7 +3031,7 @@
 					</object>
 					<object class="IBClassDescriptionSource" key="sourceIdentifier">
 						<string key="majorKey">IBProjectSource</string>
-						<string key="minorKey">./Classes/SMJobBlessAppController.h</string>
+						<string key="minorKey">./Classes/CSASAppController.h</string>
 					</object>
 				</object>
 			</object>

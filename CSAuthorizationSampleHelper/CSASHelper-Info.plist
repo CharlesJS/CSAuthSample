@@ -3,16 +3,16 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>com.charlessoft.SMJobBlessXPC.helper</string>
+	<string>com.charlessoft.CSAuthorizationSample.helper</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>SMJobBlessHelper</string>
+	<string>CSAuthorizationSampleHelper</string>
 	<key>CFBundleVersion</key>
 	<string>1.0</string>
 	<key>SMAuthorizedClients</key>
 	<array>
-		<string>anchor apple generic and identifier com.charlessoft.SMJobBlessXPC and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
+		<string>anchor apple generic and identifier com.charlessoft.CSAuthorizationSample and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>
 	</array>
 </dict>
 </plist>

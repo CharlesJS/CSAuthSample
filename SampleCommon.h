@@ -49,12 +49,12 @@
 #ifndef SampleCommon_h
 #define SampleCommon_h
 
-#include "SMJobBlessXPCCommonLib.h"
+#include "CSAuthorizationSampleCommonLib.h"
 
-#define SMJOBBLESSHELPER_VERSION	0
+#define kCSASHelperVersion	0
 
-#define kSampleAppID                "com.charlessoft.SMJobBlessXPC"
-#define kSampleHelperID             "com.charlessoft.SMJobBlessXPC.helper"
+#define kSampleAppID                "com.charlessoft.CSAuthorizationSample"
+#define kSampleHelperID             "com.charlessoft.CSAuthorizationSample.helper"
 
 #define kSampleTimeoutInterval      120
 
@@ -66,7 +66,7 @@
 
 #define kSampleGetVersionCommand        "GetVersion"
 
-#define kSampleGetVersionRightName      "com.example.SMJobBlessXPC.GetVersion"
+#define kSampleGetVersionRightName      "com.example.CSAuthorizationSample.GetVersion"
 
 // request keys (none)
 
@@ -80,7 +80,7 @@
 
 // authorization right name
 
-#define kSampleSecretSpyStuffRightName	"com.example.SMJobBlessXPC.SecretSpyStuff"
+#define kSampleSecretSpyStuffRightName	"com.example.CSAuthorizationSample.SecretSpyStuff"
 
 // request keys (none)
 
@@ -91,6 +91,6 @@
 // The kSampleCommandSet is used by both the app and the tool to communicate the set of
 // supported commands to the BetterAuthorizationSampleLib module.
 
-extern const SJBXCommandSpec kSampleCommandSet[];
+extern const CSASCommandSpec kSampleCommandSet[];
 
 #endif

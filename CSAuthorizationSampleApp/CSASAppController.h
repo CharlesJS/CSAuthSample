@@ -1,7 +1,7 @@
-/*
-
-     File: main.m
- Abstract: Main function for SMJobBlessApp.
+/* 
+ 
+     File: CSASAppController.h
+ Abstract: The main application controller header.
   Version: 1.2
  
  Disclaimer: IMPORTANT:  This Apple software is supplied to you by Apple
@@ -45,11 +45,10 @@
  Copyright (C) 2011 Apple Inc. All Rights Reserved.
  
 
-*/
+ */
 
 #import <Cocoa/Cocoa.h>
 
-int main(int argc, char *argv[])
-{
-    return NSApplicationMain(argc,  (const char **) argv);
-}
+@interface CSASAppController : NSObject
+
+@end

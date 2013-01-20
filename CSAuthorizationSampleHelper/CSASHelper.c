@@ -1,6 +1,6 @@
 /*
  
-    File: SMJobBlessHelper.c
+    File: CSASHelper.c
 Abstract: A helper tool that doesn't do anything event remotely interesting.
 See the ssd sample for how to use GCD and launchd to set up an on-demand
 server via sockets.
@@ -54,7 +54,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 #include <syslog.h>
 #include <xpc/xpc.h>
 #include "SampleCommon.h"
-#include "SMJobBlessXPCHelperLib.h"
+#include "CSAuthorizationSampleHelperLib.h"
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command
@@ -63,7 +63,7 @@ static bool DoGetVersion(AuthorizationRef authRef, const void *userData, CFDicti
     assert(authRef != NULL);
     assert(response != NULL);
     
-    long long version = (long long)SMJOBBLESSHELPER_VERSION;
+    long long version = (long long)kCSASHelperVersion;
     CFNumberRef versionRef = CFNumberCreate(kCFAllocatorDefault, kCFNumberLongLongType, &version);
 
     CFDictionaryAddValue(response, CFSTR(kSampleGetVersionResponse), versionRef);
@@ -95,15 +95,15 @@ static bool DoSecretSpyStuff(AuthorizationRef authRef, const void *userData, CFD
  in "SampleCommon.c".
  */
 
-static const SJBXCommandProc kSampleCommandProcs[] = {
+static const CSASCommandProc kSampleCommandProcs[] = {
     DoGetVersion,
     DoSecretSpyStuff,
     NULL
 };
 
 int main(int argc, const char *argv[]) {
-    // Go directly into SMJobBlessXPCLib code.
+    // Go directly into CSAuthorizationSampleHelperLib code.
 	
-	return SJBXHelperToolMain(CFSTR(kSampleHelperID), CFSTR(kSampleAppID), kSampleCommandSet, kSampleCommandProcs, kSampleTimeoutInterval);
+	return CSASHelperToolMain(CFSTR(kSampleHelperID), CFSTR(kSampleAppID), kSampleCommandSet, kSampleCommandProcs, kSampleTimeoutInterval);
 }
 

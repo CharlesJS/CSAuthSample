@@ -46,14 +46,14 @@
  
  */
 
-#ifndef SMJobBlessXPC_test_SMJobBlessXPCHelperLib_h
-#define SMJobBlessXPC_test_SMJobBlessXPCHelperLib_h
+#ifndef CSAuthorizationSampleHelperLib_h
+#define CSAuthorizationSampleHelperLib_h
 
-#include "SMJobBlessXPCCommonLib.h"
+#include "CSAuthorizationSampleCommonLib.h"
 #include <CoreFoundation/CoreFoundation.h>
 
 /*!
- @function       SJBXHelperToolMain
+ @function       CSASHelperToolMain
  
  @abstract       Entry point for a privileged helper tool.
  
@@ -90,11 +90,11 @@
  @result			An integer representing EXIT_SUCCESS or EXIT_FAILURE.
  */
 
-extern int SJBXHelperToolMain(
+extern int CSASHelperToolMain(
                               CFStringRef               helperID,
                               CFStringRef               appID,
-                              const SJBXCommandSpec		commands[],
-                              const SJBXCommandProc		commandProcs[],
+                              const CSASCommandSpec		commands[],
+                              const CSASCommandProc		commandProcs[],
                               unsigned int              timeoutInterval
                               );
 

@@ -1,6 +1,6 @@
 /*
  
-    File: SMJobBlessAppController.m
+    File: CSASAppController.m
 Abstract: The main application controller. When the application has finished
 launching, the helper tool will be installed.
  Version: 1.2
@@ -48,15 +48,15 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
  
 */
 
-#import "SMJobBlessAppController.h"
-#include "SMJobBlessXPCAppLib.h"
+#import "CSASAppController.h"
+#include "CSAuthorizationSampleAppLib.h"
 #include "SampleCommon.h"
 
-@interface SMJobBlessAppController ()
+@interface CSASAppController ()
 
 @property (nonatomic, weak)	IBOutlet NSTextField* textField;
 
-@property (strong)              SJBXCommandSender *commandSender;
+@property (strong)              CSASCommandSender *commandSender;
 @property                       BOOL helperIsReady;
 @property                       BOOL alreadyBlessingHelper;
 
@@ -72,7 +72,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 @end
 
 
-@implementation SMJobBlessAppController
+@implementation CSASAppController
 
 - (void)appendLog:(NSString *)log {
     self.textField.stringValue = [self.textField.stringValue stringByAppendingFormat:@"\n%@", log];
@@ -83,7 +83,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         
     self.helperIsReady = NO;
     
-    self.commandSender = [[SJBXCommandSender alloc] initWithCommandSet:kSampleCommandSet helperID:@kSampleHelperID error:&error];
+    self.commandSender = [[CSASCommandSender alloc] initWithCommandSet:kSampleCommandSet helperID:@kSampleHelperID error:&error];
     
     if (self.commandSender == nil) {
         [self appendLog:[NSString stringWithFormat:@"Failed to create AuthorizationRef. Error %@", error]];
@@ -91,7 +91,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
     }
     
     [self requestHelperVersion:^(int64_t version, NSError *error) {
-        if (error == nil && version == SMJOBBLESSHELPER_VERSION) {
+        if (error == nil && version == kCSASHelperVersion) {
             self.textField.stringValue = @"Helper available.";
             self.helperIsReady = YES;
         } else {
@@ -137,18 +137,18 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
     void (^errorHandler)(NSError *) = ^(NSError *error) {
         NSString *log = nil;
         
-        if ([error.domain isEqualToString:(__bridge NSString *)kSJBXErrorDomain]) {
+        if ([error.domain isEqualToString:(__bridge NSString *)kCSASErrorDomain]) {
             switch (error.code) {
-                case kSJBXErrorConnectionInterrupted:
+                case kCSASErrorConnectionInterrupted:
                     log = @"XPC connection interupted.";
                     break;
-                case kSJBXErrorConnectionInvalid:
+                case kCSASErrorConnectionInvalid:
                     log = @"XPC connection invalid, releasing.";
                     break;
-                case kSJBXErrorUnexpectedConnection:
+                case kCSASErrorUnexpectedConnection:
                     log = @"Unexpected XPC connection error.";
                     break;
-                case kSJBXErrorUnexpectedEvent:
+                case kCSASErrorUnexpectedEvent:
                     log = @"Unexpected XPC connection event.";
                     break;
                 default:
@@ -172,13 +172,13 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         return;
     }
     
-    [self appendLog:[NSString stringWithFormat:@"Sending request: %@", request[@kSJBXCommandKey]]];
+    [self appendLog:[NSString stringWithFormat:@"Sending request: %@", request[@kCSASCommandKey]]];
     
     [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:replyHandler];
 }
 
 - (void)requestHelperVersion:(void (^)(int64_t, NSError *))handler {
-    NSDictionary *request = @{ @kSJBXCommandKey : @kSampleGetVersionCommand };
+    NSDictionary *request = @{ @kCSASCommandKey : @kSampleGetVersionCommand };
     
     void (^replyHandler)(NSDictionary *) = ^(NSDictionary *response) {
         NSNumber *version = response[@kSampleGetVersionResponse];
@@ -204,7 +204,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (IBAction)doSecretSpyStuff:(id)sender {
-    NSDictionary *request = @{ @kSJBXCommandKey : @kSampleSecretSpyStuffCommand };
+    NSDictionary *request = @{ @kCSASCommandKey : @kSampleSecretSpyStuffCommand };
     
     [self sendRequest:request];
 }
