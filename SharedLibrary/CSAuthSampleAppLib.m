@@ -66,8 +66,8 @@
 #define SUPER_DEALLOC
 #else
 #define RELEASE(x)          [(x) release]
-#define BRIDGE(type, var)   ((type)var)
-#define BRIDGING_RETAIN(x)  ((CFTypeRef)[x retain])
+#define BRIDGE(type, var)   ((type)(var))
+#define BRIDGING_RETAIN(x)  ((CFTypeRef)[(x) retain])
 #define BRIDGING_RELEASE(x) [(id)(x) autorelease]
 #define SUPER_DEALLOC       [super dealloc]
 #endif
