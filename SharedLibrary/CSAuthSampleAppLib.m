@@ -132,6 +132,30 @@
     }
 }
 
+- (NSArray *)fileHandlesFromXPCReply:(xpc_object_t)reply {
+    NSMutableArray *handleArray = [NSMutableArray new];
+    xpc_object_t descriptorArray = xpc_dictionary_get_value(reply, kCSASDescriptorArrayKey);
+    size_t descriptorCount = 0;
+    
+    if (descriptorArray != NULL) {
+        descriptorCount = xpc_array_get_count(descriptorArray);
+    }
+    
+    if (descriptorCount != 0) {
+        for (size_t i = 0; i < descriptorCount; i++) {
+            int fd = xpc_array_dup_fd(descriptorArray, i);
+            
+            if (fd < 0) {
+                continue;
+            }
+            
+            [handleArray addObject:[[NSFileHandle alloc] initWithFileDescriptor:fd closeOnDealloc:YES]];
+        }
+    }
+    
+    return handleArray;
+}
+
 - (BOOL)blessHelperToolAndReturnError:(NSError **)error {
 	BOOL success = NO;
     
@@ -175,6 +199,7 @@
     xpc_connection_t            connection;
     xpc_object_t 				message;
     CFErrorRef                  error = NULL;
+    __block NSError *           connectionError = nil;
 	
 	// Pre-conditions
 	
@@ -222,16 +247,22 @@
             
             if (type == XPC_TYPE_ERROR) {
                 if (event == XPC_ERROR_CONNECTION_INTERRUPTED) {
-                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInterrupted userInfo:nil]);
+                    if (connectionError == nil) {
+                        connectionError = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInterrupted userInfo:nil];
+                    }
                 } else if (event == XPC_ERROR_CONNECTION_INVALID) {
-                    RELEASE_XPC(connection);
-                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInvalid userInfo:nil]);
+                    if (connectionError == nil) {
+                        connectionError = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInvalid userInfo:nil];
+                    }
                 } else {
-                    errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorUnexpectedConnection userInfo:nil]);
+                    if (connectionError == nil) {
+                        connectionError = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorUnexpectedConnection userInfo:nil];
+                    }
                 }
-                
             } else {
-                errorHandler([NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorUnexpectedEvent userInfo:nil]);
+                if (connectionError == nil) {
+                    connectionError = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorUnexpectedEvent userInfo:nil];
+                }
             }
         });
         
@@ -275,6 +306,7 @@
     if (success) {
         xpc_connection_send_message_with_reply(connection, message, dispatch_get_main_queue(), ^(xpc_object_t reply) {
             CFDictionaryRef sendResponse = NULL;
+            NSArray *fileHandles = nil;
             CFErrorRef sendError = NULL;
             
             // Read response.
@@ -291,13 +323,23 @@
             }
             
             if (sendSuccess) {
-                responseHandler(BRIDGE(NSDictionary *, sendResponse));
+                fileHandles = [self fileHandlesFromXPCReply:reply];
+            }
+            
+            if (sendSuccess) {
+                responseHandler(BRIDGE(NSDictionary *, sendResponse), fileHandles);
                 CFRelease(sendResponse);
             } else {
-                errorHandler(BRIDGE(NSError *, sendError));
+                if (connectionError != nil) {
+                    errorHandler(connectionError);
+                } else {
+                    errorHandler(BRIDGE(NSError *, sendError));
+                }
+                
                 CFRelease(sendError);
             }
             
+            RELEASE(fileHandles);
             RELEASE_XPC(connection);
         });
     }

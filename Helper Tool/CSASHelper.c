@@ -52,11 +52,12 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 #include <CoreFoundation/CoreFoundation.h>
 #include "SampleCommon.h"
 #include "CSAuthSampleHelperLib.h"
+#include <sys/stat.h>
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command
 
-static bool DoGetVersion(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFErrorRef *error) {
+static bool DoGetVersion(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFMutableArrayRef descriptorArray, CFErrorRef *error) {
     assert(authRef != NULL);
     assert(response != NULL);
     
@@ -73,13 +74,82 @@ static bool DoGetVersion(AuthorizationRef authRef, const void *userData, CFDicti
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command
 
-static bool DoSecretSpyStuff(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFErrorRef *error) {
+static bool DoSecretSpyStuff(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFMutableArrayRef descriptorArray, CFErrorRef *error) {
     assert(authRef != NULL);
     assert(response != NULL);
     
     CFDictionarySetValue(response, CFSTR(kSampleSecretSpyStuffResponse), CFSTR("Hello 007"));
     
     return true;
+}
+
+static bool CreateDirectoryRecursively(CFURLRef url, CFErrorRef *error) {
+    CFURLRef parentURL = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault, url);
+    char path[PATH_MAX];
+    bool success = true;
+    
+    if (!CFURLResourceIsReachable(parentURL, NULL)) {
+        if (!CreateDirectoryRecursively(parentURL, error)) {
+            success = false;
+        }
+    }
+    
+    if (success) {
+        success = CFURLGetFileSystemRepresentation(url, true, (UInt8 *)path, sizeof(path));
+    }
+    
+    if (success) {
+        if (mkdir(path, S_IRWXU | S_IRGRP | S_IXGRP | S_IROTH | S_IXOTH) < 0) {
+            if (error) *error = CSASCreateCFErrorFromErrno(errno);
+            success = false;
+        }
+    }
+    
+    CFRelease(parentURL);
+    
+    return success;
+}
+
+static bool DoGetFileDescriptors(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFMutableArrayRef descriptorArray, CFErrorRef *error) {
+    CFURLRef fileURL = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, CFSTR("/usr/local/share/CSAuthSample/testfile.txt"), kCFURLPOSIXPathStyle, false);
+    CFURLRef parentURL = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault, fileURL);
+    char path[PATH_MAX];
+    int fd;
+    bool success = true;
+    
+    assert(authRef != NULL);
+    assert(response != NULL);
+    assert(descriptorArray != NULL);
+    
+    if (!CFURLResourceIsReachable(parentURL, NULL)) {
+        success = CreateDirectoryRecursively(parentURL, error);
+    }
+    
+    if (success) {
+        success = CFURLGetFileSystemRepresentation(fileURL, true, (UInt8 *)path, sizeof(path));
+    }
+    
+    if (success) {
+        fd = open(path, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+        
+        if (fd < 0) {
+            if (error) *error = CSASCreateCFErrorFromErrno(errno);
+            success = false;
+        }
+    }
+    
+    if (success) {
+        CFNumberRef fdNum = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &fd);
+        
+        CFArrayAppendValue(descriptorArray, fdNum);
+        
+        CFRelease(fdNum);
+    }
+    
+    CFRelease(parentURL);
+    CFRelease(fileURL);
+    
+    return success;
 }
 
 /////////////////////////////////////////////////////////////////
@@ -95,6 +165,7 @@ static bool DoSecretSpyStuff(AuthorizationRef authRef, const void *userData, CFD
 static const CSASCommandProc kSampleCommandProcs[] = {
     DoGetVersion,
     DoSecretSpyStuff,
+    DoGetFileDescriptors,
     NULL
 };
 

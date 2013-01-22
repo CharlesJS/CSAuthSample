@@ -88,6 +88,16 @@
 
 #define kSampleSecretSpyStuffResponse	"Reply"
 
+// A command that will open a file descriptor, and pass it back to the application.
+
+#define kSampleGetFileDescriptorsCommand     "GetFileDescriptor"
+
+#define kSampleGetFileDescriptorsRightName   "com.charlessoft.CSAuthSample.GetFileDescriptor"
+
+// request keys (none)
+
+// response keys (none)
+
 // The kSampleCommandSet is used by both the app and the tool to communicate the set of
 // supported commands to the BetterAuthorizationSampleLib module.
 

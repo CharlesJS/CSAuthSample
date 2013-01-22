@@ -50,7 +50,7 @@
 #include "CSAuthSampleCommonLib.h"
 
 typedef void (^CSASErrorHandler)(NSError *error);
-typedef void (^CSASResponseHandler)(NSDictionary *response);
+typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles);
 
 @interface CSASCommandSender : NSObject
 

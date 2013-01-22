@@ -62,12 +62,13 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 - (IBAction)getVersion:(id)sender;
 - (IBAction)doSecretSpyStuff:(id)sender;
+- (IBAction)createFile:(id)sender;
 
 - (void)requestHelperVersion:(void (^)(int64_t version, NSError *error))handler;
 
 - (void)sendRequest:(NSDictionary *)request;
-- (void)sendRequest:(NSDictionary *)request replyHandler:(void (^)(NSDictionary *response))replyHandler;
-- (void)sendRequest:(NSDictionary *)request errorHandler:(void (^)(NSError *error))errorHandler replyHandler:(void (^)(NSDictionary *response))replyHandler;
+- (void)sendRequest:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler;
+- (void)sendRequest:(NSDictionary *)request errorHandler:(CSASErrorHandler)errorHandler responseHandler:(CSASResponseHandler)responseHandler;
 
 @end
 
@@ -124,16 +125,16 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (void)sendRequest:(NSDictionary *)request {
-    void (^replyHandler)(NSDictionary *) = ^(NSDictionary *response) {
+    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles) {
         NSString *reply = response[@"Reply"];
         
         [self appendLog:[NSString stringWithFormat:@"Received response: %@.", reply]];
     };
     
-    [self sendRequest:request replyHandler:replyHandler];
+    [self sendRequest:request responseHandler:responseHandler];
 }
 
-- (void)sendRequest:(NSDictionary *)request replyHandler:(void (^)(NSDictionary *))replyHandler {
+- (void)sendRequest:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler {
     void (^errorHandler)(NSError *) = ^(NSError *error) {
         NSString *log = nil;
         
@@ -163,10 +164,10 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         [self appendLog:log];
     };
     
-    [self sendRequest:request errorHandler:errorHandler replyHandler:replyHandler];
+    [self sendRequest:request errorHandler:errorHandler responseHandler:responseHandler];
 }
 
-- (void)sendRequest:(NSDictionary *)request errorHandler:(void (^)(NSError *))errorHandler replyHandler:(void (^)(NSDictionary *))replyHandler {
+- (void)sendRequest:(NSDictionary *)request errorHandler:(CSASErrorHandler)errorHandler responseHandler:(CSASResponseHandler)responseHandler {
     if (!self.helperIsReady) {
         [self appendLog:@"Not sending request: Helper is not yet ready"];
         return;
@@ -174,13 +175,13 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
     
     [self appendLog:[NSString stringWithFormat:@"Sending request: %@", request[@kCSASCommandKey]]];
     
-    [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:replyHandler];
+    [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:responseHandler];
 }
 
 - (void)requestHelperVersion:(void (^)(int64_t, NSError *))handler {
     NSDictionary *request = @{ @kCSASCommandKey : @kSampleGetVersionCommand };
     
-    void (^replyHandler)(NSDictionary *) = ^(NSDictionary *response) {
+    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles) {
         NSNumber *version = response[@kSampleGetVersionResponse];
         
         handler(version.longLongValue, nil);
@@ -190,7 +191,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         handler(-1, error);
     };
     
-    [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:replyHandler];
+    [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:responseHandler];
 }
 
 - (IBAction)getVersion:(id)sender {
@@ -207,6 +208,21 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
     NSDictionary *request = @{ @kCSASCommandKey : @kSampleSecretSpyStuffCommand };
     
     [self sendRequest:request];
+}
+
+- (IBAction)createFile:(id)sender {
+    NSDictionary *request = @{ @kCSASCommandKey : @kSampleGetFileDescriptorsCommand };
+    
+    [self sendRequest:request responseHandler:^(NSDictionary *response, NSArray *fileHandles) {
+        if (fileHandles.count == 0) {
+            [self appendLog:@"No file descriptors"];
+        } else {
+            NSFileHandle *fh = fileHandles[0];
+            NSString *testString = [NSString stringWithFormat:@"%@: Test data", [[NSDate date] descriptionWithLocale:[NSLocale currentLocale]]];
+            
+            [fh writeData:[testString dataUsingEncoding:NSUTF8StringEncoding]];
+        }
+    }];
 }
 
 @end

@@ -167,11 +167,38 @@ static bool CommandArraySizeMatchesCommandProcArraySize(
 
 #endif
 
+// write file descriptors to the XPC message
+
+static bool CSASWriteFileDescriptors(CFArrayRef descriptorArray, xpc_object_t message, CFErrorRef *errorPtr) {
+    CFIndex descriptorCount = CFArrayGetCount(descriptorArray);
+    bool success = true;
+    
+    xpc_object_t fdArray = xpc_array_create(NULL, 0);
+    
+    for (CFIndex i = 0; i < descriptorCount; i++) {
+        CFNumberRef eachFdNum = CFArrayGetValueAtIndex(descriptorArray, i);
+        int eachFd = 0;
+        
+        if (!CFNumberGetValue(eachFdNum, kCFNumberIntType, &eachFd)) {
+            continue;
+        }
+        
+        xpc_array_set_fd(fdArray, XPC_ARRAY_APPEND, eachFd);
+    }
+    
+    xpc_dictionary_set_value(message, kCSASDescriptorArrayKey, fdArray);
+    
+    xpc_release(fdArray);
+    
+    return success;
+}
+
 static bool HandleCommand(
                           const CSASCommandSpec		commands[],
                           const CSASCommandProc		commandProcs[],
                           CFDictionaryRef                request,
                           CFDictionaryRef *              responsePtr,
+                          CFArrayRef *                   descriptorArrayPtr,
                           AuthorizationRef               authRef,
                           CFErrorRef *					 errorPtr
                           )
@@ -246,14 +273,24 @@ static bool HandleCommand(
     }
     
     if (success) {
+        CFMutableArrayRef descriptorArray = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+        
         // Call callback to execute command based on the request.
         
-        success = commandProcs[commandIndex](authRef, commands[commandIndex].userData, request, response, &error);
+        success = commandProcs[commandIndex](authRef, commands[commandIndex].userData, request, response, descriptorArray, &error);
+
+        if (descriptorArrayPtr != NULL) {
+            if (success && (CFArrayGetCount(descriptorArray) != 0)) {
+                *descriptorArrayPtr = descriptorArray;
+            } else {
+                *descriptorArrayPtr = NULL;
+            }
+        }
         
         // If the command didn't insert its own error value, we use its function
         // result as the error value.
         
-        if ( (error != NULL) && !CFDictionaryContainsKey(response, CFSTR(kCSASErrorKey)) ) {
+        if ( !success && (error != NULL) && !CFDictionaryContainsKey(response, CFSTR(kCSASErrorKey)) ) {
             CFDictionaryRef errorDict = CSASCreateErrorDictFromCFError(error);
             
             CFDictionaryAddValue(response, CFSTR(kCSASErrorKey), errorDict);
@@ -301,6 +338,7 @@ static bool HandleEvent(
 	} else if (type == XPC_TYPE_DICTIONARY) {
         CFDictionaryRef request = NULL;
         CFDictionaryRef response = NULL;
+        CFArrayRef descriptorArray = NULL;
         xpc_object_t reply = NULL;
         xpc_connection_t remote = NULL;
         AuthorizationExternalForm authExtForm;
@@ -334,13 +372,17 @@ static bool HandleEvent(
         }
         
         if (success) {
-            success = HandleCommand(commands, commandProcs, request, &response, authRef, errorPtr);
+            success = HandleCommand(commands, commandProcs, request, &response, &descriptorArray, authRef, errorPtr);
         }
         
         if (success) {
             reply = xpc_dictionary_create_reply(event);
             
             success = CSASWriteDictionary(response, reply, errorPtr);
+        }
+        
+        if (success && descriptorArray != NULL && CFArrayGetCount(descriptorArray) != 0) {
+            success = CSASWriteFileDescriptors(descriptorArray, reply, errorPtr);
         }
         
         if (success) {
@@ -362,6 +404,10 @@ static bool HandleEvent(
         
         if (response != NULL) {
             CFRelease(response);
+        }
+        
+        if (descriptorArray != NULL) {
+            CFRelease(descriptorArray);
         }
         
         if (authRef != NULL) {

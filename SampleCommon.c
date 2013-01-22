@@ -90,6 +90,13 @@ const CSASCommandSpec kSampleCommandSet[] = {
         NULL                                    // userData
 	},
     
+    {   kSampleGetFileDescriptorsCommand,
+        kSampleGetFileDescriptorsRightName,
+        kCSASRuleAuthenticateAdmin,
+        "Please identify yourself",
+        NULL
+    },
+    
     {	NULL,                                   // the array is null terminated
         NULL,
         NULL,

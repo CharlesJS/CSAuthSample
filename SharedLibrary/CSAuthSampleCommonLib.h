@@ -295,6 +295,19 @@ typedef struct CSASCommandSpec CSASCommandSpec;
 #define kCSASErrorCodeKey     "com.apple.dts.BetterAuthorizationSample.error.code"			// CFNumber
 #define kCSASErrorUserInfoKey "com.apple.dts.BetterAuthorizationSample.error.userInfo"		// CFDictionary
 
+/*!
+ @define         kBASDescriptorArrayKey
+ 
+ @abstract       Key for a file descriptor array within the response dictionary.
+ 
+ @discussion     Within a response, this key, if present, must reference an array
+ of numbers, which are the file descriptors being returned with
+ the response.  The numbers are interpreted as ints.
+ */
+
+#define kCSASDescriptorArrayKey "com.apple.dts.BetterAuthorizationSample.descriptors"	// CFArray of CFNumber
+
+
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Helper Tool Routines
 
@@ -384,6 +397,7 @@ AuthorizationRef			auth,
 const void *                userData,
 CFDictionaryRef				request,
 CFMutableDictionaryRef      response,
+CFMutableArrayRef           descriptorArray,
 CFErrorRef *				error
 );
 

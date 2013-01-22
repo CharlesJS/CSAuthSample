@@ -274,9 +274,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		28116D4B16ABD7F80046A911 /* Static Library - App */ = {
+		28116D4B16ABD7F80046A911 /* CSAuthSample Static Library for App */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 28116D5716ABD7F80046A911 /* Build configuration list for PBXNativeTarget "Static Library - App" */;
+			buildConfigurationList = 28116D5716ABD7F80046A911 /* Build configuration list for PBXNativeTarget "CSAuthSample Static Library for App" */;
 			buildPhases = (
 				28116D4816ABD7F80046A911 /* Sources */,
 				28116D4916ABD7F80046A911 /* Frameworks */,
@@ -286,14 +286,14 @@
 			);
 			dependencies = (
 			);
-			name = "Static Library - App";
+			name = "CSAuthSample Static Library for App";
 			productName = libCSAuthSampleApp;
 			productReference = 28116D4C16ABD7F80046A911 /* liblibCSAuthSampleApp.a */;
 			productType = "com.apple.product-type.library.static";
 		};
-		28116D6016ABD8980046A911 /* Static Library - Helper */ = {
+		28116D6016ABD8980046A911 /* CSAuthSample Static Library for Helper */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 28116D6216ABD8980046A911 /* Build configuration list for PBXNativeTarget "Static Library - Helper" */;
+			buildConfigurationList = 28116D6216ABD8980046A911 /* Build configuration list for PBXNativeTarget "CSAuthSample Static Library for Helper" */;
 			buildPhases = (
 				28116D5D16ABD8980046A911 /* Sources */,
 				28116D5E16ABD8980046A911 /* Frameworks */,
@@ -303,14 +303,14 @@
 			);
 			dependencies = (
 			);
-			name = "Static Library - Helper";
+			name = "CSAuthSample Static Library for Helper";
 			productName = "Static Library for Helper";
 			productReference = 28116D6116ABD8980046A911 /* liblibCSAuthSampleHelper.a */;
 			productType = "com.apple.product-type.library.static";
 		};
-		4BE4905C10445E0A006BE471 /* Helper Tool */ = {
+		4BE4905C10445E0A006BE471 /* CSAuthSample Helper */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4BE4906210445E31006BE471 /* Build configuration list for PBXNativeTarget "Helper Tool" */;
+			buildConfigurationList = 4BE4906210445E31006BE471 /* Build configuration list for PBXNativeTarget "CSAuthSample Helper" */;
 			buildPhases = (
 				4BE4905A10445E0A006BE471 /* Sources */,
 				4BE4905B10445E0A006BE471 /* Frameworks */,
@@ -319,14 +319,14 @@
 			);
 			dependencies = (
 			);
-			name = "Helper Tool";
+			name = "CSAuthSample Helper";
 			productName = SMJobBlessHelper;
 			productReference = 4BE4905D10445E0A006BE471 /* com.charlessoft.CSAuthSample.helper */;
 			productType = "com.apple.product-type.tool";
 		};
-		8D1107260486CEB800E47090 /* Main Application */ = {
+		8D1107260486CEB800E47090 /* CSAuthSample App */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = C01FCF4A08A954540054247B /* Build configuration list for PBXNativeTarget "Main Application" */;
+			buildConfigurationList = C01FCF4A08A954540054247B /* Build configuration list for PBXNativeTarget "CSAuthSample App" */;
 			buildPhases = (
 				8D1107290486CEB800E47090 /* Resources */,
 				8D11072C0486CEB800E47090 /* Sources */,
@@ -338,7 +338,7 @@
 			dependencies = (
 				4BE4907F1044624F006BE471 /* PBXTargetDependency */,
 			);
-			name = "Main Application";
+			name = "CSAuthSample App";
 			productInstallPath = "$(HOME)/Applications";
 			productName = SMJobBless;
 			productReference = 8D1107320486CEB800E47090 /* CSAuthSample.app */;
@@ -363,10 +363,10 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				8D1107260486CEB800E47090 /* Main Application */,
-				4BE4905C10445E0A006BE471 /* Helper Tool */,
-				28116D4B16ABD7F80046A911 /* Static Library - App */,
-				28116D6016ABD8980046A911 /* Static Library - Helper */,
+				8D1107260486CEB800E47090 /* CSAuthSample App */,
+				4BE4905C10445E0A006BE471 /* CSAuthSample Helper */,
+				28116D4B16ABD7F80046A911 /* CSAuthSample Static Library for App */,
+				28116D6016ABD8980046A911 /* CSAuthSample Static Library for Helper */,
 			);
 		};
 /* End PBXProject section */
@@ -430,7 +430,7 @@
 /* Begin PBXTargetDependency section */
 		4BE4907F1044624F006BE471 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 4BE4905C10445E0A006BE471 /* Helper Tool */;
+			target = 4BE4905C10445E0A006BE471 /* CSAuthSample Helper */;
 			targetProxy = 4BE4907E1044624F006BE471 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -649,23 +649,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		28116D5716ABD7F80046A911 /* Build configuration list for PBXNativeTarget "Static Library - App" */ = {
+		28116D5716ABD7F80046A911 /* Build configuration list for PBXNativeTarget "CSAuthSample Static Library for App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				28116D5516ABD7F80046A911 /* Debug */,
 				28116D5616ABD7F80046A911 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
-		28116D6216ABD8980046A911 /* Build configuration list for PBXNativeTarget "Static Library - Helper" */ = {
+		28116D6216ABD8980046A911 /* Build configuration list for PBXNativeTarget "CSAuthSample Static Library for Helper" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				28116D6316ABD8980046A911 /* Debug */,
 				28116D6416ABD8980046A911 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
-		4BE4906210445E31006BE471 /* Build configuration list for PBXNativeTarget "Helper Tool" */ = {
+		4BE4906210445E31006BE471 /* Build configuration list for PBXNativeTarget "CSAuthSample Helper" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4BE4905F10445E0B006BE471 /* Debug */,
@@ -674,7 +676,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		C01FCF4A08A954540054247B /* Build configuration list for PBXNativeTarget "Main Application" */ = {
+		C01FCF4A08A954540054247B /* Build configuration list for PBXNativeTarget "CSAuthSample App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				C01FCF4B08A954540054247B /* Debug */,
