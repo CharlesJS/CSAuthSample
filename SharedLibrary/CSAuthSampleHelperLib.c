@@ -554,6 +554,7 @@ static void CSASSetDefaultRules(
 extern int CSASHelperToolMain(
                               CFStringRef               helperID,
                               CFStringRef               appID,
+                              CFStringRef               descriptionStringTableName,
                               const CSASCommandSpec		commands[],
                               const CSASCommandProc		commandProcs[],
                               unsigned int              timeoutInterval
@@ -571,7 +572,7 @@ extern int CSASHelperToolMain(
     
     // Set up default rules which other processes must follow to communicate with this tool.
     
-    CSASSetDefaultRules(commands, appID, NULL);
+    CSASSetDefaultRules(commands, appID, descriptionStringTableName);
     
     // set up the watchdog stuff
     InitWatchdog(timeoutInterval);

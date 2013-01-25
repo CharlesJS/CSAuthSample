@@ -327,13 +327,13 @@
             }
             
             if (sendSuccess) {
-                responseHandler(BRIDGE(NSDictionary *, sendResponse), fileHandles);
+                if (responseHandler != nil) responseHandler(BRIDGE(NSDictionary *, sendResponse), fileHandles);
                 CFRelease(sendResponse);
             } else {
                 if (connectionError != nil) {
-                    errorHandler(connectionError);
+                    if (errorHandler != nil) errorHandler(connectionError);
                 } else {
-                    errorHandler(BRIDGE(NSError *, sendError));
+                    if (errorHandler != nil) errorHandler(BRIDGE(NSError *, sendError));
                 }
                 
                 CFRelease(sendError);
@@ -347,7 +347,7 @@
     // If something failed, let the user know.
     
     if (!success) {
-        errorHandler(BRIDGE(NSError *, error));
+        if (errorHandler != nil) errorHandler(BRIDGE(NSError *, error));
         CFRelease(error);
         RELEASE_XPC(connection);
     }

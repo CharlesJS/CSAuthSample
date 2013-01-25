@@ -172,6 +172,6 @@ static const CSASCommandProc kSampleCommandProcs[] = {
 int main(int argc, const char *argv[]) {
     // Go directly into CSAuthSampleHelperLib code.
 	
-	return CSASHelperToolMain(CFSTR(kSampleHelperID), CFSTR(kSampleAppID), kSampleCommandSet, kSampleCommandProcs, kSampleTimeoutInterval);
+	return CSASHelperToolMain(CFSTR(kSampleHelperID), CFSTR(kSampleAppID), NULL, kSampleCommandSet, kSampleCommandProcs, kSampleTimeoutInterval);
 }
 

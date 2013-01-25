@@ -93,6 +93,7 @@
 extern int CSASHelperToolMain(
                               CFStringRef               helperID,
                               CFStringRef               appID,
+                              CFStringRef               descriptionStringTableName,
                               const CSASCommandSpec		commands[],
                               const CSASCommandProc		commandProcs[],
                               unsigned int              timeoutInterval
