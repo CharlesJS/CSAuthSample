@@ -91,8 +91,8 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         return;
     }
     
-    [self requestHelperVersion:^(int64_t version, NSError *error) {
-        if (error == nil && version == kCSASHelperVersion) {
+    [self requestHelperVersion:^(int64_t version, NSError *versionError) {
+        if (versionError == nil && version == kCSASHelperVersion) {
             self.textField.stringValue = @"Helper available.";
             self.helperIsReady = YES;
         } else {
