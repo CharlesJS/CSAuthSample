@@ -67,7 +67,8 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 - (void)sendRequest:(NSDictionary *)request;
 - (void)sendRequest:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler;
-- (void)sendRequest:(NSDictionary *)request errorHandler:(CSASErrorHandler)errorHandler responseHandler:(CSASResponseHandler)responseHandler;
+
+- (void)logError:(NSError *)error;
 
 @end
 
@@ -113,49 +114,20 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (void)sendRequest:(NSDictionary *)request {
-    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles) {
-        NSString *reply = response[@"Reply"];
+    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, NSError *errorOrNil) {
+        if (errorOrNil != nil) {
+            [self logError:errorOrNil];
+        } else {
+            NSString *reply = response[@"Reply"];
         
-        [self appendLog:[NSString stringWithFormat:@"Received response: %@.", reply]];
+            [self appendLog:[NSString stringWithFormat:@"Received response: %@.", reply]];
+        }
     };
     
     [self sendRequest:request responseHandler:responseHandler];
 }
 
 - (void)sendRequest:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler {
-    void (^errorHandler)(NSError *) = ^(NSError *error) {
-        NSString *log = nil;
-        
-        if ([error.domain isEqualToString:(__bridge NSString *)kCSASErrorDomain]) {
-            switch (error.code) {
-                case kCSASErrorConnectionInterrupted:
-                    log = @"XPC connection interupted.";
-                    break;
-                case kCSASErrorConnectionInvalid:
-                    log = @"XPC connection invalid, releasing.";
-                    break;
-                case kCSASErrorUnexpectedConnection:
-                    log = @"Unexpected XPC connection error.";
-                    break;
-                case kCSASErrorUnexpectedEvent:
-                    log = @"Unexpected XPC connection event.";
-                    break;
-                default:
-                    break;
-            }
-        }
-        
-        if (log == nil) {
-            log = [NSString stringWithFormat:@"An error occurred when sending the request: %@", error];
-        }
-        
-        [self appendLog:log];
-    };
-    
-    [self sendRequest:request errorHandler:errorHandler responseHandler:responseHandler];
-}
-
-- (void)sendRequest:(NSDictionary *)request errorHandler:(CSASErrorHandler)errorHandler responseHandler:(CSASResponseHandler)responseHandler {
     if (!self.helperIsReady) {
         [self appendLog:@"Not sending request: Helper is not yet ready"];
         return;
@@ -163,23 +135,52 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
     
     [self appendLog:[NSString stringWithFormat:@"Sending request: %@", request[@kCSASCommandKey]]];
     
-    [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:responseHandler];
+    [self.commandSender executeRequestInHelperTool:request responseHandler:responseHandler];
+}
+
+- (void)logError:(NSError *)error {
+    NSString *log = nil;
+    
+    if ([error.domain isEqualToString:(__bridge NSString *)kCSASErrorDomain]) {
+        switch (error.code) {
+            case kCSASErrorConnectionInterrupted:
+                log = @"XPC connection interupted.";
+                break;
+            case kCSASErrorConnectionInvalid:
+                log = @"XPC connection invalid, releasing.";
+                break;
+            case kCSASErrorUnexpectedConnection:
+                log = @"Unexpected XPC connection error.";
+                break;
+            case kCSASErrorUnexpectedEvent:
+                log = @"Unexpected XPC connection event.";
+                break;
+            default:
+                break;
+        }
+    }
+    
+    if (log == nil) {
+        log = [NSString stringWithFormat:@"An error occurred when sending the request: %@", error];
+    }
+    
+    [self appendLog:log];
 }
 
 - (void)requestHelperVersion:(void (^)(int64_t, NSError *))handler {
     NSDictionary *request = @{ @kCSASCommandKey : @kSampleGetVersionCommand };
     
-    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles) {
-        NSNumber *version = response[@kSampleGetVersionResponse];
-        
-        handler(version.longLongValue, nil);
-    };
-    
-    void (^errorHandler)(NSError *) = ^(NSError *error) {
-        handler(-1, error);
-    };
-    
-    [self.commandSender executeRequestInHelperTool:request errorHandler:errorHandler responseHandler:responseHandler];
+    [self.commandSender executeRequestInHelperTool:request responseHandler:^(NSDictionary *response, NSArray *fileHandles, NSError *errorOrNil) {
+        if (handler != nil) {
+            if (errorOrNil != nil) {
+                handler(-1, errorOrNil);
+            } else {
+                NSNumber *version = response[@kSampleGetVersionResponse];
+                
+                handler(version.longLongValue, nil);
+            }
+        }
+    }];
 }
 
 - (IBAction)getVersion:(id)sender {
@@ -201,8 +202,10 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 - (IBAction)createFile:(id)sender {
     NSDictionary *request = @{ @kCSASCommandKey : @kSampleGetFileDescriptorsCommand };
     
-    [self sendRequest:request responseHandler:^(NSDictionary *response, NSArray *fileHandles) {
-        if (fileHandles.count == 0) {
+    [self sendRequest:request responseHandler:^(NSDictionary *response, NSArray *fileHandles, NSError *errorOrNil) {
+        if (errorOrNil != nil) {
+            [self logError:errorOrNil];
+        } else if (fileHandles.count == 0) {
             [self appendLog:@"No file descriptors"];
         } else {
             NSFileHandle *fh = fileHandles[0];

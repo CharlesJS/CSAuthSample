@@ -569,7 +569,7 @@ extern int CSASHelperToolMain(
 	assert(commands[0].commandName != NULL);        // there must be at least one command
 	assert(commandProcs != NULL);
     assert( CommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
-    
+
     // Set up default rules which other processes must follow to communicate with this tool.
     
     CSASSetDefaultRules(commands, appID, descriptionStringTableName);

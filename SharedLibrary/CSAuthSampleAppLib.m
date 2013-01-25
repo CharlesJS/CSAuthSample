@@ -192,7 +192,7 @@
 	return success;
 }
 
-- (void)executeRequestInHelperTool:(NSDictionary *)request errorHandler:(CSASErrorHandler)errorHandler responseHandler:(CSASResponseHandler)responseHandler {
+- (void)executeRequestInHelperTool:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler {
     bool                        success = true;
     size_t                      commandIndex;
 	AuthorizationExternalForm	extAuth;
@@ -309,9 +309,18 @@
             NSArray *fileHandles = nil;
             CFErrorRef sendError = NULL;
             
+            bool sendSuccess = true;
+            
+            if (connectionError != nil) {
+                sendError = (CFErrorRef)CFBridgingRetain(connectionError);
+                sendSuccess = false;
+            }
+            
             // Read response.
             
-            bool sendSuccess = CSASReadDictionary(reply, &sendResponse, &sendError);
+            if (sendSuccess) {
+                sendSuccess = CSASReadDictionary(reply, &sendResponse, &sendError);
+            }
             
             if (sendSuccess) {
                 sendError = CSASCreateErrorFromResponse(sendResponse);
@@ -327,14 +336,10 @@
             }
             
             if (sendSuccess) {
-                if (responseHandler != nil) responseHandler(BRIDGE(NSDictionary *, sendResponse), fileHandles);
+                if (responseHandler != nil) responseHandler(BRIDGE(NSDictionary *, sendResponse), fileHandles, nil);
                 CFRelease(sendResponse);
             } else {
-                if (connectionError != nil) {
-                    if (errorHandler != nil) errorHandler(connectionError);
-                } else {
-                    if (errorHandler != nil) errorHandler(BRIDGE(NSError *, sendError));
-                }
+                if (responseHandler != nil) responseHandler(nil, nil, BRIDGE(NSError *, sendError));
                 
                 CFRelease(sendError);
             }
@@ -347,7 +352,7 @@
     // If something failed, let the user know.
     
     if (!success) {
-        if (errorHandler != nil) errorHandler(BRIDGE(NSError *, error));
+        if (responseHandler != nil) responseHandler(nil, nil, BRIDGE(NSError *, error));
         CFRelease(error);
         RELEASE_XPC(connection);
     }

@@ -49,8 +49,7 @@
 #import <Foundation/Foundation.h>
 #include "CSAuthSampleCommonLib.h"
 
-typedef void (^CSASErrorHandler)(NSError *error);
-typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles);
+typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles, NSError *errorOrNil);
 
 @interface CSASCommandSender : NSObject
 
@@ -115,6 +114,6 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
  @result			An OSStatus code (see CSASErrnoToOSStatus and CSASOSStatusToErrno).
  */
 
-- (void)executeRequestInHelperTool:(NSDictionary *)request errorHandler:(CSASErrorHandler)errorHandler responseHandler:(CSASResponseHandler)responseHandler;
+- (void)executeRequestInHelperTool:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler;
 
 @end
