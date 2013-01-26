@@ -428,10 +428,8 @@ extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum);
 extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err);
 extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err);
 
-extern bool CSASReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFErrorRef *errorPtr);
-extern bool CSASWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFErrorRef *errorPtr);
-
-extern CFErrorRef CSASCreateErrorFromResponse(CFDictionaryRef response);
+extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message);
+extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj);
 
 extern bool FindCommand(
                         CFDictionaryRef             request,

@@ -298,7 +298,11 @@
     // Write the request.
     
 	if (success) {
-		success = CSASWriteDictionary(BRIDGE(CFDictionaryRef, request), message, (CFErrorRef *)&error);
+		xpc_object_t xpcRequest = CSASCreateXPCMessageFromCFType(BRIDGE(CFDictionaryRef, request));
+        
+        xpc_dictionary_set_value(message, kCSASRequestKey, xpcRequest);
+        
+        RELEASE_XPC(xpcRequest);
 	}
 	
     // Send request.
@@ -319,15 +323,15 @@
             // Read response.
             
             if (sendSuccess) {
-                sendSuccess = CSASReadDictionary(reply, &sendResponse, &sendError);
-            }
-            
-            if (sendSuccess) {
-                sendError = CSASCreateErrorFromResponse(sendResponse);
+                sendResponse = CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(reply, kCSASRequestKey));
                 
-                if (sendError != NULL) {
-                    CFRelease(sendResponse);
+                if (sendResponse == NULL) {
                     sendSuccess = false;
+                    sendError = (CFErrorRef)CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(reply, kCSASErrorKey));
+                    
+                    if (sendError == NULL) {
+                        sendError = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+                    }
                 }
             }
             
@@ -337,11 +341,12 @@
             
             if (sendSuccess) {
                 if (responseHandler != nil) responseHandler(BRIDGE(NSDictionary *, sendResponse), fileHandles, nil);
-                CFRelease(sendResponse);
             } else {
                 if (responseHandler != nil) responseHandler(nil, nil, BRIDGE(NSError *, sendError));
-                
-                CFRelease(sendError);
+            }
+            
+            if (sendResponse != NULL) {
+                CFRelease(sendResponse);
             }
             
             RELEASE(fileHandles);

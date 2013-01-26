@@ -80,6 +80,11 @@
 CFStringRef const kCSASErrorDomainSecurity = CFSTR("kCSASDomainAuthorization");
 CFStringRef const kCSASErrorDomain = CFSTR("kCSASErrorDomain");
 
+// For encoding NSURLs and NSErrors in a manner that will allow them to be passed along the message port without complaints.
+
+static const char * const kCSASEncodedURLKey = "kCSAuthSampleEncodedeURLKey";
+static const char * const kCSASEncodedErrorKey = "kCSASEncodedErrorKey";
+
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Common Code
 
@@ -164,156 +169,275 @@ extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err) {
     }
 }
 
-extern CFErrorRef CSASCreateErrorFromResponse(CFDictionaryRef response) {
-    CFErrorRef error = NULL;
-    CFDictionaryRef errorDict = NULL;
+extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message) {
+    xpc_type_t type;
     
-    if (response == NULL) {
-        error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-    } else {
-        errorDict = CFDictionaryGetValue(response, CFSTR(kCSASErrorKey));
+    if (message == NULL) {
+        return NULL;
     }
     
-    if (errorDict != NULL) {
-        CFStringRef domain = CFDictionaryGetValue(errorDict, CFSTR(kCSASErrorDomainKey));
-        CFIndex code = 0;
-        CFNumberRef codeNum = CFDictionaryGetValue(errorDict, CFSTR(kCSASErrorCodeKey));
-        CFDictionaryRef userInfo = CFDictionaryGetValue(errorDict, CFSTR(kCSASErrorUserInfoKey));
+    type = xpc_get_type(message);
+    
+    if (type == XPC_TYPE_NULL) {
+        return kCFNull;
+    } else if (type == XPC_TYPE_BOOL) {
+        return xpc_bool_get_value(message) ? kCFBooleanTrue : kCFBooleanFalse;
+    } else if (type == XPC_TYPE_INT64) {
+        int64_t theInt = xpc_int64_get_value(message);
         
-        if (!CFNumberGetValue(codeNum, kCFNumberCFIndexType, &code)) {
-            code = -1;
+        return CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &theInt);
+    } else if (type == XPC_TYPE_UINT64) {
+        uint64_t theInt = xpc_int64_get_value(message);
+        
+        return CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &theInt);
+    } else if (type == XPC_TYPE_DOUBLE) {
+        double theDouble = xpc_double_get_value(message);
+        
+        return CFNumberCreate(kCFAllocatorDefault, kCFNumberDoubleType, &theDouble);
+    } else if (type == XPC_TYPE_DATE) {
+        int64_t nsSince1970 = xpc_date_get_value(message);
+        
+        int64_t sec = nsSince1970 / NSEC_PER_SEC;
+        int64_t ns = nsSince1970 % NSEC_PER_SEC;
+        
+        CFGregorianDate jan1970 = { 1970, 01, 01, 00, 00, 00 };
+        CFAbsoluteTime absJan1970 = CFGregorianDateGetAbsoluteTime(jan1970, NULL);
+        
+        CFAbsoluteTime absTime = absJan1970 + (CFAbsoluteTime)sec + ((CFAbsoluteTime)ns / (CFAbsoluteTime)NSEC_PER_SEC);
+        
+        return CFDateCreate(kCFAllocatorDefault, absTime);
+    } else if (type == XPC_TYPE_DATA) {
+        return CFDataCreate(kCFAllocatorDefault, xpc_data_get_bytes_ptr(message), xpc_data_get_length(message));
+    } else if (type == XPC_TYPE_STRING) {
+        return CFStringCreateWithBytes(kCFAllocatorDefault, (const UInt8 *)xpc_string_get_string_ptr(message), xpc_string_get_length(message), kCFStringEncodingUTF8, false);
+    } else if (type == XPC_TYPE_UUID) {
+        const uint8_t *uuid = xpc_uuid_get_bytes(message);
+        
+        return CFUUIDCreateWithBytes(kCFAllocatorDefault, uuid[0], uuid[1], uuid[2], uuid[3], uuid[4], uuid[5], uuid[6], uuid[7], uuid[8], uuid[9], uuid[10], uuid[11], uuid[12], uuid[13], uuid[14], uuid[15]);
+    } else if (type == XPC_TYPE_ARRAY) {
+        size_t count = xpc_array_get_count(message);
+        CFMutableArrayRef array = CFArrayCreateMutable(kCFAllocatorDefault, count, &kCFTypeArrayCallBacks);
+        
+        for (size_t i = 0; i < count; i++) {
+            CFTypeRef theObj = CSASCreateCFTypeFromXPCMessage(xpc_array_get_value(message, i));
+            
+            if (theObj != NULL) {
+                CFArrayAppendValue(array, theObj);
+            }
         }
-    
-        error = CFErrorCreate(kCFAllocatorDefault, domain, code, userInfo);
+        
+        return array;
+    } else if (type == XPC_TYPE_DICTIONARY) {
+        xpc_object_t special;
+        
+        if ((special = xpc_dictionary_get_value(message, kCSASEncodedURLKey)) != NULL) {
+            CFStringRef urlString = CFStringCreateWithBytes(kCFAllocatorDefault, (const UInt8 *)xpc_string_get_string_ptr(special), xpc_string_get_length(special), kCFStringEncodingUTF8, false);
+            CFURLRef url = CFURLCreateWithString(kCFAllocatorDefault, urlString, NULL);
+            
+            CFRelease(urlString);
+            
+            return url;
+        } else if ((special = xpc_dictionary_get_value(message, kCSASEncodedErrorKey)) != NULL) {
+            CFStringRef domain = CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(special, kCSASErrorDomainKey));
+            int64_t code = xpc_dictionary_get_int64(special, kCSASErrorCodeKey);
+            CFDictionaryRef userInfo = CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(special, kCSASErrorUserInfoKey));
+            
+            CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, domain, code, userInfo);
+            
+            CFRelease(domain);
+            CFRelease(userInfo);
+            
+            return error;
+        } else {
+            size_t count = xpc_dictionary_get_count(message);
+            CFMutableDictionaryRef dict = CFDictionaryCreateMutable(kCFAllocatorDefault, count, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+            
+            xpc_dictionary_apply(message, ^bool(const char *key, xpc_object_t value) {
+                CFStringRef keyString = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingUTF8);
+                CFTypeRef theObj = CSASCreateCFTypeFromXPCMessage(value);
+                
+                if (theObj != NULL) {
+                    CFDictionarySetValue(dict, keyString, theObj);
+                }
+                
+                CFRelease(keyString);
+                
+                return true;
+            });
+            
+            return dict;
+        }
     }
     
-    return error;
+    return NULL;
 }
 
-extern bool CSASReadDictionary(xpc_object_t xpcIn, CFDictionaryRef *dictPtr, CFErrorRef *errorPtr)
-// Create a CFDictionary by reading the XML data from xpcIn.
-// It first reads the data in, and then
-// unflattens the data into a CFDictionary.
-//
-// On success, the caller is responsible for releasing *dictPtr.
-//
-// See also the companion routine, CSASWriteDictionary, below.
-{
-    bool                success = true;
-	size_t				dictSize;
-	const void *		dictBuffer;
-	CFDataRef			dictData;
-	CFPropertyListRef 	dict;
+extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
+    CFTypeID type;
     
-    // Pre-conditions
-    
-	assert(xpcIn >= 0);
-	assert( dictPtr != NULL);
-	assert(*dictPtr == NULL);
-	
-	dictBuffer = NULL;
-	dictData   = NULL;
-	dict       = NULL;
-    
-	// Read the data and unflatten.
-	
-	if (success) {
-        dictBuffer = xpc_dictionary_get_data(xpcIn, kCSASRequestKey, &dictSize);
-        
-        if (dictBuffer == NULL) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-        }
-	}
-	if ( success && CSASIsBinaryPropertyListData(dictBuffer, dictSize) ) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-	}
-	if (success) {
-		dictData = CFDataCreateWithBytesNoCopy(NULL, dictBuffer, dictSize, kCFAllocatorNull);
-		if (dictData == NULL) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-		}
-	}
-	if (success) {
-		dict = CFPropertyListCreateFromXMLData(NULL, dictData, kCFPropertyListImmutable, NULL);
-		if (dict == NULL) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-		}
-	}
-	if ( success && (CFGetTypeID(dict) != CFDictionaryGetTypeID()) ) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL); // only CFDictionaries need apply
-	}
-	// CFShow(dict);
-	
-	// Clean up.
-	
-	if (!success) {
-		if (dict != NULL) {
-			CFRelease(dict);
-		}
-		dict = NULL;
-	}
-	*dictPtr = (CFDictionaryRef) dict;
-
-	if (dictData != NULL) {
-		CFRelease(dictData);
-	}
-	
-	assert( (success != false) == (*dictPtr != NULL) );
-	
-	return success;
-}
-
-extern bool CSASWriteDictionary(CFDictionaryRef dict, xpc_object_t message, CFErrorRef *errorPtr)
-// Write a dictionary to an XPC message by flattening
-// it into XML.
-//
-// See also the companion routine, CSASReadDictionary, above.
-{
-    bool                success = true;
-	CFDataRef			dictData;
-    
-    // Pre-conditions
-    
-	assert(dict != NULL);
-	assert(message >= 0);
-	
-	dictData   = NULL;
-	
-    // Get the dictionary as XML data.
-    
-	dictData = CFPropertyListCreateXMLData(NULL, dict);
-	if (dictData == NULL) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-	}
-    
-    // Send the length, then send the data.  Always send the length as a big-endian
-    // uint32_t, so that the app and the helper tool can be different architectures.
-    //
-    // The MoreAuthSample version of this code erroneously assumed that CFDataGetBytePtr
-    // can fail and thus allocated an extra buffer to copy the data into.  In reality,
-    // CFDataGetBytePtr can't fail, so this version of the code doesn't do the unnecessary
-    // allocation.
-    
-    if ( success && (CFDataGetLength(dictData) > kCSASMaxNumberOfKBytes) ) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL);
+    if (obj == NULL) {
+        return NULL;
     }
     
-	if (success) {
-        xpc_dictionary_set_data(message, kCSASRequestKey, CFDataGetBytePtr(dictData), CFDataGetLength(dictData));
-	}
+    type = CFGetTypeID(obj);
     
-	if (dictData != NULL) {
-		CFRelease(dictData);
-	}
+    if (type == CFNullGetTypeID()) {
+        return xpc_null_create();
+    } else if (type == CFBooleanGetTypeID()) {
+        return xpc_bool_create(CFBooleanGetValue(obj));
+    } else if (type == CFNumberGetTypeID()) {
+        switch (CFNumberGetType(obj)) {
+            case kCFNumberFloat32Type:
+            case kCFNumberFloat64Type:
+            case kCFNumberFloatType:
+            case kCFNumberDoubleType:
+            case kCFNumberCGFloatType: {
+                double theDouble;
+                
+                if (!CFNumberGetValue(obj, kCFNumberDoubleType, &theDouble)) {
+                    theDouble = 0.0;
+                }
+                
+                return xpc_double_create(theDouble);
+            }
+            default: {
+                int64_t theInt;
+                
+                if (!CFNumberGetValue(obj, kCFNumberSInt64Type, &theInt)) {
+                    theInt = 0;
+                }
+                
+                return xpc_int64_create(theInt);
+            }
+        }
+    } else if (type == CFDateGetTypeID()) {
+        CFAbsoluteTime absTime = CFDateGetAbsoluteTime(obj);
+        
+        CFGregorianDate jan1970 = { 1970, 01, 01, 00, 00, 00 };
+        CFAbsoluteTime absJan1970 = CFGregorianDateGetAbsoluteTime(jan1970, NULL);
+        
+        CFAbsoluteTime timeSince1970 = absTime - absJan1970;
+        
+        double iPart = 0.0;
+        double fPart = modf(timeSince1970, &iPart);
+        
+        int64_t nsSince1970 = (int64_t)iPart * NSEC_PER_SEC + (int64_t)(fPart * (double)NSEC_PER_SEC);
+        
+        return xpc_date_create(nsSince1970);
+    } else if (type == CFDataGetTypeID()) {
+        return xpc_data_create(CFDataGetBytePtr(obj), CFDataGetLength(obj));
+    } else if (type == CFStringGetTypeID()) {
+        CFIndex len = CFStringGetMaximumSizeForEncoding(CFStringGetLength(obj), kCFStringEncodingUTF8) + 1;
+        char *string = malloc(len);
+        xpc_object_t message = NULL;
+        
+        if (CFStringGetCString(obj, string, len, kCFStringEncodingUTF8)) {
+            message = xpc_string_create(string);
+        }
+        
+        free(string);
+        
+        return message;
+    } else if (type == CFUUIDGetTypeID()) {
+        CFUUIDBytes uuidBytes = CFUUIDGetUUIDBytes(obj);
+        unsigned char uuid[16] = { uuidBytes.byte0, uuidBytes.byte1, uuidBytes.byte2, uuidBytes.byte3, uuidBytes.byte4, uuidBytes.byte5, uuidBytes.byte6, uuidBytes.byte7, uuidBytes.byte8, uuidBytes.byte9, uuidBytes.byte10, uuidBytes.byte11, uuidBytes.byte12, uuidBytes.byte13, uuidBytes.byte14, uuidBytes.byte15 };
+        
+        return xpc_uuid_create(uuid);
+    } else if (type == CFArrayGetTypeID()) {
+        CFIndex count = CFArrayGetCount(obj);
+        CFTypeRef *objs = malloc(count * sizeof(CFTypeRef));
+        xpc_object_t *xpcObjs = malloc(count * sizeof(xpc_object_t));
+        size_t xpcCount = 0;
+        
+        CFArrayGetValues(obj, CFRangeMake(0, count), objs);
+        
+        for (CFIndex i = 0; i < count; i++) {
+            xpc_object_t xpcObj = CSASCreateXPCMessageFromCFType(objs[i]);
+            
+            if (xpcObj != NULL) {
+                xpcObjs[xpcCount++] = xpcObj;
+            }
+        }
+        
+        xpc_object_t message = xpc_array_create(xpcObjs, xpcCount);
+
+        for (size_t i = 0; i < xpcCount; i++) {
+            xpc_release(xpcObjs[i]);
+        }
+        
+        free(xpcObjs);
+        free(objs);
+        
+        return message;
+    } else if (type == CFDictionaryGetTypeID()) {
+        CFIndex count = CFDictionaryGetCount(obj);
+        CFTypeRef *keys = malloc(count * sizeof(CFTypeRef));
+        CFTypeRef *objs = malloc(count * sizeof(CFTypeRef));
+        const char **xpcKeys = malloc(count * sizeof(char *));
+        xpc_object_t *xpcObjs = malloc(count * sizeof(xpc_object_t));
+        size_t xpcCount = 0;
+        
+        CFDictionaryGetKeysAndValues(obj, keys, objs);
+        
+        for (CFIndex i = 0; i < count; i++) {
+            CFStringRef key = keys[i];
+            CFIndex keyLen = CFStringGetMaximumSizeForEncoding(CFStringGetLength(key), kCFStringEncodingUTF8) + 1;
+            char *keyC = malloc(keyLen);
+            
+            if (CFStringGetCString(key, keyC, keyLen, kCFStringEncodingUTF8)) {
+                xpc_object_t xpcObj = CSASCreateXPCMessageFromCFType(objs[i]);
+                
+                if (xpcObj != NULL) {
+                    xpcKeys[xpcCount] = keyC;
+                    xpcObjs[xpcCount++] = xpcObj;
+                }
+            }
+            
+            free(keyC);
+        }
+        
+        xpc_object_t message = xpc_dictionary_create(xpcKeys, xpcObjs, xpcCount);
+        
+        for (size_t i = 0; i < xpcCount; i++) {
+            xpc_release(xpcObjs[i]);
+        }
+        
+        return message;
+    } else if (type == CFURLGetTypeID()) {
+        CFStringRef key = CFStringCreateWithCString(kCFAllocatorDefault, kCSASEncodedURLKey, kCFStringEncodingUTF8);
+        CFStringRef value = CFURLGetString(obj);
+        
+        CFDictionaryRef errorDict = CFDictionaryCreate(kCFAllocatorDefault, (const void **)&key, (const void **)&value, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+        
+        xpc_object_t message = CSASCreateXPCMessageFromCFType(errorDict);
+        
+        CFRelease(key);
+        
+        return message;
+    } else if (type == CFErrorGetTypeID()) {
+        xpc_object_t domain = CSASCreateXPCMessageFromCFType(CFErrorGetDomain((CFErrorRef)obj));
+        xpc_object_t code = xpc_int64_create(CFErrorGetCode((CFErrorRef)obj));
+        CFDictionaryRef cfUserInfo = CFErrorCopyUserInfo((CFErrorRef)obj);
+        xpc_object_t userInfo = CSASCreateXPCMessageFromCFType(cfUserInfo);
+        
+        const CFIndex count = 3;
+        const char * const keys[count] = { kCSASErrorDomainKey, kCSASErrorCodeKey, kCSASErrorUserInfoKey };
+        xpc_object_t values[count] = { domain, code, userInfo };
+        
+        xpc_object_t errorDict = xpc_dictionary_create(keys, values, count);
+        
+        xpc_object_t message = xpc_dictionary_create(&kCSASEncodedErrorKey, &errorDict, 1);
+        
+        xpc_release(domain);
+        xpc_release(code);
+        xpc_release(userInfo);
+        xpc_release(errorDict);
+        CFRelease(cfUserInfo);
+        
+        return message;
+    }
     
-	return success;
+    return NULL;
 }
 
 extern bool FindCommand(

@@ -110,38 +110,6 @@ static void RestartWatchdog() {
     }
 }
 
-// for serializing / deserializing errors
-
-static CFDictionaryRef CSASCreateErrorDictFromCFError(CFErrorRef error) {
-    CFMutableDictionaryRef errorDict = CFDictionaryCreateMutable(kCFAllocatorDefault,
-                                                                 0,
-                                                                 &kCFTypeDictionaryKeyCallBacks,
-                                                                 &kCFTypeDictionaryValueCallBacks);
-    
-    if (errorDict == NULL) {
-        return NULL;
-    }
-    
-    CFStringRef domain = CFErrorGetDomain(error);
-    CFIndex code = CFErrorGetCode(error);
-    CFNumberRef codeNum = CFNumberCreate(kCFAllocatorDefault, kCFNumberCFIndexType, &code);
-    CFDictionaryRef userInfo = CFErrorCopyUserInfo(error);
-    
-    if (domain != NULL) {
-        CFDictionarySetValue(errorDict, CFSTR(kCSASErrorDomainKey), domain);
-    }
-    
-    CFDictionarySetValue(errorDict, CFSTR(kCSASErrorCodeKey), codeNum);
-    CFRelease(codeNum);
-    
-    if (userInfo != NULL) {
-        CFDictionarySetValue(errorDict, CFSTR(kCSASErrorUserInfoKey), userInfo);
-        CFRelease(userInfo);
-    }
-    
-    return (CFDictionaryRef)errorDict;
-}
-
 #if ! defined(NDEBUG)
 
 static bool CommandArraySizeMatchesCommandProcArraySize(
@@ -291,10 +259,7 @@ static bool HandleCommand(
         // result as the error value.
         
         if ( !success && (error != NULL) && !CFDictionaryContainsKey(response, CFSTR(kCSASErrorKey)) ) {
-            CFDictionaryRef errorDict = CSASCreateErrorDictFromCFError(error);
-            
-            CFDictionaryAddValue(response, CFSTR(kCSASErrorKey), errorDict);
-            CFRelease(errorDict);
+            CFDictionaryAddValue(response, CFSTR(kCSASErrorKey), error);
         }
     }
     
@@ -312,11 +277,10 @@ static bool HandleCommand(
     return success;
 }
 
-static bool HandleEvent(
+static void HandleEvent(
                         const CSASCommandSpec		commands[],
                         const CSASCommandProc		commandProcs[],
-                        xpc_object_t                event,
-                        CFErrorRef *                errorPtr
+                        xpc_object_t                event
                         )
 {
     bool success = true;
@@ -340,17 +304,39 @@ static bool HandleEvent(
         CFDictionaryRef response = NULL;
         CFArrayRef descriptorArray = NULL;
         xpc_object_t reply = NULL;
+        xpc_object_t xpcResponse = NULL;
         xpc_connection_t remote = NULL;
         AuthorizationExternalForm authExtForm;
         const void *authExtFormData;
         size_t authExtFormSize = 0;
         AuthorizationRef authRef = NULL;
+        CFErrorRef error = NULL;
         
-        authExtFormData = xpc_dictionary_get_data(event, kCSASAuthorizationRefKey, &authExtFormSize);
+        if (success) {
+            reply = xpc_dictionary_create_reply(event);
+            
+            if (reply == NULL) {
+                success = false;
+                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            }
+        }
         
-        if (authExtFormData == NULL || authExtFormSize > sizeof(authExtForm)) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        if (success) {
+            remote = xpc_dictionary_get_remote_connection(event);
+            
+            if (remote == NULL) {
+                success = false;
+                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            }
+        }
+        
+        if (success) {
+            authExtFormData = xpc_dictionary_get_data(event, kCSASAuthorizationRefKey, &authExtFormSize);
+            
+            if (authExtFormData == NULL || authExtFormSize > sizeof(authExtForm)) {
+                success = false;
+                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            }
         }
         
         if (success) {
@@ -360,41 +346,61 @@ static bool HandleEvent(
             
             if (authErr != errSecSuccess) {
                 success = false;
-                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromSecurityError(authErr);
+                error = CSASCreateCFErrorFromSecurityError(authErr);
             } else if (authRef == NULL) {
                 success = false;
-                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
             }
         }
         
         if (success) {
-            success = CSASReadDictionary(event, &request, errorPtr);
-        }
-        
-        if (success) {
-            success = HandleCommand(commands, commandProcs, request, &response, &descriptorArray, authRef, errorPtr);
-        }
-        
-        if (success) {
-            reply = xpc_dictionary_create_reply(event);
+            xpc_object_t xpcRequest = xpc_dictionary_get_value(event, kCSASRequestKey);
             
-            success = CSASWriteDictionary(response, reply, errorPtr);
+            request = CSASCreateCFTypeFromXPCMessage(xpcRequest);
+            
+            if (request == NULL) {
+                success = false;
+                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            }
+        }
+        
+        if (success) {
+            success = HandleCommand(commands, commandProcs, request, &response, &descriptorArray, authRef, &error);
+        }
+        
+        if (success) {
+            xpcResponse = CSASCreateXPCMessageFromCFType(response);
+            
+            if (xpcResponse == NULL) {
+                success = false;
+                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            }
         }
         
         if (success && descriptorArray != NULL && CFArrayGetCount(descriptorArray) != 0) {
-            success = CSASWriteFileDescriptors(descriptorArray, reply, errorPtr);
+            success = CSASWriteFileDescriptors(descriptorArray, reply, &error);
         }
         
         if (success) {
-            remote = xpc_dictionary_get_remote_connection(event);
+            xpc_dictionary_set_value(reply, kCSASRequestKey, xpcResponse);
+        }
+        
+        if (!success) {
+            xpc_object_t xpcError = CSASCreateXPCMessageFromCFType((CFTypeRef)error);
             
-            if (remote == NULL) {
-                success = false;
-                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-            }
+            CFStringRef errorDesc = CFCopyDescription(error);
+            CFDataRef utf8Error = CFStringCreateExternalRepresentation(kCFAllocatorDefault, errorDesc, kCFStringEncodingUTF8, 0);
+            
+            syslog(LOG_NOTICE, "Request failed: %s", CFDataGetBytePtr(utf8Error));
+            
+            xpc_dictionary_set_value(reply, kCSASErrorKey, xpcError);
+            
+            CFRelease(utf8Error);
+            CFRelease(errorDesc);
+            xpc_release(xpcError);
         }
         
-        if (success) {
+        if (remote != NULL && reply != NULL) {
             xpc_connection_send_message(remote, reply);
         }
         
@@ -413,11 +419,17 @@ static bool HandleEvent(
         if (authRef != NULL) {
             AuthorizationFree(authRef, kAuthorizationFlagDefaults);
         }
+        
+        if (xpcResponse != NULL) {
+            xpc_release(xpcResponse);
+        }
+        
+        if (error != NULL) {
+            CFRelease(error);
+        }
 	} else {
         syslog(LOG_NOTICE, "Unhandled event");
     }
-    
-    return success;
 }
 
 static void CSASSetDefaultRules(
@@ -596,17 +608,7 @@ extern int CSASHelperToolMain(
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
             WatchdogDisableAutomaticTermination();
             
-            CFErrorRef thisConnectionError = NULL;
-            bool success = HandleEvent(commands, commandProcs, event, &thisConnectionError);
-            
-            if (!success) {
-                CFStringRef errorDesc = CFCopyDescription(thisConnectionError);
-                
-                syslog(LOG_NOTICE, "Request failed: %s", CFStringGetCStringPtr(errorDesc, kCFStringEncodingUTF8));
-                
-                CFRelease(errorDesc);
-                CFRelease(thisConnectionError);
-            }
+            HandleEvent(commands, commandProcs, event);
             
             WatchdogEnableAutomaticTermination();
         });

@@ -13,7 +13,6 @@
 		28116D3C16ABD6780046A911 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 28116D3A16ABD6780046A911 /* main.m */; };
 		28116D4016ABD69B0046A911 /* CSASHelper.c in Sources */ = {isa = PBXBuildFile; fileRef = 28116D3F16ABD69B0046A911 /* CSASHelper.c */; };
 		28116D4E16ABD7F80046A911 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 28116D4D16ABD7F80046A911 /* Cocoa.framework */; };
-		28116D5416ABD7F80046A911 /* libCSAuthSampleApp.m in Sources */ = {isa = PBXBuildFile; fileRef = 28116D5316ABD7F80046A911 /* libCSAuthSampleApp.m */; };
 		28116D5916ABD81D0046A911 /* CSAuthSampleAppLib.h in Headers */ = {isa = PBXBuildFile; fileRef = 28978DC71699251900134EC1 /* CSAuthSampleAppLib.h */; };
 		28116D5A16ABD81D0046A911 /* CSAuthSampleAppLib.m in Sources */ = {isa = PBXBuildFile; fileRef = 28978DC81699251900134EC1 /* CSAuthSampleAppLib.m */; };
 		28116D5B16ABD81D0046A911 /* CSAuthSampleCommonLib.h in Headers */ = {isa = PBXBuildFile; fileRef = 28C4DA891692686C00BBB7D2 /* CSAuthSampleCommonLib.h */; };
@@ -74,9 +73,6 @@
 		28116D4216ABD6AA0046A911 /* CSASHelper-Launchd.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "CSASHelper-Launchd.plist"; path = "Helper Tool/CSASHelper-Launchd.plist"; sourceTree = SOURCE_ROOT; };
 		28116D4C16ABD7F80046A911 /* liblibCSAuthSampleApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liblibCSAuthSampleApp.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		28116D4D16ABD7F80046A911 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
-		28116D5116ABD7F80046A911 /* libCSAuthSampleApp-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "libCSAuthSampleApp-Prefix.pch"; sourceTree = "<group>"; };
-		28116D5216ABD7F80046A911 /* libCSAuthSampleApp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = libCSAuthSampleApp.h; sourceTree = "<group>"; };
-		28116D5316ABD7F80046A911 /* libCSAuthSampleApp.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = libCSAuthSampleApp.m; sourceTree = "<group>"; };
 		28116D6116ABD8980046A911 /* liblibCSAuthSampleHelper.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liblibCSAuthSampleHelper.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		28978DC71699251900134EC1 /* CSAuthSampleAppLib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CSAuthSampleAppLib.h; path = SharedLibrary/CSAuthSampleAppLib.h; sourceTree = "<group>"; };
 		28978DC81699251900134EC1 /* CSAuthSampleAppLib.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CSAuthSampleAppLib.m; path = SharedLibrary/CSAuthSampleAppLib.m; sourceTree = "<group>"; };
@@ -162,24 +158,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		28116D4F16ABD7F80046A911 /* libCSAuthSampleApp */ = {
-			isa = PBXGroup;
-			children = (
-				28116D5216ABD7F80046A911 /* libCSAuthSampleApp.h */,
-				28116D5316ABD7F80046A911 /* libCSAuthSampleApp.m */,
-				28116D5016ABD7F80046A911 /* Supporting Files */,
-			);
-			path = libCSAuthSampleApp;
-			sourceTree = "<group>";
-		};
-		28116D5016ABD7F80046A911 /* Supporting Files */ = {
-			isa = PBXGroup;
-			children = (
-				28116D5116ABD7F80046A911 /* libCSAuthSampleApp-Prefix.pch */,
-			);
-			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
 		28C4DA7316925DE600BBB7D2 /* Shared Library */ = {
 			isa = PBXGroup;
 			children = (
@@ -202,7 +180,6 @@
 				4BE4904710445D49006BE471 /* Main Application */,
 				28C4DA7316925DE600BBB7D2 /* Shared Library */,
 				29B97317FDCFA39411CA2CEA /* Resources */,
-				28116D4F16ABD7F80046A911 /* libCSAuthSampleApp */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
 			);
@@ -387,7 +364,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				28116D5416ABD7F80046A911 /* libCSAuthSampleApp.m in Sources */,
 				28116D5A16ABD81D0046A911 /* CSAuthSampleAppLib.m in Sources */,
 				28116D5C16ABD81D0046A911 /* CSAuthSampleCommonLib.c in Sources */,
 			);
