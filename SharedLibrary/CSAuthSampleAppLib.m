@@ -100,7 +100,7 @@
     OSStatus err = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &_authRef);
     
     if (err != errSecSuccess) {
-        if (error) *error = (NSError *)BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(err));
+        if (error) *error = [self cleanedError:(NSError *)BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(err))];
         RELEASE(self);
         return nil;
     }
@@ -170,7 +170,7 @@
 	/* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
     OSStatus status = AuthorizationCopyRights(_authRef, &authRights, kAuthorizationEmptyEnvironment, flags, NULL);
 	if (status != errAuthorizationSuccess) {
-        if (error) *error = (NSError *)BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(status));
+        if (error) *error = [self cleanedError:(NSError *)BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(status))];
         success = NO;
 	} else {
         CFErrorRef smError = NULL;
@@ -185,7 +185,7 @@
 		success = SMJobBless(kSMDomainSystemLaunchd, BRIDGE(CFStringRef, self.helperID), _authRef, &smError);
         
         if (!success) {
-            if (error) *error = BRIDGING_RELEASE(smError);
+            if (error) *error = [self cleanedError:BRIDGING_RELEASE(smError)];
         }
     }
 	
@@ -342,7 +342,11 @@
             if (sendSuccess) {
                 if (responseHandler != nil) responseHandler(BRIDGE(NSDictionary *, sendResponse), fileHandles, nil);
             } else {
-                if (responseHandler != nil) responseHandler(nil, nil, BRIDGE(NSError *, sendError));
+                if (responseHandler != nil) responseHandler(nil, nil, [self cleanedError:BRIDGE(NSError *, sendError)]);
+
+                if (sendError != NULL) {
+                    CFRelease(sendError);
+                }
             }
             
             if (sendResponse != NULL) {
@@ -357,10 +361,27 @@
     // If something failed, let the user know.
     
     if (!success) {
-        if (responseHandler != nil) responseHandler(nil, nil, BRIDGE(NSError *, error));
-        CFRelease(error);
+        if (responseHandler != nil) responseHandler(nil, nil, [self cleanedError:BRIDGE(NSError *, error)]);
+        
+        if (error != NULL) {
+            CFRelease(error);
+        }
+        
         RELEASE_XPC(connection);
     }
+}
+
+- (NSError *)cleanedError:(NSError *)error {
+    // Since, AFAIK, there is no pure-C version of the NSUserCancelledError constant (although kCFErrorDomainCocoa does exist),
+    // the underlying C code presents user cancelled errors using the POSIX ECANCELED. However, -[NSApp presentError:] only
+    // treats NSUserCancelledError as a user cancelled event which should be ignored, while displaying error boxes for ECANCELED.
+    // Thus, we convert any ECANCELED errors to NSUserCanceledError here.
+    
+    if ([error.domain isEqualToString:NSPOSIXErrorDomain] && error.code == ECANCELED) {
+        error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSUserCancelledError userInfo:nil];
+    }
+    
+    return error;
 }
 
 @end
