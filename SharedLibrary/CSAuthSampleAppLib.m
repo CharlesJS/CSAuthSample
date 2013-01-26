@@ -185,7 +185,11 @@
 		success = SMJobBless(kSMDomainSystemLaunchd, BRIDGE(CFStringRef, self.helperID), _authRef, &smError);
         
         if (!success) {
-            if (error) *error = [self cleanedError:BRIDGING_RELEASE(smError)];
+            if (error != NULL) {
+                *error = [self cleanedError:BRIDGING_RELEASE(smError)];
+            } else if (smError != NULL) {
+                CFRelease(smError);
+            }
         }
     }
 	
