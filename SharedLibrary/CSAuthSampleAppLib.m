@@ -219,7 +219,7 @@
     // single threaded, so if it's waiting for an authentication dialog for user A
     // it can't handle requests from user B.
     
-    success = FindCommand(BRIDGE(CFDictionaryRef, request), _commands, &commandIndex, &error);
+    success = CSASFindCommand(BRIDGE(CFDictionaryRef, request), _commands, &commandIndex, &error);
     
     if ( success && (_commands[commandIndex].rightName != NULL) ) {
         AuthorizationItem   item   = { _commands[commandIndex].rightName, 0, NULL, 0 };

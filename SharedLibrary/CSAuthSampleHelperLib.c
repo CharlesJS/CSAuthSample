@@ -213,7 +213,7 @@ static bool HandleCommand(
         // not the command is valid by comparing with the CSASCommandSpec array.  Also,
         // if the command is valid, return the associated right (if any).
         
-        success = FindCommand(request, commands, &commandIndex, &error);
+        success = CSASFindCommand(request, commands, &commandIndex, &error);
     }
     
     if (success) {

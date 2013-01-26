@@ -440,13 +440,13 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
     return NULL;
 }
 
-extern bool FindCommand(
-                        CFDictionaryRef             request,
-                        const CSASCommandSpec		commands[],
-                        size_t *                    commandIndexPtr,
-                        CFErrorRef *                errorPtr
-                        )
-// FindCommand is a simple utility routine for checking that the
+extern bool CSASFindCommand(
+                            CFDictionaryRef             request,
+                            const CSASCommandSpec		commands[],
+                            size_t *                    commandIndexPtr,
+                            CFErrorRef *                errorPtr
+                            )
+// CSASFindCommand is a simple utility routine for checking that the
 // command name within a request is valid (that is, matches one of the command
 // names in the CSASCommandSpec array).
 //
