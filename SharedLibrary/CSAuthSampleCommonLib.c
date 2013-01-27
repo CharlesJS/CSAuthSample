@@ -449,15 +449,19 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
 }
 
 extern void CSASLogCFTypeObject(CFTypeRef obj) {
-    CFStringRef desc = CFCopyDescription(obj);
-    size_t descSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(desc), kCFStringEncodingUTF8) + 1;
-    char *descC = malloc(descSize);
-    CFStringGetCString(desc, descC, descSize, kCFStringEncodingUTF8);
-    
-    syslog(LOG_NOTICE, "%s", descC);
-    
-    free(descC);
-    CFRelease(desc);
+    if (obj == NULL) {
+        syslog(LOG_NOTICE, "(null)");
+    } else {
+        CFStringRef desc = CFCopyDescription(obj);
+        size_t descSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(desc), kCFStringEncodingUTF8) + 1;
+        char *descC = malloc(descSize);
+        CFStringGetCString(desc, descC, descSize, kCFStringEncodingUTF8);
+        
+        syslog(LOG_NOTICE, "%s", descC);
+        
+        free(descC);
+        CFRelease(desc);
+    }
 }
 
 extern bool CSASFindCommand(

@@ -161,6 +161,20 @@ static bool CSASWriteFileDescriptors(CFArrayRef descriptorArray, xpc_object_t me
     return success;
 }
 
+// Close file descriptors after we're done with them
+
+static void CSASCloseFileDescriptors(CFArrayRef descriptorArray) {
+    CFIndex descriptorCount = CFArrayGetCount(descriptorArray);
+    
+    for (CFIndex i = 0; i < descriptorCount; i++) {
+        int eachFd;
+        
+        if (CFNumberGetValue(CFArrayGetValueAtIndex(descriptorArray, i), kCFNumberIntType, &eachFd)) {
+            close(eachFd);
+        }
+    }
+}
+
 static bool HandleCommand(
                           const CSASCommandSpec		commands[],
                           const CSASCommandProc		commandProcs[],
@@ -404,16 +418,17 @@ static void HandleEvent(
             xpc_connection_send_message(remote, reply);
         }
         
+        if (descriptorArray != NULL) {
+            CSASCloseFileDescriptors(descriptorArray);
+            CFRelease(descriptorArray);
+        }
+        
         if (reply != NULL) {
             xpc_release(reply);
         }
         
         if (response != NULL) {
             CFRelease(response);
-        }
-        
-        if (descriptorArray != NULL) {
-            CFRelease(descriptorArray);
         }
         
         if (authRef != NULL) {
