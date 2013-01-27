@@ -71,9 +71,9 @@
 		28116D3F16ABD69B0046A911 /* CSASHelper.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = CSASHelper.c; path = "Helper Tool/CSASHelper.c"; sourceTree = SOURCE_ROOT; };
 		28116D4116ABD6AA0046A911 /* CSASHelper-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "CSASHelper-Info.plist"; path = "Helper Tool/CSASHelper-Info.plist"; sourceTree = SOURCE_ROOT; };
 		28116D4216ABD6AA0046A911 /* CSASHelper-Launchd.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = "CSASHelper-Launchd.plist"; path = "Helper Tool/CSASHelper-Launchd.plist"; sourceTree = SOURCE_ROOT; };
-		28116D4C16ABD7F80046A911 /* liblibCSAuthSampleApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liblibCSAuthSampleApp.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		28116D4C16ABD7F80046A911 /* libCSAuthSampleApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCSAuthSampleApp.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		28116D4D16ABD7F80046A911 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
-		28116D6116ABD8980046A911 /* liblibCSAuthSampleHelper.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = liblibCSAuthSampleHelper.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		28116D6116ABD8980046A911 /* libCSAuthSampleHelper.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCSAuthSampleHelper.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		28978DC71699251900134EC1 /* CSAuthSampleAppLib.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CSAuthSampleAppLib.h; path = SharedLibrary/CSAuthSampleAppLib.h; sourceTree = "<group>"; };
 		28978DC81699251900134EC1 /* CSAuthSampleAppLib.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = CSAuthSampleAppLib.m; path = SharedLibrary/CSAuthSampleAppLib.m; sourceTree = "<group>"; };
 		28A6F66B16918ECD006F0A93 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = ../../../../System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<group>"; };
@@ -152,8 +152,8 @@
 			children = (
 				8D1107320486CEB800E47090 /* CSAuthSample.app */,
 				4BE4905D10445E0A006BE471 /* com.charlessoft.CSAuthSample.helper */,
-				28116D4C16ABD7F80046A911 /* liblibCSAuthSampleApp.a */,
-				28116D6116ABD8980046A911 /* liblibCSAuthSampleHelper.a */,
+				28116D4C16ABD7F80046A911 /* libCSAuthSampleApp.a */,
+				28116D6116ABD8980046A911 /* libCSAuthSampleHelper.a */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -265,7 +265,7 @@
 			);
 			name = "CSAuthSample Static Library for App";
 			productName = libCSAuthSampleApp;
-			productReference = 28116D4C16ABD7F80046A911 /* liblibCSAuthSampleApp.a */;
+			productReference = 28116D4C16ABD7F80046A911 /* libCSAuthSampleApp.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 		28116D6016ABD8980046A911 /* CSAuthSample Static Library for Helper */ = {
@@ -282,7 +282,7 @@
 			);
 			name = "CSAuthSample Static Library for Helper";
 			productName = "Static Library for Helper";
-			productReference = 28116D6116ABD8980046A911 /* liblibCSAuthSampleHelper.a */;
+			productReference = 28116D6116ABD8980046A911 /* libCSAuthSampleHelper.a */;
 			productType = "com.apple.product-type.library.static";
 		};
 		4BE4905C10445E0A006BE471 /* CSAuthSample Helper */ = {
@@ -426,7 +426,6 @@
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "libCSAuthSampleApp/libCSAuthSampleApp-Prefix.pch";
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"$(inherited)",
@@ -434,7 +433,7 @@
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				PRODUCT_NAME = libCSAuthSampleApp;
+				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -453,10 +452,9 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREFIX_HEADER = "libCSAuthSampleApp/libCSAuthSampleApp-Prefix.pch";
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				PRODUCT_NAME = libCSAuthSampleApp;
+				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 			};
 			name = Release;
@@ -482,7 +480,7 @@
 				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				PRODUCT_NAME = libCSAuthSampleHelper;
+				PRODUCT_NAME = CSAuthSampleHelper;
 				SDKROOT = macosx;
 			};
 			name = Debug;
@@ -503,7 +501,7 @@
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				PRODUCT_NAME = libCSAuthSampleHelper;
+				PRODUCT_NAME = CSAuthSampleHelper;
 				SDKROOT = macosx;
 			};
 			name = Release;
