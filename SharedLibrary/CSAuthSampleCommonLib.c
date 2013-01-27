@@ -63,6 +63,8 @@
 #include "/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/MacErrors.h"
 #endif
 
+#include <syslog.h>
+
 //////////////////////////////////////////////////////////////////////////////////
 #pragma mark ***** Constants
 
@@ -223,6 +225,8 @@ extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message) {
             
             if (theObj != NULL) {
                 CFArrayAppendValue(array, theObj);
+                
+                CFRelease(theObj);
             }
         }
         
@@ -254,13 +258,18 @@ extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message) {
             
             xpc_dictionary_apply(message, ^bool(const char *key, xpc_object_t value) {
                 CFStringRef keyString = CFStringCreateWithCString(kCFAllocatorDefault, key, kCFStringEncodingUTF8);
-                CFTypeRef theObj = CSASCreateCFTypeFromXPCMessage(value);
                 
-                if (theObj != NULL) {
-                    CFDictionarySetValue(dict, keyString, theObj);
+                if (keyString != NULL) {
+                    CFTypeRef theObj = CSASCreateCFTypeFromXPCMessage(value);
+                
+                    if (theObj != NULL) {
+                        CFDictionarySetValue(dict, keyString, theObj);
+                        
+                        CFRelease(theObj);
+                    }
+                
+                    CFRelease(keyString);
                 }
-                
-                CFRelease(keyString);
                 
                 return true;
             });
@@ -373,7 +382,7 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
         CFIndex count = CFDictionaryGetCount(obj);
         CFTypeRef *keys = malloc(count * sizeof(CFTypeRef));
         CFTypeRef *objs = malloc(count * sizeof(CFTypeRef));
-        const char **xpcKeys = malloc(count * sizeof(char *));
+        char **xpcKeys = malloc(count * sizeof(char *));
         xpc_object_t *xpcObjs = malloc(count * sizeof(xpc_object_t));
         size_t xpcCount = 0;
         
@@ -392,13 +401,12 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
                     xpcObjs[xpcCount++] = xpcObj;
                 }
             }
-            
-            free(keyC);
         }
         
-        xpc_object_t message = xpc_dictionary_create(xpcKeys, xpcObjs, xpcCount);
+        xpc_object_t message = xpc_dictionary_create((const char **)xpcKeys, xpcObjs, xpcCount);
         
         for (size_t i = 0; i < xpcCount; i++) {
+            free((void *)xpcKeys[i]);
             xpc_release(xpcObjs[i]);
         }
         
@@ -438,6 +446,18 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
     }
     
     return NULL;
+}
+
+extern void CSASLogCFTypeObject(CFTypeRef obj) {
+    CFStringRef desc = CFCopyDescription(obj);
+    size_t descSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(desc), kCFStringEncodingUTF8) + 1;
+    char *descC = malloc(descSize);
+    CFStringGetCString(desc, descC, descSize, kCFStringEncodingUTF8);
+    
+    syslog(LOG_NOTICE, "%s", descC);
+    
+    free(descC);
+    CFRelease(desc);
 }
 
 extern bool CSASFindCommand(

@@ -431,6 +431,8 @@ extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err);
 extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message);
 extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj);
 
+extern void CSASLogCFTypeObject(CFTypeRef obj);
+
 extern bool CSASFindCommand(
                             CFDictionaryRef             request,
                             const CSASCommandSpec		commands[],
