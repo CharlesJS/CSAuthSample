@@ -137,7 +137,7 @@ static bool CommandArraySizeMatchesCommandProcArraySize(
 
 // write file descriptors to the XPC message
 
-static bool CSASWriteFileDescriptors(CFArrayRef descriptorArray, xpc_object_t message, CFErrorRef *errorPtr) {
+static bool CSASWriteFileDescriptors(CFArrayRef descriptorArray, xpc_object_t message, __unused __unused CFErrorRef *errorPtr) {
     CFIndex descriptorCount = CFArrayGetCount(descriptorArray);
     bool success = true;
     

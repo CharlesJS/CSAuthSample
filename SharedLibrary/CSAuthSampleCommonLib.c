@@ -90,19 +90,6 @@ static const char * const kCSASEncodedErrorKey = "kCSASEncodedErrorKey";
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Common Code
 
-static Boolean CSASIsBinaryPropertyListData(const void * plistBuffer, size_t plistSize)
-// Make sure that whatever is passed into the buffer that will
-// eventually become a plist (and then sequentially a dictionary)
-// is NOT in binary format.
-{
-    static const char kCSASBinaryPlistWatermark[6] = "bplist";
-    
-    assert(plistBuffer != NULL);
-	
-	return (plistSize >= sizeof(kCSASBinaryPlistWatermark))
-    && (memcmp(plistBuffer, kCSASBinaryPlistWatermark, sizeof(kCSASBinaryPlistWatermark)) == 0);
-}
-
 static bool CSASOSStatusToErrno(OSStatus errNum, int *posixErr)
 {
     bool converted = true;
