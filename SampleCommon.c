@@ -80,6 +80,7 @@ const CSASCommandSpec kSampleCommandSet[] = {
         NULL,                                   // rightName           -- never authorize
         NULL,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
         NULL,									// rightDescriptionKey -- not applicable if rightName is NULL
+        NULL,                                   // code signing requiremnt
         NULL                                    // userData
 	},
     
@@ -87,6 +88,7 @@ const CSASCommandSpec kSampleCommandSet[] = {
         kSampleSecretSpyStuffRightName,         // rightName
         kCSASRuleAuthenticateAdmin,          // rightDefaultRule    -- authenticate as admin
         "Please identify yourself",  			// rightDescriptionKey -- haven't bothered trying this yet
+        kSampleCodeSigningRequirement,          // code signing requirement
         NULL                                    // userData
 	},
     
@@ -94,10 +96,12 @@ const CSASCommandSpec kSampleCommandSet[] = {
         kSampleGetFileDescriptorsRightName,
         kCSASRuleAuthenticateAdmin,
         "Please identify yourself",
+        kSampleCodeSigningRequirement,
         NULL
     },
     
     {	NULL,                                   // the array is null terminated
+        NULL,
         NULL,
         NULL,
         NULL,

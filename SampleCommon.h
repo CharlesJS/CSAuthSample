@@ -56,6 +56,8 @@
 #define kSampleAppID                "com.charlessoft.CSAuthSample"
 #define kSampleHelperID             "com.charlessoft.CSAuthSample.helper"
 
+#define kSampleCodeSigningRequirement "anchor apple generic and identifier com.charlessoft.CSAuthSample and certificate leaf[subject.CN] = \"Developer ID Application: Charles Srstka\""
+
 #define kSampleTimeoutInterval      120
 
 /////////////////////////////////////////////////////////////////

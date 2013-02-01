@@ -61,6 +61,7 @@
 #include "/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/MacErrors.h"
 #endif
 
+#include <Security/CodeSigning.h>
 #include <syslog.h>
 
 // watchdog stuff
@@ -175,6 +176,61 @@ static void CSASCloseFileDescriptors(CFArrayRef descriptorArray) {
     }
 }
 
+static bool CheckCodeSigningForConnection(xpc_connection_t conn, const char *requirement, CFErrorRef *errorPtr) {
+    SecCodeRef                  secCode = NULL;
+    SecRequirementRef           secRequirement = NULL;
+    CFDictionaryRef             codeAttrs;
+    CFIndex                     pid;
+    CFNumberRef                 pidNum;
+    CFStringRef                 pidAttrKey;
+    OSStatus                    secErr;
+    
+    // Check the code signing requirement for the command.
+    
+    pid = xpc_connection_get_pid(conn);
+    pidNum = CFNumberCreate(kCFAllocatorDefault, kCFNumberCFIndexType, &pid);
+    pidAttrKey = kSecGuestAttributePid;
+    
+    codeAttrs = CFDictionaryCreate(kCFAllocatorDefault, (const void **)&pidAttrKey, (const void **)&pidNum, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    
+    secErr = SecCodeCopyGuestWithAttributes(NULL, codeAttrs, kSecCSDefaultFlags, &secCode);
+    
+    if (secErr == errSecSuccess) {
+        CFStringRef reqString = CFStringCreateWithCString(kCFAllocatorDefault, requirement, kCFStringEncodingUTF8);
+    
+        secErr = SecRequirementCreateWithString(reqString, kSecCSDefaultFlags, &secRequirement);
+        
+        CFRelease(reqString);
+    }
+
+    if (secErr == errSecSuccess) {
+        secErr = SecCodeCheckValidity(secCode, kSecCSDefaultFlags, secRequirement);
+    }
+    
+    if (codeAttrs != NULL) {
+        CFRelease(codeAttrs);
+    }
+    
+    if (pidNum != NULL) {
+        CFRelease(pidNum);
+    }
+    
+    if (secCode != NULL) {
+        CFRelease(secCode);
+    }
+    
+    if (secRequirement != NULL) {
+        CFRelease(secRequirement);
+    }
+    
+    if (secErr != errSecSuccess) {
+        if (errorPtr) *errorPtr = CSASCreateCFErrorFromSecurityError(secErr);
+        return false;
+    } else {
+        return true;
+    }
+}
+
 static bool HandleCommand(
                           const CSASCommandSpec		commands[],
                           const CSASCommandProc		commandProcs[],
@@ -182,6 +238,7 @@ static bool HandleCommand(
                           CFDictionaryRef *              responsePtr,
                           CFArrayRef *                   descriptorArrayPtr,
                           AuthorizationRef               authRef,
+                          xpc_connection_t               connection,
                           CFErrorRef *					 errorPtr
                           )
 // This routine handles a single connection from a client.  This connection, in
@@ -228,6 +285,10 @@ static bool HandleCommand(
         // if the command is valid, return the associated right (if any).
         
         success = CSASFindCommand(request, commands, &commandIndex, &error);
+    }
+    
+    if (success && (commands[commandIndex].codeSigningRequirement != NULL)) {
+        success = CheckCodeSigningForConnection(connection, commands[commandIndex].codeSigningRequirement, &error);
     }
     
     if (success) {
@@ -294,6 +355,7 @@ static bool HandleCommand(
 static void HandleEvent(
                         const CSASCommandSpec		commands[],
                         const CSASCommandProc		commandProcs[],
+                        xpc_connection_t            connection,
                         xpc_object_t                event
                         )
 {
@@ -312,7 +374,9 @@ static void HandleEvent(
 		} else if (event == XPC_ERROR_TERMINATION_IMMINENT) {
             syslog(LOG_NOTICE, "Termination imminent");
 			// Handle per-connection termination cleanup.
-		}
+		} else {
+            syslog(LOG_NOTICE, "Something went wrong");
+        }
 	} else if (type == XPC_TYPE_DICTIONARY) {
         CFDictionaryRef request = NULL;
         CFDictionaryRef response = NULL;
@@ -379,7 +443,7 @@ static void HandleEvent(
         }
         
         if (success) {
-            success = HandleCommand(commands, commandProcs, request, &response, &descriptorArray, authRef, &error);
+            success = HandleCommand(commands, commandProcs, request, &response, &descriptorArray, authRef, connection, &error);
         }
         
         if (success) {
@@ -400,10 +464,17 @@ static void HandleEvent(
         }
         
         if (!success) {
-            xpc_object_t xpcError = CSASCreateXPCMessageFromCFType((CFTypeRef)error);
+            xpc_object_t xpcError;
+            CFStringRef errorDesc;
+            CFDataRef utf8Error;
             
-            CFStringRef errorDesc = CFCopyDescription(error);
-            CFDataRef utf8Error = CFStringCreateExternalRepresentation(kCFAllocatorDefault, errorDesc, kCFStringEncodingUTF8, 0);
+            if (error == NULL) {
+                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            }
+            
+            xpcError = CSASCreateXPCMessageFromCFType((CFTypeRef)error);
+            errorDesc = CFCopyDescription(error);
+            utf8Error = CFStringCreateExternalRepresentation(kCFAllocatorDefault, errorDesc, kCFStringEncodingUTF8, 0);
             
             syslog(LOG_NOTICE, "Request failed: %s", CFDataGetBytePtr(utf8Error));
             
@@ -413,7 +484,7 @@ static void HandleEvent(
             CFRelease(errorDesc);
             xpc_release(xpcError);
         }
-        
+    
         if (remote != NULL && reply != NULL) {
             xpc_connection_send_message(remote, reply);
         }
@@ -610,7 +681,7 @@ extern int CSASHelperToolMain(
         return EXIT_FAILURE;
     }
     
-    xpc_connection_t service = xpc_connection_create_mach_service(helperIDC, dispatch_get_main_queue(), XPC_CONNECTION_MACH_SERVICE_LISTENER);
+    xpc_connection_t service = xpc_connection_create_mach_service(helperIDC, NULL, XPC_CONNECTION_MACH_SERVICE_LISTENER);
     
     if (!service) {
         syslog(LOG_NOTICE, "Failed to create service.");
@@ -623,7 +694,7 @@ extern int CSASHelperToolMain(
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
             WatchdogDisableAutomaticTermination();
             
-            HandleEvent(commands, commandProcs, event);
+            HandleEvent(commands, commandProcs, connection, event);
             
             WatchdogEnableAutomaticTermination();
         });
@@ -634,7 +705,7 @@ extern int CSASHelperToolMain(
 	});
     
     xpc_connection_resume(service);
-
+    
     dispatch_main();
     
     // we'll never get here, but eh, release stuff anyway

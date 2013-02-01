@@ -196,6 +196,7 @@ struct CSASCommandSpec {
     const char *	rightName;
     const char *	rightDefaultRule;
     const char *	rightDescriptionKey;
+    const char *    codeSigningRequirement;
     const void *    userData;
 };
 typedef struct CSASCommandSpec CSASCommandSpec;
