@@ -599,6 +599,7 @@ static void CSASSetDefaultRules(
             if (rightNeedsChanging) {
                 CFStringRef thisDescription;
                 CFStringRef	thisRule;
+                CFDictionaryRef ruleDict;
                 
                 // The right is not already defined.  Set up a definition based on
                 // the fields in the command specification.
@@ -620,10 +621,17 @@ static void CSASSetDefaultRules(
                     assert(thisDescription != NULL);
                 }
                 
+                CFStringRef keys[2] = { CFSTR(kAuthorizationRightRule), CFSTR(kAuthorizationEnvironmentShared) };
+                CFTypeRef values[2] = { thisRule, kCFBooleanFalse };
+                
+                ruleDict = CFDictionaryCreate(kCFAllocatorDefault, (void *)keys, (void *)values, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+                
+                assert(ruleDict != NULL);
+                
                 err = AuthorizationRightSet(
                                             auth,										// authRef
                                             commands[commandIndex].rightName,           // rightName
-                                            thisRule,                                   // rightDefinition
+                                            ruleDict,                                   // rightDefinition
                                             thisDescription,							// descriptionKey
                                             bundle,                                     // bundle
                                             descriptionStringTableName					// localeTableName
@@ -636,6 +644,9 @@ static void CSASSetDefaultRules(
                 if (thisRule != NULL) {
 					CFRelease(thisRule);
 				}
+                if (ruleDict != NULL) {
+                    CFRelease(ruleDict);
+                }
             } else {
                 // A right already exists (err == noErr) or any other error occurs, we
                 // assume that it has been set up in advance by the system administrator or

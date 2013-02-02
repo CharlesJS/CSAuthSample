@@ -68,7 +68,7 @@
 
 #define kSampleGetVersionCommand        "GetVersion"
 
-#define kSampleGetVersionRightName      "com.example.CSAuthSample.GetVersion"
+#define kSampleGetVersionRightName      "com.charlessoft.CSAuthSample.GetVersion"
 
 // request keys (none)
 
@@ -82,7 +82,7 @@
 
 // authorization right name
 
-#define kSampleSecretSpyStuffRightName	"com.example.CSAuthSample.SecretSpyStuff"
+#define kSampleSecretSpyStuffRightName	"com.charlessoft.CSAuthSample.SecretSpyStuff"
 
 // request keys (none)
 
