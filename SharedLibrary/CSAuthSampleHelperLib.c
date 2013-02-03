@@ -518,27 +518,158 @@ static void HandleEvent(
     }
 }
 
+static CFDictionaryRef CSASCreateAuthorizationPrompt(CFDictionaryRef authPrompts, const char *descKeyC) {
+    CFDictionaryRef authPrompt = NULL;
+    CFStringRef descKey = NULL;
+    
+    if (descKeyC != NULL) {
+        descKey = CFStringCreateWithCString(kCFAllocatorDefault, descKeyC, kCFStringEncodingUTF8);
+    }
+    
+    if (descKey != NULL) {
+        if (authPrompts != NULL) {
+            // Get the authorization prompt, if there is one, from our Info.plist.
+            
+            authPrompt = CFDictionaryGetValue(authPrompts, descKey);
+        }
+        
+        if (authPrompt != NULL) {
+            CFRetain(authPrompt);
+        } else {
+            // As a fallback, use the key itself as a non-localized authorization prompt.
+            
+            CFStringRef key = CFSTR("");
+            
+            authPrompt = CFDictionaryCreate(kCFAllocatorDefault, (const void **)&key, (const void **)&descKey, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+        }
+        
+        CFRelease(descKey);
+    }
+    
+    return authPrompt;
+}
+
+static CFDictionaryRef CSASCreateRightForCommandSpec(CSASCommandSpec commandSpec, CFDictionaryRef authPrompts) {
+    const char *ruleName = commandSpec.rightDefaultRule;
+    
+    if (ruleName == NULL) {
+        return NULL;
+    } else {
+        CFMutableDictionaryRef rightDict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+        CFDictionaryRef authPrompt = CSASCreateAuthorizationPrompt(authPrompts, commandSpec.rightDescriptionKey);
+        bool isOneOfOurs = true;
+        
+        // Replicate all the Apple-supplied rules found in /etc/authorization, but with the "shared" attribute set to false.
+        
+        if (strcmp(ruleName, kCSASRuleAllow) == 0) {
+            // Allow anyone.
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("allow"));
+        } else if (strcmp(ruleName, kCSASRuleDeny) == 0) {
+            // Deny everyone.
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("deny"));
+        } else if (strcmp(ruleName, kCSASRuleAuthenticateAdmin) == 0) {
+            // Authenticate as admin.
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
+            CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("admin"));
+        } else if (strcmp(ruleName, kCSASRuleAuthenticateDeveloper) == 0) {
+            // Authenticate as developer.
+            
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
+            CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("_developer"));
+        } else if (strcmp(ruleName, kCSASRuleAuthenticateSessionOwner) == 0) {
+            // Authenticate as session owner.
+            
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
+            CFDictionarySetValue(rightDict, CFSTR("session-owner"), kCFBooleanTrue);
+        } else if (strcmp(ruleName, kCSASRuleAuthenticateSessionOwnerOrAdmin) == 0) {
+            // Authenticate as admin or session owner.
+            
+            CFDictionarySetValue(rightDict, CFSTR("allow-root"), kCFBooleanFalse);
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
+            CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("admin"));
+            CFDictionarySetValue(rightDict, CFSTR("session-owner"), kCFBooleanTrue);
+        } else if (strcmp(ruleName, kCSASRuleIsAdmin) == 0) {
+            // Verify that the user asking for authorization is an administrator.
+            
+            CFDictionarySetValue(rightDict, CFSTR("authenticate-user"), kCFBooleanFalse);
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
+            CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("admin"));
+        } else if (strcmp(ruleName, kCSASRuleIsDeveloper) == 0) {
+            // Verify that the user asking for authorization is a developer.
+            
+            CFDictionarySetValue(rightDict, CFSTR("authenticate-user"), kCFBooleanFalse);
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
+            CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("_developer"));
+        } else if (strcmp(ruleName, kCSASRuleIsRoot) == 0) {
+            // Verify that the process that created this AuthorizationRef is running as root.
+            
+            CFDictionarySetValue(rightDict, CFSTR("allow-root"), kCFBooleanTrue);
+            CFDictionarySetValue(rightDict, CFSTR("authenticate-user"), kCFBooleanFalse);
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
+        } else if (strcmp(ruleName, kCSASRuleIsSessionOwner) == 0) {
+            // Verify that the requesting process is running as the session owner.
+            
+            CFDictionarySetValue(rightDict, CFSTR("allow-root"), kCFBooleanFalse);
+            CFDictionarySetValue(rightDict, CFSTR("authenticate-user"), kCFBooleanFalse);
+            CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
+            CFDictionarySetValue(rightDict, CFSTR("session-owner"), kCFBooleanTrue);
+        } else {
+            CFStringRef nameString = CFStringCreateWithCString(kCFAllocatorDefault, ruleName, kCFStringEncodingUTF8);
+            
+            CFDictionarySetValue(rightDict, CFSTR("rule"), nameString);
+            
+            CFRelease(nameString);
+            
+            isOneOfOurs = false;
+        }
+        
+        if (isOneOfOurs) {
+            CFNumberRef timeout = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &commandSpec.rightTimeoutInSeconds);
+            
+            CFDictionarySetValue(rightDict, CFSTR("shared"), CFSTR("false"));
+            CFDictionarySetValue(rightDict, CFSTR("timeout"), timeout);
+            
+            CFRelease(timeout);
+        }
+        
+        if (commandSpec.rightComment != NULL) {
+            CFStringRef comment = CFStringCreateWithCString(kCFAllocatorDefault, commandSpec.rightComment, kCFStringEncodingUTF8);
+            
+            CFDictionarySetValue(rightDict, CFSTR("comment"), comment);
+            
+            CFRelease(comment);
+        }
+        
+        if (authPrompt != NULL) {
+            CFDictionarySetValue(rightDict, CFSTR("default-prompt"), authPrompt);
+            
+            CFRelease(authPrompt);
+        }
+        
+        return rightDict;
+    }
+}
+
 static void CSASSetDefaultRules(
                                 const CSASCommandSpec		commands[],
-                                CFStringRef					bundleID,
-                                CFStringRef					descriptionStringTableName
+                                CFDictionaryRef             infoPlist
                                 )
 // See comment in header.
 {
     AuthorizationRef            auth;
 	OSStatus					err;
-    CFBundleRef                 bundle = NULL;
 	size_t						commandIndex;
-	
+	CFDictionaryRef             authPrompts = NULL;
+    
 	// Pre-conditions
 	
 	assert(commands != NULL);
 	assert(commands[0].commandName != NULL);        // there must be at least one command
-                                                    // it's not the end of the world if bundleID is NULL
-                                                    // descriptionStringTableName may be NULL
     
-    if (bundleID != NULL) {
-        bundle = CFBundleGetBundleWithIdentifier(bundleID);
+    // Get the dictionary containing all the authorization prompts.
+    
+    if (infoPlist != NULL) {
+        authPrompts = CFDictionaryGetValue(infoPlist, CFSTR(kCSASAuthorizationPromptsKey));
     }
     
     // set up the AuthorizationRef
@@ -550,6 +681,8 @@ static void CSASSetDefaultRules(
     
     commandIndex = 0;
     while (commands[commandIndex].commandName != NULL) {
+        CFDictionaryRef rightDict = NULL;
+        
         // Some no-obvious assertions:
         
         // If you have a right name, you must supply a default rule.
@@ -563,11 +696,14 @@ static void CSASSetDefaultRules(
         
         assert( (commands[commandIndex].rightName != NULL) || (commands[commandIndex].rightDescriptionKey == NULL) );
         
+        // Get the right dictionary for our specified right.
+        
+        rightDict = CSASCreateRightForCommandSpec(commands[commandIndex], authPrompts);
+        
         // If there's a right name but no current right specification, set up the
         // right specification.
         
-        if (commands[commandIndex].rightName != NULL) {
-            Boolean rightNeedsChanging = false;
+        if (rightDict != NULL) {
             CFDictionaryRef existingRight = NULL;
             
             err = AuthorizationRightGet(commands[commandIndex].rightName, &existingRight);
@@ -583,75 +719,32 @@ static void CSASSetDefaultRules(
             // helper tool code.
             
             if (err == errAuthorizationDenied) {
-                rightNeedsChanging = true;
-            } else if (err == errAuthorizationSuccess) {
-                CFStringRef existingRule = CFDictionaryGetValue(existingRight, CFSTR(kAuthorizationRightRule));
-                CFStringRef desiredRule = CFStringCreateWithCString(kCFAllocatorDefault, commands[commandIndex].rightDefaultRule, kCFStringEncodingUTF8);
-                
-                if (CFStringCompare(existingRule, desiredRule, 0) != kCFCompareEqualTo) {
-                    rightNeedsChanging = true;
-                }
-                
-                CFRelease(desiredRule);
-                CFRelease(existingRight);
+                existingRight = NULL;
             }
             
-            if (rightNeedsChanging) {
-                CFStringRef thisDescription;
-                CFStringRef	thisRule;
-                CFDictionaryRef ruleDict;
-                
+            if (existingRight == NULL || !CFEqual(existingRight, rightDict)) {
                 // The right is not already defined.  Set up a definition based on
                 // the fields in the command specification.
-                
-                thisRule = CFStringCreateWithCString(
-                                                     kCFAllocatorDefault,
-                                                     commands[commandIndex].rightDefaultRule,
-                                                     kCFStringEncodingUTF8
-                                                     );
-                assert(thisRule != NULL);
-                
-                thisDescription = NULL;
-                if (commands[commandIndex].rightDescriptionKey != NULL) {
-                    thisDescription = CFStringCreateWithCString (
-                                                                 kCFAllocatorDefault,
-                                                                 commands[commandIndex].rightDescriptionKey,
-                                                                 kCFStringEncodingUTF8
-                                                                 );
-                    assert(thisDescription != NULL);
-                }
-                
-                CFStringRef keys[2] = { CFSTR(kAuthorizationRightRule), CFSTR(kAuthorizationEnvironmentShared) };
-                CFTypeRef values[2] = { thisRule, kCFBooleanFalse };
-                
-                ruleDict = CFDictionaryCreate(kCFAllocatorDefault, (void *)keys, (void *)values, 2, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-                
-                assert(ruleDict != NULL);
                 
                 err = AuthorizationRightSet(
                                             auth,										// authRef
                                             commands[commandIndex].rightName,           // rightName
-                                            ruleDict,                                   // rightDefinition
-                                            thisDescription,							// descriptionKey
-                                            bundle,                                     // bundle
-                                            descriptionStringTableName					// localeTableName
+                                            rightDict,                                  // rightDefinition
+                                            NULL,            							// descriptionKey
+                                            NULL,                                       // bundle
+                                            NULL					                    // localeTableName
                                             );												// NULL indicates "Localizable.strings"
+
                 assert(err == noErr);
-                
-                if (thisDescription != NULL) {
-					CFRelease(thisDescription);
-				}
-                if (thisRule != NULL) {
-					CFRelease(thisRule);
-				}
-                if (ruleDict != NULL) {
-                    CFRelease(ruleDict);
-                }
             } else {
                 // A right already exists (err == noErr) or any other error occurs, we
                 // assume that it has been set up in advance by the system administrator or
                 // this is the second time we've run.  Either way, there's nothing more for
                 // us to do.
+            }
+            
+            if (rightDict != NULL) {
+                CFRelease(rightDict);
             }
         }
         commandIndex += 1;
@@ -661,27 +754,40 @@ static void CSASSetDefaultRules(
 }
 
 extern int CSASHelperToolMain(
+                              int                       argc,
+                              const char *              argv[],
                               CFStringRef               helperID,
-                              CFStringRef               appID,
-                              CFStringRef               descriptionStringTableName,
                               const CSASCommandSpec		commands[],
                               const CSASCommandProc		commandProcs[],
                               unsigned int              timeoutInterval
                               )
 // See comment in header.
 {
+    CFURLRef                    helperURL = NULL;
+    CFDictionaryRef             infoPlist = NULL;
     char                        helperIDC[PATH_MAX];
 	
 	// Pre-conditions
 	
+    assert(argc >= 1);
 	assert(commands != NULL);
 	assert(commands[0].commandName != NULL);        // there must be at least one command
 	assert(commandProcs != NULL);
     assert( CommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
 
+    // Get our embedded Info.plist file.
+    
+    helperURL = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)argv[0], strlen(argv[0]), false);
+    
+    assert(helperURL != NULL);
+    
+    infoPlist = CFBundleCopyInfoDictionaryForURL(helperURL);
+    
+    assert(infoPlist != NULL);
+    
     // Set up default rules which other processes must follow to communicate with this tool.
     
-    CSASSetDefaultRules(commands, appID, descriptionStringTableName);
+    CSASSetDefaultRules(commands, infoPlist);
     
     // set up the watchdog stuff
     InitWatchdog(timeoutInterval);
@@ -724,6 +830,14 @@ extern int CSASHelperToolMain(
     xpc_release(service);
     
     CleanupWatchdog();
+    
+    if (helperURL != NULL) {
+        CFRelease(helperURL);
+    }
+    
+    if (infoPlist != NULL) {
+        CFRelease(infoPlist);
+    }
     
     return EXIT_SUCCESS;
 }

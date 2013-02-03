@@ -192,12 +192,14 @@ extern "C" {
  */
 
 struct CSASCommandSpec {
-    const char *	commandName;
-    const char *	rightName;
-    const char *	rightDefaultRule;
-    const char *	rightDescriptionKey;
-    const char *    codeSigningRequirement;
-    const void *    userData;
+    const char *		commandName;
+    const char *		rightName;
+    const char *		rightDefaultRule;
+    const unsigned int	rightTimeoutInSeconds;
+    const char *        rightComment;
+    const char *		rightDescriptionKey;
+    const char *    	codeSigningRequirement;
+    const void *    	userData;
 };
 typedef struct CSASCommandSpec CSASCommandSpec;
 
@@ -219,46 +221,36 @@ typedef struct CSASCommandSpec CSASCommandSpec;
  Some constants defining authorization rules, for use in SampleCommon.h.
  */
 
-// Default rule. Credentials remain valid for 5 minutes after they've been obtained.
-// An acquired credential is shared by all clients.
-#define kCSASRuleDefault                         "default"
-
 // Allow anyone.
-#define kCSASRuleAllow                           kAuthorizationRuleClassAllow
+#define kCSASRuleAllow 								"kCSASRuleAllow"
 
 // Deny anyone.
-#define kCSASRuleDeny                            kAuthorizationRuleClassDeny
+#define kCSASRuleDeny								"kCSASRuleDeny"
 
 // Authenticate as an administrator.
-#define kCSASRuleAuthenticateAdmin               kAuthorizationRuleAuthenticateAsAdmin
-
-// Like the default rule, but credentials remain valid for only 30 seconds after they've been obtained.
-// An acquired credential is shared by all clients.
-#define kCSASRuleAuthenticateAdmin30        	 "authenticate-admin-30"
+// An acquired credential is *not* shared by all clients.
+#define kCSASRuleAuthenticateAdmin					"kCSASRuleAuthenticateAdmin"
 
 // Authenticate as a developer.
-#define kCSASRuleAuthenticateDeveloper           "authenticate-developer"
+#define kCSASRuleAuthenticateDeveloper				"kCSASRuleAuthenticateDeveloper"
 
 // Authenticate as the session owner.
-#define kCSASRuleAuthenticateSessionOwner        kAuthorizationRuleAuthenticateAsSessionUser
+#define kCSASRuleAuthenticateSessionOwner			"kCSASRuleAuthenticateSessionOwner"
 
 // Authenticate either as the owner or as an administrator.
-#define kCSASRuleAuthenticateSessionOwnerOrAdmin "authenticate-session-owner-or-admin"
-
-// Same as authenticate-session-owner.
-#define kCSASRuleAuthenticateSessionUser         "authenticate-session-user"
+#define kCSASRuleAuthenticateSessionOwnerOrAdmin	"kCSASRuleAuthenticateSessionOwnerOrAdmin"
 
 // Verify that the user asking for authorization is an administrator.
-#define kCSASRuleIsAdmin                         kAuthorizationRuleIsAdmin
+#define kCSASRuleIsAdmin							"kCSASRuleIsAdmin"
 
 // Verify that the user asking for authorization is a developer.
-#define kCSASRuleIsDeveloper                     "is-developer"
+#define kCSASRuleIsDeveloper						"kCSASRuleIsDeveloper"
 
 // Verify that the process that created this AuthorizationRef is running as root.
-#define kCSASRuleIsRoot                          "is-root"
+#define kCSASRuleIsRoot								"kCSASRuleIsRoot"
 
 // Verify that the requesting process is running as the session owner.
-#define kCSASRuleIsSessionOwner                  "is-session-owner"
+#define kCSASRuleIsSessionOwner						"kCSASRuleIsSessionOwner"
 
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Request/Response Keys

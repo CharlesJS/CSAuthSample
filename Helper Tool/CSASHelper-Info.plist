@@ -10,6 +10,19 @@
 	<string>CSAuthSampleHelper</string>
 	<key>CFBundleVersion</key>
 	<string>1.0</string>
+	<key>CSASAuthorizationPrompts</key>
+	<dict>
+		<key>GetFileDescriptor</key>
+		<dict>
+			<key>en</key>
+			<string>__APPNAME__ wants to open a file in /usr/local/share.</string>
+		</dict>
+		<key>SecretSpyStuff</key>
+		<dict>
+			<key>en</key>
+			<string>__APPNAME__ wants a martini shaken, not stirred.</string>
+		</dict>
+	</dict>
 	<key>SMAuthorizedClients</key>
 	<array>
 		<string>anchor apple generic and identifier com.charlessoft.CSAuthSample and certificate leaf[subject.CN] = &quot;Developer ID Application: Charles Srstka&quot;</string>

@@ -6,8 +6,6 @@
 //
 //
 
-#include "SampleCommon.h"
-
 /*
  File:       SampleCommon.c
  
@@ -79,15 +77,19 @@ const CSASCommandSpec kSampleCommandSet[] = {
     {	kSampleGetVersionCommand,               // commandName
         NULL,                                   // rightName           -- never authorize
         NULL,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
+        0,                                      // rightTimeoutInSeconds        -- not applicable if rightName is NULL
+        NULL,									// rightComment -- not applicable if rightName is NULL
         NULL,									// rightDescriptionKey -- not applicable if rightName is NULL
-        NULL,                                   // code signing requiremnt
+        NULL,                                   // codeSigningRequirement
         NULL                                    // userData
 	},
     
     {	kSampleSecretSpyStuffCommand,           // commandName
         kSampleSecretSpyStuffRightName,         // rightName
         kCSASRuleAuthenticateAdmin,          // rightDefaultRule    -- authenticate as admin
-        "__APPNAME__ wants to do secret spy stuff",  			// rightDescriptionKey -- haven't bothered trying this yet
+        300,                                  // rightTimeoutInSeconds -- 5 minute timeout
+        "Gives the Secret Password",            // rightComment
+        "SecretSpyStuff",  			// rightDescriptionKey -- haven't bothered trying this yet
         kSampleCodeSigningRequirement,          // code signing requirement
         NULL                                    // userData
 	},
@@ -95,13 +97,17 @@ const CSASCommandSpec kSampleCommandSet[] = {
     {   kSampleGetFileDescriptorsCommand,
         kSampleGetFileDescriptorsRightName,
         kCSASRuleAuthenticateAdmin,
-        "Please identify yourself",
+        0,
+        "Opens a file and passes back the descriptor",
+        "GetFileDescriptor",
         kSampleCodeSigningRequirement,
         NULL
     },
     
     {	NULL,                                   // the array is null terminated
         NULL,
+        NULL,
+        0,
         NULL,
         NULL,
         NULL,

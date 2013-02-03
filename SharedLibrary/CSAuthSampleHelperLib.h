@@ -53,6 +53,14 @@
 #include <CoreFoundation/CoreFoundation.h>
 
 /*!
+ 
+ This is the key for the localized authorization prompt strings in the helper's Info.plist.
+ 
+ */
+
+#define kCSASAuthorizationPromptsKey "CSASAuthorizationPrompts"
+
+/*!
  @function       CSASHelperToolMain
  
  @abstract       Entry point for a privileged helper tool.
@@ -91,9 +99,9 @@
  */
 
 extern int CSASHelperToolMain(
+                              int                       argc,
+                              const char *              argv[],
                               CFStringRef               helperID,
-                              CFStringRef               appID,
-                              CFStringRef               descriptionStringTableName,
                               const CSASCommandSpec		commands[],
                               const CSASCommandProc		commandProcs[],
                               unsigned int              timeoutInterval
