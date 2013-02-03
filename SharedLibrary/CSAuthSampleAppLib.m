@@ -200,7 +200,7 @@
     bool                        success = true;
     size_t                      commandIndex;
 	AuthorizationExternalForm	extAuth;
-    xpc_connection_t            connection;
+    xpc_connection_t            connection = NULL;
     xpc_object_t 				message;
     CFErrorRef                  error = NULL;
     __block NSError *           connectionError = nil;
@@ -371,7 +371,9 @@
             CFRelease(error);
         }
         
-        RELEASE_XPC(connection);
+        if (connection != NULL) {
+            RELEASE_XPC(connection);
+        }
     }
 }
 

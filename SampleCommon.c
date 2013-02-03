@@ -87,7 +87,7 @@ const CSASCommandSpec kSampleCommandSet[] = {
     {	kSampleSecretSpyStuffCommand,           // commandName
         kSampleSecretSpyStuffRightName,         // rightName
         kCSASRuleAuthenticateAdmin,          // rightDefaultRule    -- authenticate as admin
-        "Please identify yourself",  			// rightDescriptionKey -- haven't bothered trying this yet
+        "__APPNAME__ wants to do secret spy stuff",  			// rightDescriptionKey -- haven't bothered trying this yet
         kSampleCodeSigningRequirement,          // code signing requirement
         NULL                                    // userData
 	},
