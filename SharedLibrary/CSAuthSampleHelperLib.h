@@ -60,6 +60,107 @@
 
 #define kCSASAuthorizationPromptsKey "CSASAuthorizationPrompts"
 
+/////////////////////////////////////////////////////////////////
+#pragma mark ***** Helper Tool Routines
+
+/*!
+ @functiongroup  Helper Tool Routines
+ */
+
+/*!
+ @typedef        CSASCommandProc
+ 
+ @abstract       Command processing callback.
+ 
+ @discussion     When your helper tool calls CSASHelperToolMain, it passes in a pointer to an
+ array of callback functions of this type.  When CSASHelperToolMain receives a
+ valid command, it calls one of these function so that your program-specific
+ code can process the request.  CSAS guarantees that the effective, save and
+ real user IDs (EUID, SUID, RUID) will all be zero at this point (that is,
+ you're "running as root").
+ 
+ By the time this callback is called, CSASHelperToolMain has already verified that
+ this is a known command.  It also acquires the authorization right associated
+ with the command, if any.  However, it does nothing to validate the other
+ parameters in the request.  These parameters come from a non-privileged source
+ and you should verify them carefully.
+ 
+ Your implementation should get any input parameters from the request and place
+ any output parameters in the response.  It can also put an array of file
+ descriptors into the response using the kCSASDescriptorArrayKey key.
+ 
+ If an error occurs, you should just return an appropriate error code.
+ CSASHelperToolMain will ensure that this gets placed in the response.
+ 
+ You should attempt to fail before adding any file descriptors to the response,
+ or remove them once you know that you're going to fail.  If you put file
+ descriptors into the response and then return an error, those descriptors will
+ still be passed back to the client.  It's likely the client isn't expecting this.
+ 
+ Calls to this function will be serialised; that is, once your callback is
+ running, CSASHelperToolMain won't call you again until you return.  Your callback
+ should avoid blocking for long periods of time.  If you block for too long, the
+ CSAS watchdog will kill the entire helper tool process.
+ 
+ This callback runs in a daemon context; you must avoid doing things that require the
+ user's context.  For example, launching a GUI application would be bad.  See
+ Technote 2083 "Daemons and Agents" for more information about execution contexts.
+ 
+ @param auth     This is a reference to the authorization instance associated with the original
+ application that made the request.
+ 
+ This will never be NULL.
+ 
+ @param userData This is the value from the userData field of the corresponding entry in the
+ CSASCommandSpec array that you passed to CSASHelperToolMain.
+ 
+ @param request  This dictionary contains the request.  It will have, at a bare minimum, a
+ kCSASCommandKey item whose value matches one of the commands in the
+ CSASCommandSpec array you passed to CSASHelperToolMain.  It may also have
+ other, command-specific parameters.
+ 
+ This will never be NULL.
+ 
+ @param response This is a dictionary into which you can place the response.  It will start out
+ empty, and you can add any results you please to it.
+ 
+ If you need to return file descriptors, place them in an array and place that
+ array in the response using the kCSASDescriptorArrayKey key.
+ 
+ There's no need to set the error result in the response.  CSASHelperToolMain will
+ do that for you.  However, if you do set a value for the kCSASErrorKey key,
+ that value will take precedence; in this case, the function result is ignored.
+ 
+ This will never be NULL.
+ 
+ @param asl      A reference to the ASL client handle for logging.
+ 
+ This may be NULL.  However, ASL handles a NULL input, so you don't need to
+ conditionalise your code.
+ 
+ @param aslMsg   A reference to a ASL message template for logging.
+ 
+ This may be NULL.  However, ASL handles a NULL input, so you don't need to
+ conditionalise your code.
+ */
+
+typedef bool (^CSASConnectionHandler)(
+                                      CFDictionaryRef       	request,
+                                      CFMutableDictionaryRef	response,
+                                      CFMutableArrayRef			fileDescriptors,
+                                      CFErrorRef *				errorPtr
+                                      );
+
+typedef bool (*CSASCommandProc)(
+                                AuthorizationRef		auth,
+                                const void *            userData,
+                                CFDictionaryRef			request,
+                                CFMutableDictionaryRef  response,
+                                CFMutableArrayRef       descriptorArray,
+                                CSASConnectionHandler *	connectionHandler,
+                                CFErrorRef *			error
+                                );
+
 /*!
  @function       CSASHelperToolMain
  
@@ -107,7 +208,7 @@ extern int CSASHelperToolMain(
                               unsigned int              timeoutInterval
                               );
 
-extern void WatchdogEnableAutomaticTermination();
-extern void WatchdogDisableAutomaticTermination();
+extern void CSASWatchdogEnableAutomaticTermination();
+extern void CSASWatchdogDisableAutomaticTermination();
 
 #endif

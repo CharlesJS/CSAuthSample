@@ -54,9 +54,10 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 @interface CSASAppController ()
 
-@property (nonatomic, weak)	IBOutlet NSTextField* textField;
+@property (nonatomic, assign)	IBOutlet NSTextView   *textView;
 
-@property (strong)              CSASCommandSender *commandSender;
+@property (strong)              CSASRequestSender *commandSender;
+@property (strong)              CSASHelperConnection *persistentConnection;
 @property                       BOOL helperIsReady;
 
 - (IBAction)getVersion:(id)sender;
@@ -72,11 +73,20 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 @end
 
-
 @implementation CSASAppController
 
 - (void)appendLog:(NSString *)log {
-    self.textField.stringValue = [self.textField.stringValue stringByAppendingFormat:@"\n%@", log];
+    NSTextStorage *textStorage = self.textView.textStorage;
+    
+    [textStorage beginEditing];
+    
+    [textStorage appendAttributedString:[[NSAttributedString alloc] initWithString:@"\n"]];
+    [textStorage appendAttributedString:[[NSAttributedString alloc] initWithString:log]];
+    
+    [textStorage endEditing];
+    
+    [self.textView setNeedsDisplay:YES];
+    [self.textView scrollToEndOfDocument:nil];
 }
 
 - (void)applicationDidFinishLaunching:(NSNotification *)notification {
@@ -84,7 +94,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         
     self.helperIsReady = NO;
     
-    self.commandSender = [[CSASCommandSender alloc] initWithCommandSet:kSampleCommandSet helperID:@kSampleHelperID error:&error];
+    self.commandSender = [[CSASRequestSender alloc] initWithCommandSet:kSampleCommandSet helperID:@kSampleHelperID error:&error];
     
     if (self.commandSender == nil) {
         [self appendLog:[NSString stringWithFormat:@"Failed to create AuthorizationRef. Error %@", error]];
@@ -93,7 +103,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
     
     [self requestHelperVersion:^(int64_t version, NSError *versionError) {
         if (versionError == nil && version == kCSASHelperVersion) {
-            self.textField.stringValue = @"Helper available.";
+            self.textView.string = @"Helper available.";
             self.helperIsReady = YES;
         } else {
             NSError *blessError = nil;
@@ -103,7 +113,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
                 return;
             }
             
-            self.textField.stringValue = @"Helper available.";
+            self.textView.string = @"Helper available.";
             self.helperIsReady = YES;
         }
     }];
@@ -114,7 +124,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (void)sendRequest:(NSDictionary *)request {
-    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, NSError *errorOrNil) {
+    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, __unused CSASHelperConnection *unused, NSError *errorOrNil) {
         if (errorOrNil != nil) {
             [self logError:errorOrNil];
         } else {
@@ -170,7 +180,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 - (void)requestHelperVersion:(void (^)(int64_t, NSError *))handler {
     NSDictionary *request = @{ @kCSASCommandKey : @kSampleGetVersionCommand };
     
-    [self.commandSender executeRequestInHelperTool:request responseHandler:^(NSDictionary *response, NSArray *fileHandles, NSError *errorOrNil) {
+    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, __unused CSASHelperConnection *unused, NSError *errorOrNil) {
         if (handler != nil) {
             if (errorOrNil != nil) {
                 handler(-1, errorOrNil);
@@ -180,7 +190,9 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
                 handler(version.longLongValue, nil);
             }
         }
-    }];
+    };
+    
+    [self.commandSender executeRequestInHelperTool:request responseHandler:responseHandler];
 }
 
 - (IBAction)getVersion:(id)sender {
@@ -202,7 +214,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 - (IBAction)createFile:(id)sender {
     NSDictionary *request = @{ @kCSASCommandKey : @kSampleGetFileDescriptorsCommand };
     
-    [self sendRequest:request responseHandler:^(NSDictionary *response, NSArray *fileHandles, NSError *errorOrNil) {
+    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, __unused CSASHelperConnection *unused, NSError *errorOrNil) {
         if (errorOrNil != nil) {
             [self logError:errorOrNil];
         } else if (fileHandles.count == 0) {
@@ -213,7 +225,47 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
             
             [fh writeData:[testString dataUsingEncoding:NSUTF8StringEncoding]];
         }
-    }];
+    };
+    
+    [self.commandSender executeRequestInHelperTool:request responseHandler:responseHandler];
+}
+
+- (IBAction)openPersistentConnection:(id)sender {
+    NSDictionary *request = @{ @kCSASCommandKey : @kSampleOpenPersistentConnectionCommand };
+    
+    CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, CSASHelperConnection *persistentConnection, NSError *errorOrNil) {
+        if (errorOrNil != nil) {
+            [self logError:errorOrNil];
+        } else if (persistentConnection == nil) {
+            [self appendLog:@"No connection"];
+        } else {
+            self.persistentConnection = persistentConnection;
+        }
+    };
+    
+    [self.commandSender executeRequestInHelperTool:request responseHandler:responseHandler];
+}
+
+- (IBAction)talkThroughPersistentConnection:(id)sender {
+    NSDictionary *message = @{ @kCSASRequestKey : @"it's your birthday" };
+    
+    CSASResponseHandler responseHandler = ^(NSDictionary *response, __unused NSArray *unused1, __unused CSASHelperConnection *unused2, NSError *errorOrNil) {
+        NSString *responseString = response[@kCSASRequestKey];
+        
+        if (errorOrNil != nil) {
+            [self logError:errorOrNil];
+        } else if (responseString == nil) {
+            [self appendLog:@"No response string"];
+        } else {
+            [self appendLog:responseString];
+        }
+    };
+    
+    if (self.persistentConnection == nil) {
+        [self appendLog:@"No persistent connection is open"];
+    } else {
+        [self.persistentConnection sendMessage:message responseHandler:responseHandler];
+    }
 }
 
 @end

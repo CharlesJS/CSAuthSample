@@ -100,6 +100,16 @@
 
 // response keys (none)
 
+// A command that will open a persistent connection, through which the application can then send further messages.
+
+#define kSampleOpenPersistentConnectionCommand "OpenPersistentConnection"
+
+#define kSampleOpenPersistentConnectionRightName "com.charlessoft.CSAuthSample.OpenPersistentConnection"
+
+// request keys (none)
+
+// response keys (none)
+
 // The kSampleCommandSet is used by both the app and the tool to communicate the set of
 // supported commands to the BetterAuthorizationSampleLib module.
 

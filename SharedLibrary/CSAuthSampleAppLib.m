@@ -60,12 +60,14 @@
 
 #if USING_ARC
 #define RELEASE(x)
+#define AUTORELEASE(x)      (x)
 #define BRIDGE(type, var)   ((__bridge type)(var))
 #define BRIDGING_RETAIN(x)  CFBridgingRetain(x)
 #define BRIDGING_RELEASE(x) CFBridgingRelease(x)
 #define SUPER_DEALLOC
 #else
 #define RELEASE(x)          [(x) release]
+#define AUTORELEASE(x)      [(x) autorelease]
 #define BRIDGE(type, var)   ((type)(var))
 #define BRIDGING_RETAIN(x)  ((CFTypeRef)[(x) retain])
 #define BRIDGING_RELEASE(x) [(id)(x) autorelease]
@@ -73,18 +75,113 @@
 #endif
 
 #if USING_ARC && OS_OBJECT_USE_OBJC_RETAIN_RELEASE
+#define RETAIN_XPC(x)       (x)
 #define RELEASE_XPC(x)
 #else
+#define RETAIN_XPC(x)       xpc_retain(x)
 #define RELEASE_XPC(x)      xpc_release(x)
 #endif
 
-@interface CSASCommandSender ()
+@interface CSASRequestSender ()
 
 @property (copy) NSString *helperID;
 
 @end
 
-@implementation CSASCommandSender {
+@interface CSASHelperConnection ()
+
+- (instancetype)initWithXPCConnection:(xpc_connection_t)conn;
+
+@end
+
+static NSError *CSASCleanedError(NSError *error) {
+    // Since, AFAIK, there is no pure-C version of the NSUserCancelledError constant (although kCFErrorDomainCocoa does exist),
+    // the underlying C code presents user cancelled errors using the POSIX ECANCELED. However, -[NSApp presentError:] only
+    // treats NSUserCancelledError as a user cancelled event which should be ignored, while displaying error boxes for ECANCELED.
+    // Thus, we convert any ECANCELED errors to NSUserCanceledError here.
+    
+    if ([error.domain isEqualToString:NSPOSIXErrorDomain] && error.code == ECANCELED) {
+        error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSUserCancelledError userInfo:nil];
+    }
+    
+    return error;
+}
+
+static NSError *CSASErrorFromXPCEvent(xpc_object_t event) {
+    xpc_type_t type = xpc_get_type(event);
+    NSError *error = nil;
+    
+    if (type == XPC_TYPE_ERROR) {
+        if (event == XPC_ERROR_CONNECTION_INTERRUPTED) {
+            error = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInterrupted userInfo:nil];
+        } else if (event == XPC_ERROR_CONNECTION_INVALID) {
+            error = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInvalid userInfo:nil];
+        } else {
+            error = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorUnexpectedConnection userInfo:nil];
+        }
+    }
+    
+    return error;
+}
+
+static NSArray *CSASFileHandlesFromXPCReply(xpc_object_t reply) {
+    NSMutableArray *handleArray = [NSMutableArray array];
+    xpc_object_t descriptorArray = xpc_dictionary_get_value(reply, kCSASDescriptorArrayKey);
+    size_t descriptorCount = 0;
+    
+    if (descriptorArray != NULL) {
+        descriptorCount = xpc_array_get_count(descriptorArray);
+    }
+    
+    if (descriptorCount != 0) {
+        for (size_t i = 0; i < descriptorCount; i++) {
+            int fd = xpc_array_dup_fd(descriptorArray, i);
+            
+            if (fd < 0) {
+                continue;
+            }
+            
+            [handleArray addObject:[[NSFileHandle alloc] initWithFileDescriptor:fd closeOnDealloc:YES]];
+        }
+    }
+    
+    return handleArray;
+}
+
+static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandlesPtr, NSError **errorPtr) {
+    NSDictionary *response = NULL;
+    NSArray *fileHandles = nil;
+    bool success = true;
+    NSError *error = NULL;
+    
+    if (success) {
+        response = BRIDGING_RELEASE(CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(reply, kCSASRequestKey)));
+        
+        if (response == nil) {
+            success = false;
+            error = BRIDGING_RELEASE(CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(reply, kCSASErrorKey)));
+            
+            if (error == nil) {
+                error = BRIDGING_RELEASE(CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr));
+            }
+        }
+    }
+    
+    if (success) {
+        fileHandles = CSASFileHandlesFromXPCReply(reply);
+    }
+    
+    if (success) {
+        if (fileHandlesPtr != NULL) *fileHandlesPtr = fileHandles;
+    } else {
+        if (errorPtr != NULL) *errorPtr = CSASCleanedError(error);
+        response = nil;
+    }
+    
+    return response;
+}
+
+@implementation CSASRequestSender {
     AuthorizationRef _authRef;
     const CSASCommandSpec *_commands;
 }
@@ -100,7 +197,7 @@
     OSStatus err = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &_authRef);
     
     if (err != errSecSuccess) {
-        if (error) *error = [self cleanedError:(NSError *)BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(err))];
+        if (error) *error = CSASCleanedError(BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(err)));
         RELEASE(self);
         return nil;
     }
@@ -129,31 +226,8 @@
     if (_authRef != NULL) {
         // destroy rights for a little added security
         AuthorizationFree(_authRef, kAuthorizationFlagDestroyRights);
+        _authRef = NULL;
     }
-}
-
-- (NSArray *)fileHandlesFromXPCReply:(xpc_object_t)reply {
-    NSMutableArray *handleArray = [NSMutableArray new];
-    xpc_object_t descriptorArray = xpc_dictionary_get_value(reply, kCSASDescriptorArrayKey);
-    size_t descriptorCount = 0;
-    
-    if (descriptorArray != NULL) {
-        descriptorCount = xpc_array_get_count(descriptorArray);
-    }
-    
-    if (descriptorCount != 0) {
-        for (size_t i = 0; i < descriptorCount; i++) {
-            int fd = xpc_array_dup_fd(descriptorArray, i);
-            
-            if (fd < 0) {
-                continue;
-            }
-            
-            [handleArray addObject:[[NSFileHandle alloc] initWithFileDescriptor:fd closeOnDealloc:YES]];
-        }
-    }
-    
-    return handleArray;
 }
 
 - (BOOL)blessHelperToolAndReturnError:(NSError **)error {
@@ -170,7 +244,7 @@
 	/* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
     OSStatus status = AuthorizationCopyRights(_authRef, &authRights, kAuthorizationEmptyEnvironment, flags, NULL);
 	if (status != errAuthorizationSuccess) {
-        if (error) *error = [self cleanedError:(NSError *)BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(status))];
+        if (error) *error = CSASCleanedError(BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(status)));
         success = NO;
 	} else {
         CFErrorRef smError = NULL;
@@ -186,7 +260,7 @@
         
         if (!success) {
             if (error != NULL) {
-                *error = [self cleanedError:BRIDGING_RELEASE(smError)];
+                *error = CSASCleanedError(BRIDGING_RELEASE(smError));
             } else if (smError != NULL) {
                 CFRelease(smError);
             }
@@ -247,21 +321,11 @@
     
     if (success) {
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
-            xpc_type_t type = xpc_get_type(event);
+            xpc_type_t eventType = xpc_get_type(event);
             
-            if (type == XPC_TYPE_ERROR) {
-                if (event == XPC_ERROR_CONNECTION_INTERRUPTED) {
-                    if (connectionError == nil) {
-                        connectionError = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInterrupted userInfo:nil];
-                    }
-                } else if (event == XPC_ERROR_CONNECTION_INVALID) {
-                    if (connectionError == nil) {
-                        connectionError = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInvalid userInfo:nil];
-                    }
-                } else {
-                    if (connectionError == nil) {
-                        connectionError = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorUnexpectedConnection userInfo:nil];
-                    }
+            if (eventType == XPC_TYPE_ERROR) {
+                if (connectionError == nil) {
+                    connectionError = CSASErrorFromXPCEvent(event);
                 }
             } else {
                 if (connectionError == nil) {
@@ -313,51 +377,35 @@
     
     if (success) {
         xpc_connection_send_message_with_reply(connection, message, dispatch_get_main_queue(), ^(xpc_object_t reply) {
-            CFDictionaryRef sendResponse = NULL;
+            NSDictionary *response = nil;
             NSArray *fileHandles = nil;
-            CFErrorRef sendError = NULL;
-            
-            bool sendSuccess = true;
+            CSASHelperConnection *helperConnection = nil;
+            bool replySuccess = true;
+            NSError *replyError = nil;
             
             if (connectionError != nil) {
-                sendError = (CFErrorRef)CFBridgingRetain(connectionError);
-                sendSuccess = false;
+                replyError = connectionError;
+                replySuccess = false;
             }
             
-            // Read response.
-            
-            if (sendSuccess) {
-                sendResponse = CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(reply, kCSASRequestKey));
+            if (replySuccess) {
+                response = CSASHandleXPCReply(reply, &fileHandles, &replyError);
                 
-                if (sendResponse == NULL) {
-                    sendSuccess = false;
-                    sendError = (CFErrorRef)CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(reply, kCSASErrorKey));
-                    
-                    if (sendError == NULL) {
-                        sendError = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-                    }
+                if (response == nil) {
+                    replySuccess = false;
                 }
             }
             
-            if (sendSuccess) {
-                fileHandles = [self fileHandlesFromXPCReply:reply];
+            if (replySuccess && xpc_dictionary_get_bool(reply, kCSASCanAcceptFurtherInputKey)) {
+                helperConnection = AUTORELEASE([[CSASHelperConnection alloc] initWithXPCConnection:connection]);
             }
             
-            if (sendSuccess) {
-                if (responseHandler != nil) responseHandler(BRIDGE(NSDictionary *, sendResponse), fileHandles, nil);
+            if (replySuccess) {
+                responseHandler(response, fileHandles, helperConnection, nil);
             } else {
-                if (responseHandler != nil) responseHandler(nil, nil, [self cleanedError:BRIDGE(NSError *, sendError)]);
-
-                if (sendError != NULL) {
-                    CFRelease(sendError);
-                }
+                responseHandler(nil, nil, nil, replyError);
             }
             
-            if (sendResponse != NULL) {
-                CFRelease(sendResponse);
-            }
-            
-            RELEASE(fileHandles);
             RELEASE_XPC(connection);
         });
     }
@@ -365,7 +413,7 @@
     // If something failed, let the user know.
     
     if (!success) {
-        if (responseHandler != nil) responseHandler(nil, nil, [self cleanedError:BRIDGE(NSError *, error)]);
+        if (responseHandler != nil) responseHandler(nil, nil, nil, CSASCleanedError(BRIDGE(NSError *, error)));
         
         if (error != NULL) {
             CFRelease(error);
@@ -377,17 +425,107 @@
     }
 }
 
-- (NSError *)cleanedError:(NSError *)error {
-    // Since, AFAIK, there is no pure-C version of the NSUserCancelledError constant (although kCFErrorDomainCocoa does exist),
-    // the underlying C code presents user cancelled errors using the POSIX ECANCELED. However, -[NSApp presentError:] only
-    // treats NSUserCancelledError as a user cancelled event which should be ignored, while displaying error boxes for ECANCELED.
-    // Thus, we convert any ECANCELED errors to NSUserCanceledError here.
+@end
+
+@implementation CSASHelperConnection {
+    xpc_connection_t _connection;
+}
+
+- (instancetype)initWithXPCConnection:(xpc_connection_t)conn {
+    self = [super init];
     
-    if ([error.domain isEqualToString:NSPOSIXErrorDomain] && error.code == ECANCELED) {
-        error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSUserCancelledError userInfo:nil];
+    if (self == nil) {
+        return nil;
     }
     
-    return error;
+    _connection = RETAIN_XPC(conn);
+    
+    return self;
+}
+
+- (void)dealloc {
+    if (_connection != NULL) {
+        RELEASE_XPC(_connection);
+    }
+    
+    SUPER_DEALLOC;
+}
+
+- (void)sendMessage:(NSDictionary *)messageDict responseHandler:(CSASResponseHandler)responseHandler {
+    xpc_object_t message = nil;
+    NSError *error = nil;
+    __block NSError *connectionError = nil;
+    bool success = true;
+    
+    if (_connection == NULL) {
+        error = BRIDGING_RELEASE(CSASCreateCFErrorFromErrno(EINVAL));
+        success = false;
+    }
+    
+    if (success) {
+        xpc_connection_set_event_handler(_connection, ^(xpc_object_t event) {
+            xpc_type_t eventType = xpc_get_type(event);
+            
+            if (eventType == XPC_TYPE_ERROR) {
+                if (connectionError == nil) {
+                    connectionError = CSASErrorFromXPCEvent(event);
+                }
+            } else {
+                if (connectionError == nil) {
+                    connectionError = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorUnexpectedEvent userInfo:nil];
+                }
+            }
+        });
+    }
+    
+    if (success) {
+        message = xpc_dictionary_create(NULL, NULL, 0);
+        
+        if (message == NULL) {
+            error = BRIDGING_RELEASE(CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr));
+            success = false;
+        }
+    }
+    
+    if (success) {
+        xpc_object_t xpcMessageDict = CSASCreateXPCMessageFromCFType(BRIDGE(CFDictionaryRef, messageDict));
+        
+        xpc_dictionary_set_value(message, kCSASRequestKey, xpcMessageDict);
+        
+        RELEASE_XPC(xpcMessageDict);
+    }
+    
+    if (success) {
+        xpc_connection_send_message_with_reply(_connection, message, dispatch_get_main_queue(), ^(xpc_object_t reply) {
+            if (connectionError != nil) {
+                responseHandler(nil, nil, nil, connectionError);
+            } else {
+                NSArray *fileHandles = nil;
+                NSError *replyError = nil;
+                NSDictionary *response = CSASHandleXPCReply(reply, &fileHandles, &replyError);
+                
+                if (response == nil) {
+                    responseHandler(nil, nil, nil, replyError);
+                } else {
+                    responseHandler(response, fileHandles, nil, nil);
+                }
+            }
+        });
+    }
+    
+    if (!success) {
+        responseHandler(nil, nil, nil, error);
+    }
+    
+    if (message != NULL) {
+        RELEASE_XPC(message);
+    }
+}
+
+- (void)closeConnection {
+    xpc_connection_cancel(_connection);
+    RELEASE_XPC(_connection);
+    _connection = NULL;
 }
 
 @end

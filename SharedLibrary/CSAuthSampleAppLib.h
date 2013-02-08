@@ -49,9 +49,11 @@
 #import <Foundation/Foundation.h>
 #include "CSAuthSampleCommonLib.h"
 
-typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles, NSError *errorOrNil);
+@class CSASHelperConnection;
 
-@interface CSASCommandSender : NSObject
+typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles, CSASHelperConnection *persistentConnection, NSError *errorOrNil);
+
+@interface CSASRequestSender : NSObject
 
 - (instancetype)initWithCommandSet:(const CSASCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error;
 
@@ -115,5 +117,13 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
  */
 
 - (void)executeRequestInHelperTool:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler;
+
+@end
+
+@interface CSASHelperConnection : NSObject
+
+- (void)sendMessage:(NSDictionary *)message responseHandler:(CSASResponseHandler)responseHandler;
+
+- (void)closeConnection;
 
 @end

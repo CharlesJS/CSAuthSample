@@ -12,6 +12,11 @@
 	<string>1.0</string>
 	<key>CSASAuthorizationPrompts</key>
 	<dict>
+		<key>OpenPersistentConnection</key>
+		<dict>
+			<key>en</key>
+			<string>__APPNAME__ wants to open a persistent connection to the helper tool.</string>
+		</dict>
 		<key>GetFileDescriptor</key>
 		<dict>
 			<key>en</key>

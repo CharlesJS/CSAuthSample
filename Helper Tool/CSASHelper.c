@@ -57,7 +57,13 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command
 
-static bool DoGetVersion(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFMutableArrayRef descriptorArray, CFErrorRef *error) {
+static bool DoGetVersion(AuthorizationRef 					authRef,
+                         __unused const void *				userData,
+                         CFDictionaryRef 					request,
+                         CFMutableDictionaryRef 			response,
+                         CFMutableArrayRef 					descriptorArray,
+                         __unused CSASConnectionHandler *	connectionHandler,
+                         CFErrorRef *						error) {
     assert(authRef != NULL);
     assert(response != NULL);
     
@@ -74,7 +80,13 @@ static bool DoGetVersion(AuthorizationRef authRef, const void *userData, CFDicti
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Get Version Command
 
-static bool DoSecretSpyStuff(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFMutableArrayRef descriptorArray, CFErrorRef *error) {
+static bool DoSecretSpyStuff(AuthorizationRef 					authRef,
+                             __unused const void *				userData,
+                             CFDictionaryRef 					request,
+                             CFMutableDictionaryRef 			response,
+                             CFMutableArrayRef 					descriptorArray,
+                             __unused CSASConnectionHandler *	connectionHandler,
+                             CFErrorRef *						error) {
     assert(authRef != NULL);
     assert(response != NULL);
     
@@ -110,7 +122,13 @@ static bool CreateDirectoryRecursively(CFURLRef url, CFErrorRef *error) {
     return success;
 }
 
-static bool DoGetFileDescriptors(AuthorizationRef authRef, const void *userData, CFDictionaryRef request, CFMutableDictionaryRef response, CFMutableArrayRef descriptorArray, CFErrorRef *error) {
+static bool DoGetFileDescriptors(AuthorizationRef 					authRef,
+                                 __unused const void *				userData,
+                                 CFDictionaryRef 					request,
+                                 CFMutableDictionaryRef 			response,
+                                 CFMutableArrayRef 					descriptorArray,
+                                 __unused CSASConnectionHandler *	connectionHandler,
+                                 CFErrorRef *						error) {
     CFURLRef fileURL = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, CFSTR("/usr/local/share/CSAuthSample/testfile.txt"), kCFURLPOSIXPathStyle, false);
     CFURLRef parentURL = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault, fileURL);
     char path[PATH_MAX];
@@ -153,6 +171,35 @@ static bool DoGetFileDescriptors(AuthorizationRef authRef, const void *userData,
 }
 
 /////////////////////////////////////////////////////////////////
+#pragma mark ***** Open Persistent Connection Command
+
+static bool DoOpenPersistentConnection(AuthorizationRef 				authRef,
+                                       __unused const void *			userData,
+                                       __unused CFDictionaryRef			request,
+                                       __unused CFMutableDictionaryRef	response,
+                                       __unused CFMutableArrayRef		descriptorArray,
+                                       CSASConnectionHandler *	        connectionHandler,
+                                       __unused CFErrorRef *			error) {
+    assert(authRef != NULL);
+    
+    if (connectionHandler) *connectionHandler = Block_copy(^bool(CFDictionaryRef request,
+                                                                 CFMutableDictionaryRef response,
+                                                                 __unused CFMutableArrayRef fileDescriptors,
+                                                                 __unused CFErrorRef *errorPtr) {
+        CFStringRef requestString = CFDictionaryGetValue(request, CFSTR(kCSASRequestKey));
+        CFStringRef responseString = CFStringCreateWithFormat(kCFAllocatorDefault, NULL, CFSTR("Say %@\nIt's my birthday too yeah"), requestString);
+        
+        CFDictionarySetValue(response, CFSTR(kCSASRequestKey), responseString);
+        
+        CFRelease(requestString);
+        
+        return true;
+    });
+    
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////
 #pragma mark ***** Tool Infrastructure
 
 /*
@@ -166,6 +213,7 @@ static const CSASCommandProc kSampleCommandProcs[] = {
     DoGetVersion,
     DoSecretSpyStuff,
     DoGetFileDescriptors,
+    DoOpenPersistentConnection,
     NULL
 };
 

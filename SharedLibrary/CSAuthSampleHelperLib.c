@@ -72,18 +72,18 @@ static dispatch_queue_t gWatchdogQueue = NULL;
 static unsigned int gNumConnections = 0;
 static unsigned int gTimeoutInterval = 0;
 
-static void InitWatchdog(unsigned int timeoutInterval) {
+static void CSASInitWatchdog(unsigned int timeoutInterval) {
     gTimeoutInterval = timeoutInterval;
     gWatchdogQueue = dispatch_queue_create("gWatchdogQueue", DISPATCH_QUEUE_SERIAL);
 }
 
-static void ExitIfNoConnections() {
+static void CSASExitIfNoConnections() {
     if (gNumConnections == 0) {
         exit(0);
     }
 }
 
-static void CancelWatchdog() {
+static void CSASCancelWatchdog() {
     if (gWatchdogSource != NULL) {
         dispatch_source_cancel(gWatchdogSource);
         dispatch_release(gWatchdogSource);
@@ -91,20 +91,20 @@ static void CancelWatchdog() {
     }
 }
 
-static void CleanupWatchdog() {
-    CancelWatchdog();
+static void CSASCleanupWatchdog() {
+    CSASCancelWatchdog();
     dispatch_release(gWatchdogQueue);
     gWatchdogQueue = NULL;
 }
 
-static void RestartWatchdog() {
+static void CSASRestartWatchdog() {
     if (gTimeoutInterval != 0) {
         gWatchdogSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, gWatchdogQueue);
         
         dispatch_source_set_timer(gWatchdogSource, dispatch_time(DISPATCH_TIME_NOW, (int64_t)gTimeoutInterval * NSEC_PER_SEC), DISPATCH_TIME_FOREVER, 0);
         
         dispatch_source_set_event_handler(gWatchdogSource, ^{
-            ExitIfNoConnections();
+            CSASExitIfNoConnections();
         });
         
         dispatch_resume(gWatchdogSource);
@@ -113,10 +113,10 @@ static void RestartWatchdog() {
 
 #if ! defined(NDEBUG)
 
-static bool CommandArraySizeMatchesCommandProcArraySize(
-                                                        const CSASCommandSpec		commands[],
-                                                        const CSASCommandProc		commandProcs[]
-                                                        )
+static bool CSASCommandArraySizeMatchesCommandProcArraySize(
+                                                            const CSASCommandSpec		commands[],
+                                                            const CSASCommandProc		commandProcs[]
+                                                            )
 {
     size_t  commandCount;
     size_t  procCount;
@@ -176,7 +176,7 @@ static void CSASCloseFileDescriptors(CFArrayRef descriptorArray) {
     }
 }
 
-static bool CheckCodeSigningForConnection(xpc_connection_t conn, const char *requirement, CFErrorRef *errorPtr) {
+static bool CSASCheckCodeSigningForConnection(xpc_connection_t conn, const char *requirement, CFErrorRef *errorPtr) {
     SecCodeRef                  secCode = NULL;
     SecRequirementRef           secRequirement = NULL;
     CFDictionaryRef             codeAttrs;
@@ -231,16 +231,17 @@ static bool CheckCodeSigningForConnection(xpc_connection_t conn, const char *req
     }
 }
 
-static bool HandleCommand(
-                          const CSASCommandSpec		commands[],
-                          const CSASCommandProc		commandProcs[],
-                          CFDictionaryRef                request,
-                          CFDictionaryRef *              responsePtr,
-                          CFArrayRef *                   descriptorArrayPtr,
-                          AuthorizationRef               authRef,
-                          xpc_connection_t               connection,
-                          CFErrorRef *					 errorPtr
-                          )
+static bool CSASHandleCommand(
+                              const CSASCommandSpec		commands[],
+                              const CSASCommandProc		commandProcs[],
+                              CFDictionaryRef                request,
+                              CFDictionaryRef *              responsePtr,
+                              CFArrayRef *                   descriptorArrayPtr,
+                              AuthorizationRef               authRef,
+                              xpc_connection_t               connection,
+                              CSASConnectionHandler *        connectionHandler,
+                              CFErrorRef *					 errorPtr
+                              )
 // This routine handles a single connection from a client.  This connection, in
 // turn, represents a single command (request/response pair).  commands is the
 // list of valid commands.  commandProc is a callback to call to actually
@@ -257,7 +258,7 @@ static bool HandleCommand(
 	assert(commands != NULL);
 	assert(commands[0].commandName != NULL);        // there must be at least one command
     assert(commandProcs != NULL);
-    assert( CommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
+    assert( CSASCommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
     
     // Create a mutable response dictionary before calling the client.
     if (success) {
@@ -288,7 +289,7 @@ static bool HandleCommand(
     }
     
     if (success && (commands[commandIndex].codeSigningRequirement != NULL)) {
-        success = CheckCodeSigningForConnection(connection, commands[commandIndex].codeSigningRequirement, &error);
+        success = CSASCheckCodeSigningForConnection(connection, commands[commandIndex].codeSigningRequirement, &error);
     }
     
     if (success) {
@@ -320,7 +321,7 @@ static bool HandleCommand(
         
         // Call callback to execute command based on the request.
         
-        success = commandProcs[commandIndex](authRef, commands[commandIndex].userData, request, response, descriptorArray, &error);
+        success = commandProcs[commandIndex](authRef, commands[commandIndex].userData, request, response, descriptorArray, connectionHandler, &error);
 
         if (descriptorArrayPtr != NULL) {
             if (success && (CFArrayGetCount(descriptorArray) != 0)) {
@@ -328,6 +329,10 @@ static bool HandleCommand(
             } else {
                 *descriptorArrayPtr = NULL;
             }
+        }
+        
+        if (connectionHandler != NULL) {
+            xpc_connection_set_context(connection, connectionHandler);
         }
         
         // If the command didn't insert its own error value, we use its function
@@ -352,167 +357,233 @@ static bool HandleCommand(
     return success;
 }
 
-static void HandleEvent(
-                        const CSASCommandSpec		commands[],
-                        const CSASCommandProc		commandProcs[],
-                        xpc_connection_t            connection,
-                        xpc_object_t                event
-                        )
+typedef struct CSASXPCConnectionContext {
+    CSASConnectionHandler connectionHandler;
+} CSASXPCConnectionContext;
+
+static void CSASHandleError(
+                            xpc_connection_t connection,
+                            xpc_object_t event
+                            )
 {
+    if (event == XPC_ERROR_CONNECTION_INVALID) {
+        // The client process on the other end of the connection has either
+        // crashed or cancelled the connection. After receiving this error,
+        // the connection is in an invalid state, and you do not need to
+        // call xpc_connection_cancel(). Just tear down any associated state
+        // here.
+
+        CSASXPCConnectionContext *ctx = xpc_connection_get_context(connection);
+        
+        if (ctx != NULL) {
+            if (ctx->connectionHandler != NULL) {
+                xpc_release(connection);
+                CSASWatchdogEnableAutomaticTermination();
+
+                Block_release(ctx->connectionHandler);
+            }
+            
+            free(ctx);
+            xpc_connection_set_context(connection, NULL);
+        }
+    } else if (event == XPC_ERROR_TERMINATION_IMMINENT) {
+        syslog(LOG_NOTICE, "Termination imminent");
+        // Handle per-connection termination cleanup.
+    } else {
+        syslog(LOG_NOTICE, "Something went wrong");
+    }
+}
+
+static void CSASHandleRequest(
+                              const CSASCommandSpec 	commands[],
+                              const CSASCommandProc 	commandProcs[],
+                              xpc_connection_t      	connection,
+                              xpc_object_t          	event
+                              )
+{
+    CFDictionaryRef request = NULL;
+    CFDictionaryRef response = NULL;
+    CFArrayRef descriptorArray = NULL;
+    xpc_object_t reply = NULL;
+    xpc_object_t xpcResponse = NULL;
+    xpc_connection_t remote = NULL;
+    AuthorizationExternalForm authExtForm;
+    const void *authExtFormData;
+    size_t authExtFormSize = 0;
+    AuthorizationRef authRef = NULL;
+    CSASConnectionHandler connectionHandler = NULL;
+    CSASXPCConnectionContext *ctx = xpc_connection_get_context(connection);
+    bool isPersistent = (ctx != NULL) && (ctx->connectionHandler != NULL);
     bool success = true;
+    CFErrorRef error = NULL;
     
-    xpc_type_t type = xpc_get_type(event);
+    if (success) {
+        reply = xpc_dictionary_create_reply(event);
+        
+        if (reply == NULL) {
+            success = false;
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        }
+    }
     
-    if (type == XPC_TYPE_ERROR) {
-		if (event == XPC_ERROR_CONNECTION_INVALID) {
-			// The client process on the other end of the connection has either
-			// crashed or cancelled the connection. After receiving this error,
-			// the connection is in an invalid state, and you do not need to
-			// call xpc_connection_cancel(). Just tear down any associated state
-			// here.
-            syslog(LOG_NOTICE, "connection went invalid");
-		} else if (event == XPC_ERROR_TERMINATION_IMMINENT) {
-            syslog(LOG_NOTICE, "Termination imminent");
-			// Handle per-connection termination cleanup.
-		} else {
-            syslog(LOG_NOTICE, "Something went wrong");
-        }
-	} else if (type == XPC_TYPE_DICTIONARY) {
-        CFDictionaryRef request = NULL;
-        CFDictionaryRef response = NULL;
-        CFArrayRef descriptorArray = NULL;
-        xpc_object_t reply = NULL;
-        xpc_object_t xpcResponse = NULL;
-        xpc_connection_t remote = NULL;
-        AuthorizationExternalForm authExtForm;
-        const void *authExtFormData;
-        size_t authExtFormSize = 0;
-        AuthorizationRef authRef = NULL;
-        CFErrorRef error = NULL;
+    if (success) {
+        remote = xpc_dictionary_get_remote_connection(event);
         
-        if (success) {
-            reply = xpc_dictionary_create_reply(event);
-            
-            if (reply == NULL) {
-                success = false;
-                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-            }
+        if (remote == NULL) {
+            success = false;
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
-        
-        if (success) {
-            remote = xpc_dictionary_get_remote_connection(event);
-            
-            if (remote == NULL) {
-                success = false;
-                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-            }
-        }
-        
-        if (success) {
-            authExtFormData = xpc_dictionary_get_data(event, kCSASAuthorizationRefKey, &authExtFormSize);
-            
-            if (authExtFormData == NULL || authExtFormSize > sizeof(authExtForm)) {
-                success = false;
-                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-            }
-        }
-        
-        if (success) {
-            memcpy(&authExtForm, authExtFormData, authExtFormSize);
-            
-            OSStatus authErr = AuthorizationCreateFromExternalForm(&authExtForm, &authRef);
-            
-            if (authErr != errSecSuccess) {
-                success = false;
-                error = CSASCreateCFErrorFromSecurityError(authErr);
-            } else if (authRef == NULL) {
-                success = false;
-                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-            }
-        }
-        
-        if (success) {
-            xpc_object_t xpcRequest = xpc_dictionary_get_value(event, kCSASRequestKey);
-            
-            request = CSASCreateCFTypeFromXPCMessage(xpcRequest);
-            
-            if (request == NULL) {
-                success = false;
-                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-            }
-        }
-        
-        if (success) {
-            success = HandleCommand(commands, commandProcs, request, &response, &descriptorArray, authRef, connection, &error);
-        }
-        
-        if (success) {
-            xpcResponse = CSASCreateXPCMessageFromCFType(response);
-            
-            if (xpcResponse == NULL) {
-                success = false;
-                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-            }
-        }
-        
-        if (success && descriptorArray != NULL && CFArrayGetCount(descriptorArray) != 0) {
-            success = CSASWriteFileDescriptors(descriptorArray, reply, &error);
-        }
-        
-        if (success) {
-            xpc_dictionary_set_value(reply, kCSASRequestKey, xpcResponse);
-        }
-        
-        if (!success) {
-            xpc_object_t xpcError;
-            CFStringRef errorDesc;
-            CFDataRef utf8Error;
-            
-            if (error == NULL) {
-                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
-            }
-            
-            xpcError = CSASCreateXPCMessageFromCFType((CFTypeRef)error);
-            errorDesc = CFCopyDescription(error);
-            utf8Error = CFStringCreateExternalRepresentation(kCFAllocatorDefault, errorDesc, kCFStringEncodingUTF8, 0);
-            
-            syslog(LOG_NOTICE, "Request failed: %s", CFDataGetBytePtr(utf8Error));
-            
-            xpc_dictionary_set_value(reply, kCSASErrorKey, xpcError);
-            
-            CFRelease(utf8Error);
-            CFRelease(errorDesc);
-            xpc_release(xpcError);
-        }
+    }
     
-        if (remote != NULL && reply != NULL) {
-            xpc_connection_send_message(remote, reply);
+    if (success && !isPersistent) {
+        authExtFormData = xpc_dictionary_get_data(event, kCSASAuthorizationRefKey, &authExtFormSize);
+        
+        if (authExtFormData == NULL || authExtFormSize > sizeof(authExtForm)) {
+            success = false;
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        }
+    }
+    
+    if (success && !isPersistent) {
+        memcpy(&authExtForm, authExtFormData, authExtFormSize);
+        
+        OSStatus authErr = AuthorizationCreateFromExternalForm(&authExtForm, &authRef);
+        
+        if (authErr != errSecSuccess) {
+            success = false;
+            error = CSASCreateCFErrorFromSecurityError(authErr);
+        } else if (authRef == NULL) {
+            success = false;
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        }
+    }
+    
+    if (success) {
+        xpc_object_t xpcRequest = xpc_dictionary_get_value(event, kCSASRequestKey);
+        
+        request = CSASCreateCFTypeFromXPCMessage(xpcRequest);
+        
+        if (request == NULL) {
+            success = false;
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        }
+    }
+    
+    if (success) {
+        if (!isPersistent) {
+            success = CSASHandleCommand(commands, commandProcs, request, &response, &descriptorArray, authRef, connection, &connectionHandler, &error);
+        } else if (ctx->connectionHandler != NULL) {
+            CFMutableDictionaryRef mutableResponse = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+            CFMutableArrayRef mutableFileDescriptors = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+            
+            success = ctx->connectionHandler(request, mutableResponse, mutableFileDescriptors, &error);
+            
+            if (success) {
+                response = mutableResponse;
+                descriptorArray = mutableFileDescriptors;
+            } else {
+                CFRelease(mutableResponse);
+                CFRelease(mutableFileDescriptors);
+            }
+        }
+    }
+    
+    if (success) {
+        xpcResponse = CSASCreateXPCMessageFromCFType(response);
+        
+        if (xpcResponse == NULL) {
+            success = false;
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        }
+    }
+    
+    if (success && descriptorArray != NULL && CFArrayGetCount(descriptorArray) != 0) {
+        success = CSASWriteFileDescriptors(descriptorArray, reply, &error);
+    }
+    
+    if (success && (ctx == NULL)) {
+        ctx = malloc(sizeof(CSASXPCConnectionContext));
+        
+        ctx->connectionHandler = connectionHandler;
+        
+        xpc_connection_set_context(connection, ctx);
+        
+        if (connectionHandler != NULL) {
+            xpc_retain(connection);
+            CSASWatchdogDisableAutomaticTermination();
+        }
+    }
+    
+    if (success) {
+        xpc_dictionary_set_value(reply, kCSASRequestKey, xpcResponse);
+        xpc_dictionary_set_bool(reply, kCSASCanAcceptFurtherInputKey, (ctx->connectionHandler != NULL));
+    }
+    
+    if (!success) {
+        xpc_object_t xpcError;
+        CFStringRef errorDesc;
+        CFDataRef utf8Error;
+        
+        if (error == NULL) {
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }
         
-        if (descriptorArray != NULL) {
-            CSASCloseFileDescriptors(descriptorArray);
-            CFRelease(descriptorArray);
-        }
+        xpcError = CSASCreateXPCMessageFromCFType((CFTypeRef)error);
+        errorDesc = CFCopyDescription(error);
+        utf8Error = CFStringCreateExternalRepresentation(kCFAllocatorDefault, errorDesc, kCFStringEncodingUTF8, 0);
         
-        if (reply != NULL) {
-            xpc_release(reply);
-        }
+        syslog(LOG_NOTICE, "Request failed: %s", CFDataGetBytePtr(utf8Error));
         
-        if (response != NULL) {
-            CFRelease(response);
-        }
+        xpc_dictionary_set_value(reply, kCSASErrorKey, xpcError);
         
-        if (authRef != NULL) {
-            AuthorizationFree(authRef, kAuthorizationFlagDefaults);
-        }
-        
-        if (xpcResponse != NULL) {
-            xpc_release(xpcResponse);
-        }
+        CFRelease(utf8Error);
+        CFRelease(errorDesc);
+        xpc_release(xpcError);
         
         if (error != NULL) {
             CFRelease(error);
         }
+    }
+    
+    if (remote != NULL && reply != NULL) {
+        xpc_connection_send_message(remote, reply);
+    }
+    
+    if (descriptorArray != NULL) {
+        CSASCloseFileDescriptors(descriptorArray);
+        CFRelease(descriptorArray);
+    }
+    
+    if (reply != NULL) {
+        xpc_release(reply);
+    }
+    
+    if (response != NULL) {
+        CFRelease(response);
+    }
+    
+    if (authRef != NULL) {
+        AuthorizationFree(authRef, kAuthorizationFlagDefaults);
+    }
+    
+    if (xpcResponse != NULL) {
+        xpc_release(xpcResponse);
+    }
+}
+
+static void CSASHandleEvent(
+                            const CSASCommandSpec		commands[],
+                            const CSASCommandProc		commandProcs[],
+                            xpc_connection_t            connection,
+                            xpc_object_t                event
+                            )
+{
+    xpc_type_t type = xpc_get_type(event);
+    
+    if (type == XPC_TYPE_ERROR) {
+		CSASHandleError(connection, event);
+	} else if (type == XPC_TYPE_DICTIONARY) {
+        CSASHandleRequest(commands, commandProcs, connection, event);
 	} else {
         syslog(LOG_NOTICE, "Unhandled event");
     }
@@ -773,7 +844,7 @@ extern int CSASHelperToolMain(
 	assert(commands != NULL);
 	assert(commands[0].commandName != NULL);        // there must be at least one command
 	assert(commandProcs != NULL);
-    assert( CommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
+    assert( CSASCommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
 
     // Get our embedded Info.plist file.
     
@@ -790,7 +861,7 @@ extern int CSASHelperToolMain(
     CSASSetDefaultRules(commands, infoPlist);
     
     // set up the watchdog stuff
-    InitWatchdog(timeoutInterval);
+    CSASInitWatchdog(timeoutInterval);
     
     // Set up XPC service.
     
@@ -806,19 +877,19 @@ extern int CSASHelperToolMain(
     }
     
     xpc_connection_set_event_handler(service, ^(xpc_object_t connection) {
-        WatchdogDisableAutomaticTermination();
+        CSASWatchdogDisableAutomaticTermination();
         
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
-            WatchdogDisableAutomaticTermination();
+            CSASWatchdogDisableAutomaticTermination();
             
-            HandleEvent(commands, commandProcs, connection, event);
+            CSASHandleEvent(commands, commandProcs, connection, event);
             
-            WatchdogEnableAutomaticTermination();
+            CSASWatchdogEnableAutomaticTermination();
         });
         
         xpc_connection_resume(connection);
         
-        WatchdogEnableAutomaticTermination();
+        CSASWatchdogEnableAutomaticTermination();
 	});
     
     xpc_connection_resume(service);
@@ -829,7 +900,7 @@ extern int CSASHelperToolMain(
     
     xpc_release(service);
     
-    CleanupWatchdog();
+    CSASCleanupWatchdog();
     
     if (helperURL != NULL) {
         CFRelease(helperURL);
@@ -842,23 +913,23 @@ extern int CSASHelperToolMain(
     return EXIT_SUCCESS;
 }
 
-extern void WatchdogEnableAutomaticTermination() {
+extern void CSASWatchdogEnableAutomaticTermination() {
     dispatch_sync(gWatchdogQueue, ^{
-        CancelWatchdog();
+        CSASCancelWatchdog();
         
         if (gNumConnections > 0) {
             gNumConnections--;
         }
         
         if (gNumConnections == 0) {
-            RestartWatchdog();
+            CSASRestartWatchdog();
         }
     });
 }
 
-extern void WatchdogDisableAutomaticTermination() {
+extern void CSASWatchdogDisableAutomaticTermination() {
     dispatch_sync(gWatchdogQueue, ^{
-        CancelWatchdog();
+        CSASCancelWatchdog();
         
         gNumConnections++;
     });
