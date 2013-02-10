@@ -1106,6 +1106,7 @@
 							<int key="NSvFlags">289</int>
 							<string key="NSFrame">{{384, 46}, {113, 32}}</string>
 							<reference key="NSSuperview" ref="414427165"/>
+							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="781716492"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSEnabled">YES</bool>
@@ -1134,6 +1135,7 @@
 							<int key="NSvFlags">289</int>
 							<string key="NSFrame">{{246, 46}, {138, 32}}</string>
 							<reference key="NSSuperview" ref="414427165"/>
+							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="267633926"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSEnabled">YES</bool>
@@ -1158,6 +1160,7 @@
 							<int key="NSvFlags">289</int>
 							<string key="NSFrame">{{139, 46}, {107, 32}}</string>
 							<reference key="NSSuperview" ref="414427165"/>
+							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="1067023413"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSEnabled">YES</bool>
@@ -1182,6 +1185,7 @@
 							<int key="NSvFlags">289</int>
 							<string key="NSFrame">{{14, 13}, {216, 32}}</string>
 							<reference key="NSSuperview" ref="414427165"/>
+							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="19716710"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSEnabled">YES</bool>
@@ -1206,6 +1210,7 @@
 							<int key="NSvFlags">289</int>
 							<string key="NSFrame">{{230, 13}, {267, 32}}</string>
 							<reference key="NSSuperview" ref="414427165"/>
+							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<bool key="NSEnabled">YES</bool>
@@ -1238,8 +1243,32 @@
 										<object class="NSTextView" id="423225142">
 											<reference key="NSNextResponder" ref="618853216"/>
 											<int key="NSvFlags">2322</int>
-											<string key="NSFrameSize">{456, 216}</string>
+											<object class="NSMutableSet" key="NSDragTypes">
+												<bool key="EncodedWithXMLCoder">YES</bool>
+												<object class="NSArray" key="set.sortedObjects">
+													<bool key="EncodedWithXMLCoder">YES</bool>
+													<string>Apple HTML pasteboard type</string>
+													<string>Apple PDF pasteboard type</string>
+													<string>Apple PICT pasteboard type</string>
+													<string>Apple PNG pasteboard type</string>
+													<string>Apple URL pasteboard type</string>
+													<string>CorePasteboardFlavorType 0x6D6F6F76</string>
+													<string>NSColor pasteboard type</string>
+													<string>NSFilenamesPboardType</string>
+													<string>NSStringPboardType</string>
+													<string>NeXT Encapsulated PostScript v1.2 pasteboard type</string>
+													<string>NeXT RTFD pasteboard type</string>
+													<string>NeXT Rich Text Format v1.0 pasteboard type</string>
+													<string>NeXT TIFF v4.0 pasteboard type</string>
+													<string>NeXT font pasteboard type</string>
+													<string>NeXT ruler pasteboard type</string>
+													<string>WebURLsWithTitlesPboardType</string>
+													<string>public.url</string>
+												</object>
+											</object>
+											<string key="NSFrameSize">{486, 216}</string>
 											<reference key="NSSuperview" ref="618853216"/>
+											<reference key="NSWindow"/>
 											<reference key="NSNextKeyView" ref="826119364"/>
 											<string key="NSReuseIdentifierKey">_NS:13</string>
 											<object class="NSTextContainer" key="NSTextContainer" id="1001700449">
@@ -1258,7 +1287,7 @@
 													<nil key="NSDelegate"/>
 												</object>
 												<reference key="NSTextView" ref="423225142"/>
-												<double key="NSWidth">456</double>
+												<double key="NSWidth">486</double>
 												<int key="NSTCFlags">1</int>
 											</object>
 											<object class="NSTextViewSharedData" key="NSSharedData">
@@ -1325,13 +1354,14 @@
 												<int key="NSPreferredTextFinderStyle">1</int>
 											</object>
 											<int key="NSTVFlags">6</int>
-											<string key="NSMaxSize">{463, 10000000}</string>
-											<string key="NSMinize">{454, 216}</string>
+											<string key="NSMaxSize">{486, 10000000}</string>
+											<string key="NSMinize">{469, 216}</string>
 											<nil key="NSDelegate"/>
 										</object>
 									</object>
-									<string key="NSFrame">{{1, 1}, {454, 216}}</string>
+									<string key="NSFrame">{{1, 1}, {469, 216}}</string>
 									<reference key="NSSuperview" ref="1014667198"/>
+									<reference key="NSWindow"/>
 									<reference key="NSNextKeyView" ref="423225142"/>
 									<string key="NSReuseIdentifierKey">_NS:11</string>
 									<reference key="NSDocView" ref="423225142"/>
@@ -1497,8 +1527,9 @@ wGw</bytes>
 								<object class="NSScroller" id="826119364">
 									<reference key="NSNextResponder" ref="1014667198"/>
 									<int key="NSvFlags">256</int>
-									<string key="NSFrame">{{455, 1}, {15, 216}}</string>
+									<string key="NSFrame">{{454, 1}, {16, 216}}</string>
 									<reference key="NSSuperview" ref="1014667198"/>
+									<reference key="NSWindow"/>
 									<reference key="NSNextKeyView" ref="1041911036"/>
 									<string key="NSReuseIdentifierKey">_NS:83</string>
 									<bool key="NSAllowsLogicalLayoutDirection">NO</bool>
@@ -1511,6 +1542,7 @@ wGw</bytes>
 									<int key="NSvFlags">-2147483392</int>
 									<string key="NSFrame">{{-100, -100}, {87, 18}}</string>
 									<reference key="NSSuperview" ref="1014667198"/>
+									<reference key="NSWindow"/>
 									<reference key="NSNextKeyView" ref="618853216"/>
 									<string key="NSReuseIdentifierKey">_NS:33</string>
 									<bool key="NSEnabled">YES</bool>
@@ -1524,6 +1556,7 @@ wGw</bytes>
 							</object>
 							<string key="NSFrame">{{20, 94}, {471, 218}}</string>
 							<reference key="NSSuperview" ref="414427165"/>
+							<reference key="NSWindow"/>
 							<reference key="NSNextKeyView" ref="446996073"/>
 							<string key="NSReuseIdentifierKey">_NS:9</string>
 							<int key="NSsFlags">133266</int>
@@ -1537,9 +1570,10 @@ wGw</bytes>
 					</object>
 					<string key="NSFrameSize">{511, 332}</string>
 					<reference key="NSSuperview"/>
+					<reference key="NSWindow"/>
 					<reference key="NSNextKeyView" ref="1014667198"/>
 				</object>
-				<string key="NSScreenRect">{{0, 0}, {1920, 1178}}</string>
+				<string key="NSScreenRect">{{0, 0}, {1440, 878}}</string>
 				<string key="NSMaxSize">{10000000000000, 10000000000000}</string>
 				<bool key="NSWindowIsRestorable">YES</bool>
 			</object>
@@ -2117,6 +2151,42 @@ wGw</bytes>
 						<reference key="destination" ref="423225142"/>
 					</object>
 					<int key="connectionID">592</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBBindingConnection" key="connection">
+						<string key="label">enabled: persistentConnection.isValid</string>
+						<reference key="source" ref="781716492"/>
+						<reference key="destination" ref="327447578"/>
+						<object class="NSNibBindingConnector" key="connector">
+							<reference key="NSSource" ref="781716492"/>
+							<reference key="NSDestination" ref="327447578"/>
+							<string key="NSLabel">enabled: persistentConnection.isValid</string>
+							<string key="NSBinding">enabled</string>
+							<string key="NSKeyPath">persistentConnection.isValid</string>
+							<object class="NSDictionary" key="NSOptions">
+								<string key="NS.key.0">NSValueTransformerName</string>
+								<string key="NS.object.0">NSNegateBoolean</string>
+							</object>
+							<int key="NSNibBindingConnectorVersion">2</int>
+						</object>
+					</object>
+					<int key="connectionID">594</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBBindingConnection" key="connection">
+						<string key="label">enabled: persistentConnection.isValid</string>
+						<reference key="source" ref="19716710"/>
+						<reference key="destination" ref="327447578"/>
+						<object class="NSNibBindingConnector" key="connector">
+							<reference key="NSSource" ref="19716710"/>
+							<reference key="NSDestination" ref="327447578"/>
+							<string key="NSLabel">enabled: persistentConnection.isValid</string>
+							<string key="NSBinding">enabled</string>
+							<string key="NSKeyPath">persistentConnection.isValid</string>
+							<int key="NSNibBindingConnectorVersion">2</int>
+						</object>
+					</object>
+					<int key="connectionID">595</int>
 				</object>
 			</object>
 			<object class="IBMutableOrderedSet" key="objectRecords">
@@ -3798,9 +3868,79 @@ wGw</bytes>
 				<reference key="dict.values" ref="0"/>
 			</object>
 			<nil key="sourceID"/>
-			<int key="maxID">592</int>
+			<int key="maxID">595</int>
 		</object>
-		<object class="IBClassDescriber" key="IBDocument.Classes"/>
+		<object class="IBClassDescriber" key="IBDocument.Classes">
+			<object class="NSMutableArray" key="referencedPartialClassDescriptions">
+				<bool key="EncodedWithXMLCoder">YES</bool>
+				<object class="IBPartialClassDescription">
+					<string key="className">CSASAppController</string>
+					<string key="superclassName">NSObject</string>
+					<object class="NSMutableDictionary" key="actions">
+						<bool key="EncodedWithXMLCoder">YES</bool>
+						<object class="NSArray" key="dict.sortedKeys">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>createFile:</string>
+							<string>doSecretSpyStuff:</string>
+							<string>getVersion:</string>
+						</object>
+						<object class="NSArray" key="dict.values">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>id</string>
+							<string>id</string>
+							<string>id</string>
+						</object>
+					</object>
+					<object class="NSMutableDictionary" key="actionInfosByName">
+						<bool key="EncodedWithXMLCoder">YES</bool>
+						<object class="NSArray" key="dict.sortedKeys">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<string>createFile:</string>
+							<string>doSecretSpyStuff:</string>
+							<string>getVersion:</string>
+						</object>
+						<object class="NSArray" key="dict.values">
+							<bool key="EncodedWithXMLCoder">YES</bool>
+							<object class="IBActionInfo">
+								<string key="name">createFile:</string>
+								<string key="candidateClassName">id</string>
+							</object>
+							<object class="IBActionInfo">
+								<string key="name">doSecretSpyStuff:</string>
+								<string key="candidateClassName">id</string>
+							</object>
+							<object class="IBActionInfo">
+								<string key="name">getVersion:</string>
+								<string key="candidateClassName">id</string>
+							</object>
+						</object>
+					</object>
+					<object class="NSMutableDictionary" key="outlets">
+						<string key="NS.key.0">textView</string>
+						<string key="NS.object.0">NSTextView</string>
+					</object>
+					<object class="NSMutableDictionary" key="toOneOutletInfosByName">
+						<string key="NS.key.0">textView</string>
+						<object class="IBToOneOutletInfo" key="NS.object.0">
+							<string key="name">textView</string>
+							<string key="candidateClassName">NSTextView</string>
+						</object>
+					</object>
+					<object class="IBClassDescriptionSource" key="sourceIdentifier">
+						<string key="majorKey">IBProjectSource</string>
+						<string key="minorKey">./Classes/CSASAppController.h</string>
+					</object>
+				</object>
+				<object class="IBPartialClassDescription">
+					<string key="className">NSLayoutConstraint</string>
+					<string key="superclassName">NSObject</string>
+					<object class="IBClassDescriptionSource" key="sourceIdentifier">
+						<string key="majorKey">IBProjectSource</string>
+						<string key="minorKey">./Classes/NSLayoutConstraint.h</string>
+					</object>
+				</object>
+			</object>
+		</object>
 		<int key="IBDocument.localizationMode">0</int>
 		<string key="IBDocument.TargetRuntimeIdentifier">IBCocoaFramework</string>
 		<object class="NSMutableDictionary" key="IBDocument.PluginDeclaredDevelopmentDependencies">

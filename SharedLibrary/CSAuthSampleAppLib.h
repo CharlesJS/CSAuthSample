@@ -122,6 +122,8 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
 
 @interface CSASHelperConnection : NSObject
 
+@property (readonly) BOOL isValid;
+
 - (void)sendMessage:(NSDictionary *)message responseHandler:(CSASResponseHandler)responseHandler;
 
 - (void)closeConnection;
