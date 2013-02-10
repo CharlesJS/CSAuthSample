@@ -235,8 +235,13 @@ extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message) {
             
             CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, domain, code, userInfo);
             
-            CFRelease(domain);
-            CFRelease(userInfo);
+            if (domain != NULL) {
+                CFRelease(domain);
+            }
+            
+            if (userInfo != NULL) {
+                CFRelease(userInfo);
+            }
             
             return error;
         } else {
@@ -388,6 +393,8 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
                     xpcObjs[xpcCount++] = xpcObj;
                 }
             }
+            
+            free(keyC);
         }
         
         xpc_object_t message = xpc_dictionary_create((const char **)xpcKeys, xpcObjs, xpcCount);
@@ -396,6 +403,11 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
             free((void *)xpcKeys[i]);
             xpc_release(xpcObjs[i]);
         }
+        
+        free(keys);
+        free(objs);
+        free(xpcKeys);
+        free(xpcObjs);
         
         return message;
     } else if (type == CFURLGetTypeID()) {
@@ -423,11 +435,25 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
         
         xpc_object_t message = xpc_dictionary_create(&kCSASEncodedErrorKey, &errorDict, 1);
         
-        xpc_release(domain);
-        xpc_release(code);
-        xpc_release(userInfo);
-        xpc_release(errorDict);
-        CFRelease(cfUserInfo);
+        if (domain != NULL) {
+            xpc_release(domain);
+        }
+        
+        if (code != NULL) {
+            xpc_release(code);
+        }
+        
+        if (userInfo != NULL) {
+            xpc_release(userInfo);
+        }
+        
+        if (errorDict != NULL) {
+            xpc_release(errorDict);
+        }
+        
+        if (cfUserInfo != NULL) {
+            CFRelease(cfUserInfo);
+        }
         
         return message;
     }

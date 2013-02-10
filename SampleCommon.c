@@ -110,7 +110,7 @@ const CSASCommandSpec kSampleCommandSet[] = {
         0,
         "Opens a persistent connection through which the application can send further messages",
         "OpenPersistentConnection",
-        kSampleCodeSigningRequirement,
+        kSampleCodeSigningRequirement
     },
     
     {	NULL,                                   // the array is null terminated

@@ -191,7 +191,9 @@ static bool DoOpenPersistentConnection(AuthorizationRef 				authRef,
         
         CFDictionarySetValue(response, CFSTR(kCSASRequestKey), responseString);
         
-        CFRelease(requestString);
+        if (responseString != NULL) {
+            CFRelease(responseString);
+        }
         
         return true;
     });

@@ -145,7 +145,7 @@ static NSArray *CSASFileHandlesFromXPCReply(xpc_object_t reply) {
                 continue;
             }
             
-            [handleArray addObject:[[NSFileHandle alloc] initWithFileDescriptor:fd closeOnDealloc:YES]];
+            [handleArray addObject:AUTORELEASE([[NSFileHandle alloc] initWithFileDescriptor:fd closeOnDealloc:YES])];
         }
     }
     
@@ -279,7 +279,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     size_t                      commandIndex;
 	AuthorizationExternalForm	extAuth;
     xpc_connection_t            connection = NULL;
-    xpc_object_t 				message;
+    xpc_object_t 				message = NULL;
     CFErrorRef                  error = NULL;
     __block NSError *           connectionError = nil;
 	
@@ -410,6 +410,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
                 responseHandler(nil, nil, nil, replyError);
             }
             
+            RELEASE_XPC(message);
             RELEASE_XPC(connection);
         });
     }
@@ -425,6 +426,10 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         
         if (connection != NULL) {
             RELEASE_XPC(connection);
+        }
+        
+        if (message != NULL) {
+            RELEASE_XPC(message);
         }
     }
 }
@@ -472,6 +477,8 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         RELEASE_XPC(_connection);
     }
     
+    RELEASE(_connectionError);
+    
     SUPER_DEALLOC;
 }
 
@@ -482,8 +489,8 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     
     self.connectionError = nil;
     
-    if (_connection == NULL) {
-        error = BRIDGING_RELEASE(CSASCreateCFErrorFromErrno(EINVAL));
+    if (!self.isValid) {
+        error = [NSError errorWithDomain:BRIDGE(NSString *, kCSASErrorDomain) code:kCSASErrorConnectionInvalid userInfo:nil];
         success = false;
     }
     

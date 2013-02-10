@@ -138,7 +138,7 @@ static bool CSASCommandArraySizeMatchesCommandProcArraySize(
 
 // write file descriptors to the XPC message
 
-static bool CSASWriteFileDescriptors(CFArrayRef descriptorArray, xpc_object_t message, __unused __unused CFErrorRef *errorPtr) {
+static bool CSASWriteFileDescriptors(CFArrayRef descriptorArray, xpc_object_t message, __unused CFErrorRef *errorPtr) {
     CFIndex descriptorCount = CFArrayGetCount(descriptorArray);
     bool success = true;
     
@@ -323,11 +323,15 @@ static bool CSASHandleCommand(
         
         success = commandProcs[commandIndex](authRef, commands[commandIndex].userData, request, response, descriptorArray, connectionHandler, &error);
 
-        if (descriptorArrayPtr != NULL) {
+        if (descriptorArrayPtr == NULL) {
+            CSASCloseFileDescriptors(descriptorArray);
+            CFRelease(descriptorArray);
+        } else {
             if (success && (CFArrayGetCount(descriptorArray) != 0)) {
                 *descriptorArrayPtr = descriptorArray;
             } else {
                 *descriptorArrayPtr = NULL;
+                CFRelease(descriptorArray);
             }
         }
         
@@ -520,25 +524,27 @@ static void CSASHandleRequest(
     }
     
     if (!success) {
-        xpc_object_t xpcError;
-        CFStringRef errorDesc;
-        CFDataRef utf8Error;
-        
-        if (error == NULL) {
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        if (reply != NULL) {
+            xpc_object_t xpcError;
+            CFStringRef errorDesc;
+            CFDataRef utf8Error;
+            
+            if (error == NULL) {
+                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            }
+            
+            xpcError = CSASCreateXPCMessageFromCFType((CFTypeRef)error);
+            errorDesc = CFCopyDescription(error);
+            utf8Error = CFStringCreateExternalRepresentation(kCFAllocatorDefault, errorDesc, kCFStringEncodingUTF8, 0);
+            
+            syslog(LOG_NOTICE, "Request failed: %s", CFDataGetBytePtr(utf8Error));
+            
+            xpc_dictionary_set_value(reply, kCSASErrorKey, xpcError);
+            
+            CFRelease(utf8Error);
+            CFRelease(errorDesc);
+            xpc_release(xpcError);
         }
-        
-        xpcError = CSASCreateXPCMessageFromCFType((CFTypeRef)error);
-        errorDesc = CFCopyDescription(error);
-        utf8Error = CFStringCreateExternalRepresentation(kCFAllocatorDefault, errorDesc, kCFStringEncodingUTF8, 0);
-        
-        syslog(LOG_NOTICE, "Request failed: %s", CFDataGetBytePtr(utf8Error));
-        
-        xpc_dictionary_set_value(reply, kCSASErrorKey, xpcError);
-        
-        CFRelease(utf8Error);
-        CFRelease(errorDesc);
-        xpc_release(xpcError);
         
         if (error != NULL) {
             CFRelease(error);
@@ -552,6 +558,10 @@ static void CSASHandleRequest(
     if (descriptorArray != NULL) {
         CSASCloseFileDescriptors(descriptorArray);
         CFRelease(descriptorArray);
+    }
+    
+    if (request != NULL) {
+        CFRelease(request);
     }
     
     if (reply != NULL) {
@@ -695,7 +705,7 @@ static CFDictionaryRef CSASCreateRightForCommandSpec(CSASCommandSpec commandSpec
         }
         
         if (isOneOfOurs) {
-            CFNumberRef timeout = CFNumberCreate(kCFAllocatorDefault, kCFNumberIntType, &commandSpec.rightTimeoutInSeconds);
+            CFNumberRef timeout = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &commandSpec.rightTimeoutInSeconds);
             
             CFDictionarySetValue(rightDict, CFSTR("shared"), CFSTR("false"));
             CFDictionarySetValue(rightDict, CFSTR("timeout"), timeout);
