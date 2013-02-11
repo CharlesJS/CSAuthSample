@@ -56,7 +56,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 @property (nonatomic, assign)	IBOutlet NSTextView   *textView;
 
-@property (strong)              CSASRequestSender *commandSender;
+@property (strong)              CSASRequestSender *requestSender;
 @property (strong)              CSASHelperConnection *persistentConnection;
 @property                       BOOL helperIsReady;
 
@@ -66,8 +66,10 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 
 - (void)requestHelperVersion:(void (^)(int64_t version, NSError *error))handler;
 
-- (void)sendRequest:(NSDictionary *)request;
-- (void)sendRequest:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler;
+- (void)sendRequestWithName:(NSString *)commandName;
+- (void)sendRequestWithName:(NSString *)commandName responseHandler:(CSASResponseHandler)responseHandler;
+- (void)sendRequestWithName:(NSString *)commandName userInfo:(NSDictionary *)userInfo;
+- (void)sendRequestWithName:(NSString *)commandName userInfo:(NSDictionary *)userInfo responseHandler:(CSASResponseHandler)responseHandler;
 
 - (void)logError:(NSError *)error;
 
@@ -94,9 +96,9 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         
     self.helperIsReady = NO;
     
-    self.commandSender = [[CSASRequestSender alloc] initWithCommandSet:kSampleCommandSet helperID:@kSampleHelperID error:&error];
+    self.requestSender = [[CSASRequestSender alloc] initWithCommandSet:kSampleCommandSet helperID:@kSampleHelperID error:&error];
     
-    if (self.commandSender == nil) {
+    if (self.requestSender == nil) {
         [self appendLog:[NSString stringWithFormat:@"Failed to create AuthorizationRef. Error %@", error]];
         return;
     }
@@ -108,7 +110,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         } else {
             NSError *blessError = nil;
                 
-            if (![self.commandSender blessHelperToolAndReturnError:&blessError]) {
+            if (![self.requestSender blessHelperToolAndReturnError:&blessError]) {
                 [self appendLog:[NSString stringWithFormat:@"Failed to bless helper. Error: %@", blessError]];
                 return;
             }
@@ -120,10 +122,18 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (void)applicationWillTerminate:(NSNotification *)aNotification {
-    [self.commandSender cleanUp];
+    [self.requestSender cleanUp];
 }
 
-- (void)sendRequest:(NSDictionary *)request {
+- (void)sendRequestWithName:(NSString *)commandName {
+    [self sendRequestWithName:commandName userInfo:nil];
+}
+
+- (void)sendRequestWithName:(NSString *)commandName responseHandler:(CSASResponseHandler)responseHandler {
+    [self sendRequestWithName:commandName userInfo:nil responseHandler:responseHandler];
+}
+
+- (void)sendRequestWithName:(NSString *)commandName userInfo:(NSDictionary *)userInfo {
     CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, __unused CSASHelperConnection *unused, NSError *errorOrNil) {
         if (errorOrNil != nil) {
             [self logError:errorOrNil];
@@ -134,18 +144,18 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         }
     };
     
-    [self sendRequest:request responseHandler:responseHandler];
+    [self sendRequestWithName:commandName userInfo:userInfo responseHandler:responseHandler];
 }
 
-- (void)sendRequest:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler {
+- (void)sendRequestWithName:(NSString *)commandName userInfo:(NSDictionary *)userInfo responseHandler:(CSASResponseHandler)responseHandler {
     if (!self.helperIsReady) {
         [self appendLog:@"Not sending request: Helper is not yet ready"];
         return;
     }
     
-    [self appendLog:[NSString stringWithFormat:@"Sending request: %@", request[@kCSASCommandKey]]];
+    [self appendLog:[NSString stringWithFormat:@"Sending request: %@", commandName]];
     
-    [self.commandSender executeRequestInHelperTool:request responseHandler:responseHandler];
+    [self.requestSender executeCommandInHelperTool:commandName userInfo:userInfo responseHandler:responseHandler];
 }
 
 - (void)logError:(NSError *)error {
@@ -178,8 +188,6 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (void)requestHelperVersion:(void (^)(int64_t, NSError *))handler {
-    NSDictionary *request = @{ @kCSASCommandKey : @kSampleGetVersionCommand };
-    
     CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, __unused CSASHelperConnection *unused, NSError *errorOrNil) {
         if (handler != nil) {
             if (errorOrNil != nil) {
@@ -192,7 +200,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         }
     };
     
-    [self.commandSender executeRequestInHelperTool:request responseHandler:responseHandler];
+    [self.requestSender executeCommandInHelperTool:@kSampleGetVersionCommand userInfo:nil responseHandler:responseHandler];
 }
 
 - (IBAction)getVersion:(id)sender {
@@ -206,14 +214,10 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 }
 
 - (IBAction)doSecretSpyStuff:(id)sender {
-    NSDictionary *request = @{ @kCSASCommandKey : @kSampleSecretSpyStuffCommand };
-    
-    [self sendRequest:request];
+    [self sendRequestWithName:@kSampleSecretSpyStuffCommand];
 }
 
 - (IBAction)createFile:(id)sender {
-    NSDictionary *request = @{ @kCSASCommandKey : @kSampleGetFileDescriptorsCommand };
-    
     CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, __unused CSASHelperConnection *unused, NSError *errorOrNil) {
         if (errorOrNil != nil) {
             [self logError:errorOrNil];
@@ -227,12 +231,10 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         }
     };
     
-    [self.commandSender executeRequestInHelperTool:request responseHandler:responseHandler];
+    [self sendRequestWithName:@kSampleGetFileDescriptorsCommand responseHandler:responseHandler];
 }
 
 - (IBAction)openPersistentConnection:(id)sender {
-    NSDictionary *request = @{ @kCSASCommandKey : @kSampleOpenPersistentConnectionCommand };
-    
     CSASResponseHandler responseHandler = ^(NSDictionary *response, NSArray *fileHandles, CSASHelperConnection *persistentConnection, NSError *errorOrNil) {
         if (errorOrNil != nil) {
             [self logError:errorOrNil];
@@ -243,7 +245,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
         }
     };
     
-    [self.commandSender executeRequestInHelperTool:request responseHandler:responseHandler];
+    [self sendRequestWithName:@kSampleOpenPersistentConnectionCommand responseHandler:responseHandler];
 }
 
 - (IBAction)talkThroughPersistentConnection:(id)sender {

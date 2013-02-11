@@ -379,7 +379,7 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
         size_t xpcCount = 0;
         
         CFDictionaryGetKeysAndValues(obj, keys, objs);
-        
+
         for (CFIndex i = 0; i < count; i++) {
             CFStringRef key = keys[i];
             CFIndex keyLen = CFStringGetMaximumSizeForEncoding(CFStringGetLength(key), kCFStringEncodingUTF8) + 1;
@@ -387,14 +387,14 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
             
             if (CFStringGetCString(key, keyC, keyLen, kCFStringEncodingUTF8)) {
                 xpc_object_t xpcObj = CSASCreateXPCMessageFromCFType(objs[i]);
-                
+
                 if (xpcObj != NULL) {
                     xpcKeys[xpcCount] = keyC;
                     xpcObjs[xpcCount++] = xpcObj;
                 }
+            } else {
+                free(keyC);
             }
-            
-            free(keyC);
         }
         
         xpc_object_t message = xpc_dictionary_create((const char **)xpcKeys, xpcObjs, xpcCount);
@@ -478,7 +478,7 @@ extern void CSASLogCFTypeObject(CFTypeRef obj) {
 }
 
 extern bool CSASFindCommand(
-                            CFDictionaryRef             request,
+                            CFStringRef                 commandName,
                             const CSASCommandSpec		commands[],
                             size_t *                    commandIndexPtr,
                             CFErrorRef *                errorPtr
@@ -491,14 +491,13 @@ extern bool CSASFindCommand(
 // in the commands array.  On error, the value in *commandIndexPtr is undefined.
 {
 	bool                        success = true;
-    CFStringRef                 commandStr;
     char *                      command;
 	CFIndex						commandSize = 0;
 	size_t						index = 0;
 	
 	// Pre-conditions
 	
-	assert(request != NULL);
+	assert(commandName != NULL);
 	assert(commands != NULL);
 	assert(commands[0].commandName != NULL);        // there must be at least one command
 	assert(commandIndexPtr != NULL);
@@ -508,12 +507,11 @@ extern bool CSASFindCommand(
     // Get the command as a C string.  To prevent untrusted command string from
 	// trying to run us out of memory, we limit its length to 1024 UTF-16 values.
     
-    commandStr = CFDictionaryGetValue(request, CFSTR(kCSASCommandKey));
-    if ( (commandStr == NULL) || (CFGetTypeID(commandStr) != CFStringGetTypeID()) ) {
+    if ( (commandName == NULL) || (CFGetTypeID(commandName) != CFStringGetTypeID()) ) {
         success = false;
         if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL);
     }
-	commandSize = CFStringGetLength(commandStr);
+	commandSize = CFStringGetLength(commandName);
 	if ( (success) && (commandSize > 1024) ) {
 		success = false;
         if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL);
@@ -521,13 +519,13 @@ extern bool CSASFindCommand(
     if (success) {
         size_t      bufSize;
         
-        bufSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(commandStr), kCFStringEncodingUTF8) + 1;
+        bufSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(commandName), kCFStringEncodingUTF8) + 1;
         command = malloc(bufSize);
         
         if (command == NULL) {
             success = false;
             if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOMEM);
-        } else if ( ! CFStringGetCString(commandStr, command, bufSize, kCFStringEncodingUTF8) ) {
+        } else if ( ! CFStringGetCString(commandName, command, bufSize, kCFStringEncodingUTF8) ) {
             success = false;
             if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
         }

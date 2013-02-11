@@ -116,7 +116,7 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
  @result			An OSStatus code (see CSASErrnoToOSStatus and CSASOSStatusToErrno).
  */
 
-- (void)executeRequestInHelperTool:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler;
+- (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary *)userInfo responseHandler:(CSASResponseHandler)responseHandler;
 
 @end
 

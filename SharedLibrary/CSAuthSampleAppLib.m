@@ -274,7 +274,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 	return success;
 }
 
-- (void)executeRequestInHelperTool:(NSDictionary *)request responseHandler:(CSASResponseHandler)responseHandler {
+- (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary *)userInfo responseHandler:(CSASResponseHandler)responseHandler {
     bool                        success = true;
     size_t                      commandIndex;
 	AuthorizationExternalForm	extAuth;
@@ -285,11 +285,12 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 	
 	// Pre-conditions
 	
-	assert(request != nil);
+	assert(commandName != nil);
     
 	// For debugging.
     
-    assert([request[@kCSASCommandKey] isKindOfClass:[NSString class]]);
+    assert([commandName isKindOfClass:[NSString class]]);
+    assert(userInfo == nil || [userInfo isKindOfClass:[NSDictionary class]]);
     
     // Look up the command and preauthorize.  This has the nice side effect that
     // the authentication dialog comes up, in the typical case, here, rather than
@@ -297,7 +298,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     // single threaded, so if it's waiting for an authentication dialog for user A
     // it can't handle requests from user B.
     
-    success = CSASFindCommand(BRIDGE(CFDictionaryRef, request), _commands, &commandIndex, &error);
+    success = CSASFindCommand(BRIDGE(CFStringRef, commandName), _commands, &commandIndex, &error);
     
     if ( success && (_commands[commandIndex].rightName != NULL) ) {
         AuthorizationItem   item   = { _commands[commandIndex].rightName, 0, NULL, 0 };
@@ -369,8 +370,16 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 	
     // Write the request.
     
-	if (success) {
-		xpc_object_t xpcRequest = CSASCreateXPCMessageFromCFType(BRIDGE(CFDictionaryRef, request));
+    if (success) {
+        xpc_object_t xpcName = CSASCreateXPCMessageFromCFType(BRIDGE(CFStringRef, commandName));
+        
+        xpc_dictionary_set_value(message, kCSASCommandKey, xpcName);
+        
+        RELEASE_XPC(xpcName);
+    }
+    
+	if (success && (userInfo != nil)) {
+		xpc_object_t xpcRequest = CSASCreateXPCMessageFromCFType(BRIDGE(CFDictionaryRef, userInfo));
         
         xpc_dictionary_set_value(message, kCSASRequestKey, xpcRequest);
         

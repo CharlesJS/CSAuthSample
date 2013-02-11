@@ -234,6 +234,7 @@ static bool CSASCheckCodeSigningForConnection(xpc_connection_t conn, const char 
 static bool CSASHandleCommand(
                               const CSASCommandSpec		commands[],
                               const CSASCommandProc		commandProcs[],
+                              CFStringRef                    commandName,
                               CFDictionaryRef                request,
                               CFDictionaryRef *              responsePtr,
                               CFArrayRef *                   descriptorArrayPtr,
@@ -285,7 +286,7 @@ static bool CSASHandleCommand(
         // not the command is valid by comparing with the CSASCommandSpec array.  Also,
         // if the command is valid, return the associated right (if any).
         
-        success = CSASFindCommand(request, commands, &commandIndex, &error);
+        success = CSASFindCommand(commandName, commands, &commandIndex, &error);
     }
     
     if (success && (commands[commandIndex].codeSigningRequirement != NULL)) {
@@ -406,7 +407,10 @@ static void CSASHandleRequest(
                               )
 {
     CFDictionaryRef request = NULL;
+    xpc_object_t xpcRequest = NULL;
     CFDictionaryRef response = NULL;
+    CFStringRef commandName = NULL;
+    const char *commandNameC = NULL;
     CFArrayRef descriptorArray = NULL;
     xpc_object_t reply = NULL;
     xpc_object_t xpcResponse = NULL;
@@ -440,11 +444,29 @@ static void CSASHandleRequest(
     }
     
     if (success && !isPersistent) {
+        commandNameC = xpc_dictionary_get_string(event, kCSASCommandKey);
+        
+        if (commandNameC == NULL) {
+            success = false;
+            error = CSASCreateCFErrorFromErrno(EINVAL);
+        }
+    }
+    
+    if (success && !isPersistent) {
+        commandName = CFStringCreateWithCString(kCFAllocatorDefault, commandNameC, kCFStringEncodingUTF8);
+        
+        if (commandName == NULL) {
+            success = false;
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        }
+    }
+    
+    if (success && !isPersistent) {
         authExtFormData = xpc_dictionary_get_data(event, kCSASAuthorizationRefKey, &authExtFormSize);
         
         if (authExtFormData == NULL || authExtFormSize > sizeof(authExtForm)) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            error = CSASCreateCFErrorFromCarbonError(EINVAL);
         }
     }
     
@@ -463,19 +485,16 @@ static void CSASHandleRequest(
     }
     
     if (success) {
-        xpc_object_t xpcRequest = xpc_dictionary_get_value(event, kCSASRequestKey);
+        xpcRequest = xpc_dictionary_get_value(event, kCSASRequestKey);
         
-        request = CSASCreateCFTypeFromXPCMessage(xpcRequest);
-        
-        if (request == NULL) {
-            success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+        if (xpcRequest != NULL) {
+            request = CSASCreateCFTypeFromXPCMessage(xpcRequest);
         }
     }
     
     if (success) {
         if (!isPersistent) {
-            success = CSASHandleCommand(commands, commandProcs, request, &response, &descriptorArray, authRef, connection, &connectionHandler, &error);
+            success = CSASHandleCommand(commands, commandProcs, commandName, request, &response, &descriptorArray, authRef, connection, &connectionHandler, &error);
         } else if (ctx->connectionHandler != NULL) {
             CFMutableDictionaryRef mutableResponse = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
             CFMutableArrayRef mutableFileDescriptors = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
@@ -570,6 +589,10 @@ static void CSASHandleRequest(
     
     if (response != NULL) {
         CFRelease(response);
+    }
+    
+    if (commandName != NULL) {
+        CFRelease(commandName);
     }
     
     if (authRef != NULL) {

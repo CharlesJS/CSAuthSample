@@ -335,7 +335,7 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj);
 extern void CSASLogCFTypeObject(CFTypeRef obj);
 
 extern bool CSASFindCommand(
-                            CFDictionaryRef             request,
+                            CFStringRef                 commandName,
                             const CSASCommandSpec		commands[],
                             size_t *                    commandIndexPtr,
                             CFErrorRef *                errorPtr
