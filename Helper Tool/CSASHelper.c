@@ -58,6 +58,7 @@ Copyright (C) 2011 Apple Inc. All Rights Reserved.
 #pragma mark ***** Get Version Command
 
 static bool DoGetVersion(AuthorizationRef 					authRef,
+                         CSASCallerCredentials *            creds,
                          __unused const void *				userData,
                          CFDictionaryRef 					request,
                          CFMutableDictionaryRef 			response,
@@ -81,6 +82,7 @@ static bool DoGetVersion(AuthorizationRef 					authRef,
 #pragma mark ***** Get Version Command
 
 static bool DoSecretSpyStuff(AuthorizationRef 					authRef,
+                             CSASCallerCredentials *            creds,
                              __unused const void *				userData,
                              CFDictionaryRef 					request,
                              CFMutableDictionaryRef 			response,
@@ -123,6 +125,7 @@ static bool CreateDirectoryRecursively(CFURLRef url, CFErrorRef *error) {
 }
 
 static bool DoGetFileDescriptors(AuthorizationRef 					authRef,
+                                 CSASCallerCredentials *            creds,
                                  __unused const void *				userData,
                                  CFDictionaryRef 					request,
                                  CFMutableDictionaryRef 			response,
@@ -174,6 +177,7 @@ static bool DoGetFileDescriptors(AuthorizationRef 					authRef,
 #pragma mark ***** Open Persistent Connection Command
 
 static bool DoOpenPersistentConnection(AuthorizationRef 				authRef,
+                                       CSASCallerCredentials *          creds,
                                        __unused const void *			userData,
                                        __unused CFDictionaryRef			request,
                                        __unused CFMutableDictionaryRef	response,

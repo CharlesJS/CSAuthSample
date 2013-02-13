@@ -416,7 +416,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
             if (replySuccess) {
                 responseHandler(response, fileHandles, helperConnection, nil);
             } else {
-                responseHandler(nil, nil, nil, replyError);
+                responseHandler(nil, nil, nil, CSASCleanedError(replyError));
             }
             
             RELEASE_XPC(message);
