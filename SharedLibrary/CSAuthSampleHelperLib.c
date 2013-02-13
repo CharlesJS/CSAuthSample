@@ -336,10 +336,6 @@ static bool CSASHandleCommand(
             }
         }
         
-        if (connectionHandler != NULL) {
-            xpc_connection_set_context(connection, connectionHandler);
-        }
-        
         // If the command didn't insert its own error value, we use its function
         // result as the error value.
         
