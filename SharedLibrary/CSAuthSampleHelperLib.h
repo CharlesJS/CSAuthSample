@@ -67,6 +67,13 @@
  @functiongroup  Helper Tool Routines
  */
 
+typedef struct CSASCallerCredentials {
+    pid_t processID;
+    uid_t userID;
+    gid_t groupID;
+    au_asid_t auditSessionID;
+} CSASCallerCredentials;
+
 /*!
  @typedef        CSASCommandProc
  
@@ -153,6 +160,7 @@ typedef bool (^CSASConnectionHandler)(
 
 typedef bool (*CSASCommandProc)(
                                 AuthorizationRef		auth,
+                                CSASCallerCredentials * creds,
                                 const void *            userData,
                                 CFDictionaryRef			request,
                                 CFMutableDictionaryRef  response,

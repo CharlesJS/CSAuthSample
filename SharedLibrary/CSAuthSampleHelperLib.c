@@ -319,10 +319,15 @@ static bool CSASHandleCommand(
     
     if (success) {
         CFMutableArrayRef descriptorArray = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
+        CSASCallerCredentials creds;
+        
+        creds.processID = xpc_connection_get_pid(connection);
+        creds.userID = xpc_connection_get_euid(connection);
+        creds.groupID = xpc_connection_get_egid(connection);
         
         // Call callback to execute command based on the request.
         
-        success = commandProcs[commandIndex](authRef, commands[commandIndex].userData, request, response, descriptorArray, connectionHandler, &error);
+        success = commandProcs[commandIndex](authRef, &creds, commands[commandIndex].userData, request, response, descriptorArray, connectionHandler, &error);
 
         if (descriptorArrayPtr == NULL) {
             CSASCloseFileDescriptors(descriptorArray);
