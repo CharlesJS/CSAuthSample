@@ -55,6 +55,8 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
 
 @interface CSASRequestSender : NSObject
 
+@property (strong) NSOperationQueue *operationQueue;
+
 - (instancetype)initWithCommandSet:(const CSASCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error;
 
 // Make sure this is called before your application exits.

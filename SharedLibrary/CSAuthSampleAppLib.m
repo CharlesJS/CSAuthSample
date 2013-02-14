@@ -389,7 +389,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     // Send request.
     
     if (success) {
-        xpc_connection_send_message_with_reply(connection, message, dispatch_get_main_queue(), ^(xpc_object_t reply) {
+        xpc_connection_send_message_with_reply(connection, message, DISPATCH_TARGET_QUEUE_DEFAULT, ^(xpc_object_t reply) {
             NSDictionary *response = nil;
             NSArray *fileHandles = nil;
             CSASHelperConnection *helperConnection = nil;
@@ -413,10 +413,18 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
                 helperConnection = AUTORELEASE([[CSASHelperConnection alloc] initWithXPCConnection:connection]);
             }
             
-            if (replySuccess) {
-                responseHandler(response, fileHandles, helperConnection, nil);
+            void (^completionHandler)() = ^{
+                if (replySuccess) {
+                    responseHandler(response, fileHandles, helperConnection, nil);
+                } else {
+                    responseHandler(nil, nil, nil, CSASCleanedError(replyError));
+                }
+            };
+            
+            if (self.operationQueue != nil) {
+                [self.operationQueue addOperationWithBlock:completionHandler];
             } else {
-                responseHandler(nil, nil, nil, CSASCleanedError(replyError));
+                completionHandler();
             }
             
             RELEASE_XPC(message);
@@ -486,6 +494,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         RELEASE_XPC(_connection);
     }
     
+    RELEASE(_operationQueue);
     RELEASE(_connectionError);
     
     SUPER_DEALLOC;
