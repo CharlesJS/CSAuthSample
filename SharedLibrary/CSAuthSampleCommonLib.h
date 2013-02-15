@@ -329,6 +329,9 @@ extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum);
 extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err);
 extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err);
 
+extern char *CSASCreateFileSystemRepresentationForURL(CFURLRef url, CFErrorRef *error);
+extern char *CSASCreateFileSystemRepresentationForPath(CFStringRef path);
+
 extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message);
 extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj);
 

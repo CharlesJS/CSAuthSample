@@ -158,6 +158,42 @@ extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err) {
     }
 }
 
+extern char *CSASCreateFileSystemRepresentationForURL(CFURLRef url, CFErrorRef *error) {
+    CFStringRef scheme = CFURLCopyScheme(url);
+    bool isFile = CFEqual(scheme, CFSTR("file"));
+    
+    CFRelease(scheme);
+    
+    if (!isFile) {
+        if (error) *error = CSASCreateCFErrorFromErrno(EINVAL);
+        return NULL;
+    } else {
+        size_t bufsize = PATH_MAX + 1;
+        uint8_t *buf = malloc(bufsize);
+        
+        while (!CFURLGetFileSystemRepresentation(url, true, buf, bufsize)) {
+            free(buf);
+            bufsize += 100;
+            buf = malloc(bufsize);
+        }
+        
+        return (char *)buf;
+    }
+}
+
+extern char *CSASCreateFileSystemRepresentationForPath(CFStringRef path) {
+    size_t bufsize = PATH_MAX + 1;
+    char *buf = malloc(bufsize);
+    
+    while (!CFStringGetFileSystemRepresentation(path, buf, bufsize)) {
+        free(buf);
+        bufsize += 100;
+        buf = malloc(bufsize);
+    }
+    
+    return buf;
+}
+
 extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message) {
     xpc_type_t type;
     
