@@ -424,7 +424,9 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
             if (self.operationQueue != nil) {
                 [self.operationQueue addOperationWithBlock:completionHandler];
             } else {
-                completionHandler();
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+                    completionHandler();
+                });
             }
             
             RELEASE_XPC(message);
