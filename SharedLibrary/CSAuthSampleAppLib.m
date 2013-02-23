@@ -494,6 +494,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 - (void)dealloc {
     if (_connection != NULL) {
         RELEASE_XPC(_connection);
+        _connection = NULL;
     }
     
     RELEASE(_operationQueue);
