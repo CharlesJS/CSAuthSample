@@ -63,6 +63,20 @@
 #include "/System/Library/Frameworks/CoreServices.framework/Frameworks/CarbonCore.framework/Headers/MacErrors.h"
 #endif
 
+// 10_6
+extern const struct _xpc_type_s _xpc_type_array WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_bool WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_data WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_date WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_dictionary WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_double WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_error WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_int64 WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_null WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_string WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_uint64 WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_type_s _xpc_type_uuid WEAK_IMPORT_ATTRIBUTE;
+
 #include <syslog.h>
 
 //////////////////////////////////////////////////////////////////////////////////
