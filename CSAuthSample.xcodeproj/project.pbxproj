@@ -337,10 +337,10 @@
 				ONLY_ACTIVE_ARCH = YES;
 				PROVISIONING_PROFILE = "";
 				WARNING_CFLAGS = (
-					"-Wall",
-					"-Wextra",
-					"-Wshadow",
+					"-Weverything",
 					"-Werror",
+					"-Wno-objc-missing-property-synthesis",
+					"-Wno-pedantic",
 				);
 			};
 			name = Debug;
@@ -362,10 +362,10 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PROVISIONING_PROFILE = "";
 				WARNING_CFLAGS = (
-					"-Wall",
-					"-Wextra",
-					"-Wshadow",
+					"-Weverything",
 					"-Werror",
+					"-Wno-objc-missing-property-synthesis",
+					"-Wno-pedantic",
 				);
 			};
 			name = Release;

@@ -82,17 +82,6 @@ extern const struct _xpc_type_s _xpc_type_uuid WEAK_IMPORT_ATTRIBUTE;
 //////////////////////////////////////////////////////////////////////////////////
 #pragma mark ***** Constants
 
-// kCSASMaxNumberOfKBytes has two uses:
-//
-// 1. When receiving a dictionary, it is used to limit the size of the incoming
-//    data.  This ensures that a non-privileged client can't exhaust the
-//    address space of a privileged helper tool.
-//
-// 2. Because it's less than 4 GB, this limit ensures that the dictionary size
-//    can be sent as an architecture-neutral uint32_t.
-
-#define kCSASMaxNumberOfKBytes			(1024 * 1024)
-
 CFStringRef const kCSASErrorDomainSecurity = CFSTR("kCSASDomainAuthorization");
 CFStringRef const kCSASErrorDomain = CFSTR("kCSASErrorDomain");
 

@@ -91,11 +91,11 @@ static void CSASCancelWatchdog() {
     }
 }
 
-static void CSASCleanupWatchdog() {
+/*static void CSASCleanupWatchdog() {
     CSASCancelWatchdog();
     dispatch_release(gWatchdogQueue);
     gWatchdogQueue = NULL;
-}
+}*/
 
 static void CSASRestartWatchdog() {
     if (gTimeoutInterval != 0) {
@@ -249,7 +249,7 @@ static bool CSASHandleCommand(
 // execute a command.  Finally, fd is the file descriptor from which the request
 // should be read, and to which the response should be sent.
 {
-    size_t                      commandIndex;
+    size_t                      commandIndex = 0;
     CFMutableDictionaryRef		response	= NULL;
     bool                        success = true;
     CFErrorRef                  error = NULL;
@@ -417,7 +417,7 @@ static void CSASHandleRequest(
     xpc_object_t xpcResponse = NULL;
     xpc_connection_t remote = NULL;
     AuthorizationExternalForm authExtForm;
-    const void *authExtFormData;
+    const void *authExtFormData = NULL;
     size_t authExtFormSize = 0;
     AuthorizationRef authRef = NULL;
     CSASConnectionHandler connectionHandler = NULL;
@@ -931,8 +931,9 @@ extern int CSASHelperToolMain(
     dispatch_main();
     
     // we'll never get here, but eh, release stuff anyway
+    // (actually, don't, since the compiler gives a warning that the code will never be executed)
     
-    xpc_release(service);
+    /*xpc_release(service);
     
     CSASCleanupWatchdog();
     
@@ -944,7 +945,7 @@ extern int CSASHelperToolMain(
         CFRelease(infoPlist);
     }
     
-    return EXIT_SUCCESS;
+    return EXIT_SUCCESS;*/
 }
 
 extern void CSASWatchdogEnableAutomaticTermination() {
