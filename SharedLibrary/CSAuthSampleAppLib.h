@@ -57,12 +57,12 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
 
 @property (strong) NSOperationQueue *operationQueue;
 
-- (instancetype)initWithCommandSet:(const CSASCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error;
+- (instancetype)initWithCommandSet:(const CSASCommandSpec *)commands helperID:(NSString *)helperID error:(NSError *__autoreleasing *)error;
 
 // Make sure this is called before your application exits.
 - (void)cleanUp;
 
-- (BOOL)blessHelperToolAndReturnError:(NSError **)error;
+- (BOOL)blessHelperToolAndReturnError:(NSError *__autoreleasing *)error;
 
 /*!
  @function       CSASExecuteRequestInHelperTool

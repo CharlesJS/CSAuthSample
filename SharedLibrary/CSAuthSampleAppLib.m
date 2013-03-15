@@ -207,7 +207,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     const CSASCommandSpec *_commands;
 }
 
-- (instancetype)initWithCommandSet:(const CSASCommandSpec *)commands helperID:(NSString *)helperID error:(NSError **)error {
+- (instancetype)initWithCommandSet:(const CSASCommandSpec *)commands helperID:(NSString *)helperID error:(NSError *__autoreleasing *)error {
     self = [super init];
     
     if (self == nil) {
@@ -251,7 +251,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     }
 }
 
-- (BOOL)blessHelperToolAndReturnError:(NSError **)error {
+- (BOOL)blessHelperToolAndReturnError:(NSError *__autoreleasing *)error {
 	BOOL success = NO;
     
 	AuthorizationItem authItem		= { kSMRightBlessPrivilegedHelper, 0, NULL, 0 };
