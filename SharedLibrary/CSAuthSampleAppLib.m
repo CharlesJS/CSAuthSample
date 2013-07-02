@@ -577,14 +577,20 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 }
 
 - (void)closeConnection {
-    if (_connection != NULL) {
-        xpc_connection_cancel(_connection);
-        RELEASE_XPC(_connection);
-        _connection = NULL;
-        
-        dispatch_async(dispatch_get_main_queue(), ^{
-            self.isValid = NO;
-        });
+    @synchronized(self) {
+        if (_connection != NULL) {
+            // Set a blank event handler to prevent it from getting called while we are closing the connection.
+            // Specifically, cancelling the connection will cause the XPC_ERROR_CONNECTION_INVALID event,
+            // which then causes this method to be called again.
+            xpc_connection_set_event_handler(_connection, ^(xpc_object_t event) {});
+            xpc_connection_cancel(_connection);
+            RELEASE_XPC(_connection);
+            _connection = NULL;
+            
+            dispatch_async(dispatch_get_main_queue(), ^{
+                self.isValid = NO;
+            });
+        }
     }
 }
 
