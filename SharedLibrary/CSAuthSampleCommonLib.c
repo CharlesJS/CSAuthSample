@@ -122,27 +122,49 @@ static bool CSASOSStatusToErrno(OSStatus errNum, int *posixErr)
     return converted;
 }
 
-extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum) {
-    return CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainPOSIX, errNum, NULL);
+extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum, CFURLRef url) {
+    CFDictionaryRef userInfo = CFDictionaryCreate(kCFAllocatorDefault,
+                                                  (const void **)&kCFErrorURLKey,
+                                                  (const void **)&url,
+                                                  (url != NULL),
+                                                  &kCFTypeDictionaryKeyCallBacks,
+                                                  &kCFTypeDictionaryValueCallBacks);
+    
+    CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainPOSIX, errNum, userInfo);
+    
+    CFRelease(userInfo);
+    
+    return error;
 }
 
-extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err) {
+extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err, CFURLRef url) {
     // Prefer POSIX errors over OSStatus ones if possible, as they tend to present nicer error messages to the end user.
     
     int posixErr;
     
     if (CSASOSStatusToErrno(err, &posixErr)) {
-        return CSASCreateCFErrorFromErrno(posixErr);
+        return CSASCreateCFErrorFromErrno(posixErr, url);
     } else {
-        return CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainOSStatus, err, NULL);
+        CFDictionaryRef userInfo = CFDictionaryCreate(kCFAllocatorDefault,
+                                                      (const void **)&kCFErrorURLKey,
+                                                      (const void **)&url,
+                                                      (url != NULL),
+                                                      &kCFTypeDictionaryKeyCallBacks,
+                                                      &kCFTypeDictionaryValueCallBacks);
+        
+        CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainOSStatus, err, userInfo);
+        
+        CFRelease(userInfo);
+        
+        return error;
     }
 }
 
 extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err) {
     if (err == errAuthorizationCanceled) {
-        return CSASCreateCFErrorFromErrno(ECANCELED);
+        return CSASCreateCFErrorFromErrno(ECANCELED, NULL);
     } else if (err >= errSecErrnoBase && err <= errSecErrnoLimit) {
-        return CSASCreateCFErrorFromErrno(err - errSecErrnoBase);
+        return CSASCreateCFErrorFromErrno(err - errSecErrnoBase, NULL);
     } else {
         CFStringRef errStr = SecCopyErrorMessageString(err, NULL);
         CFDictionaryRef userInfo = CFDictionaryCreate(kCFAllocatorDefault,
@@ -168,7 +190,7 @@ extern char *CSASCreateFileSystemRepresentationForURL(CFURLRef url, CFErrorRef *
     CFRelease(scheme);
     
     if (!isFile) {
-        if (error) *error = CSASCreateCFErrorFromErrno(EINVAL);
+        if (error) *error = CSASCreateCFErrorFromErrno(EINVAL, url);
         return NULL;
     } else {
         size_t bufsize = PATH_MAX + 1;
@@ -548,12 +570,12 @@ extern bool CSASFindCommand(
     
     if ( (commandName == NULL) || (CFGetTypeID(commandName) != CFStringGetTypeID()) ) {
         success = false;
-        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL);
+        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL, NULL);
     }
 	commandSize = CFStringGetLength(commandName);
 	if ( (success) && (commandSize > 1024) ) {
 		success = false;
-        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL);
+        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL, NULL);
 	}
     if (success) {
         size_t      bufSize;
@@ -563,10 +585,10 @@ extern bool CSASFindCommand(
         
         if (command == NULL) {
             success = false;
-            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOMEM);
+            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOMEM, NULL);
         } else if ( ! CFStringGetCString(commandName, command, bufSize, kCFStringEncodingUTF8) ) {
             success = false;
-            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
         }
     }
     
@@ -581,7 +603,7 @@ extern bool CSASFindCommand(
             index += 1;
             if (commands[index].commandName == NULL) {
                 success = false;
-                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOENT);
+                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOENT, NULL);
                 break;
             }
         } while (true);

@@ -183,7 +183,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
             error = BRIDGING_RELEASE(CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(reply, kCSASErrorKey)));
             
             if (error == nil) {
-                error = BRIDGING_RELEASE(CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr));
+                error = BRIDGING_RELEASE(CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL));
             }
         }
     }
@@ -335,7 +335,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 		connection = xpc_connection_create_mach_service(self.helperID.fileSystemRepresentation, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
 		if (connection == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
 		}
 	}
     
@@ -366,7 +366,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         
         if (message == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr);
+            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
         }
     }
 	
@@ -536,7 +536,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         message = xpc_dictionary_create(NULL, NULL, 0);
         
         if (message == NULL) {
-            error = BRIDGING_RELEASE(CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr));
+            error = BRIDGING_RELEASE(CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL));
             success = false;
         }
     }

@@ -325,8 +325,8 @@ enum {
     kCSASErrorUnexpectedEvent
 };
 
-extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum);
-extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err);
+extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum, CFURLRef url);
+extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err, CFURLRef url);
 extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err);
 
 extern char *CSASCreateFileSystemRepresentationForURL(CFURLRef url, CFErrorRef *error);
