@@ -82,7 +82,6 @@ extern const struct _xpc_type_s _xpc_type_uuid WEAK_IMPORT_ATTRIBUTE;
 //////////////////////////////////////////////////////////////////////////////////
 #pragma mark ***** Constants
 
-CFStringRef const kCSASErrorDomainSecurity = CFSTR("kCSASDomainAuthorization");
 CFStringRef const kCSASErrorDomain = CFSTR("kCSASErrorDomain");
 
 // For encoding NSURLs and NSErrors in a manner that will allow them to be passed along the message port without complaints.
@@ -93,42 +92,30 @@ static const char * const kCSASEncodedErrorKey = "kCSASEncodedErrorKey";
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Common Code
 
-static bool CSASOSStatusToErrno(OSStatus errNum, int *posixErr)
-{
-    bool converted = true;
+static CFMutableDictionaryRef CSASCreateErrorUserInfoForURL(CFURLRef url) {
+    CFMutableDictionaryRef userInfo = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
     
-    switch (errNum) {
-		case noErr:
-			*posixErr = 0;
-			break;
-        case memFullErr:
-            *posixErr = ENOMEM;
-            break;
-		case kEOPNOTSUPPErr:
-			*posixErr = ENOTSUP;
-			break;
-        case kECANCELErr:
-        case userCanceledErr:
-            *posixErr = ECANCELED;             // note spelling difference
-            break;
-        default:
-            if ( (errNum >= errSecErrnoBase) && (errNum <= (errSecErrnoBase + ELAST)) ) {
-                *posixErr = (int) errNum - errSecErrnoBase;	// POSIX based error
-            } else {
-				converted = false;
-			}
+    if (url != NULL) {
+        CFStringRef scheme = CFURLCopyScheme(url);
+        
+        CFDictionarySetValue(userInfo, kCFErrorURLKey, url);
+        
+        if (CFEqual(scheme, CFSTR("file"))) {
+            CFStringRef path = CFURLCopyPath(url);
+            
+            CFDictionarySetValue(userInfo, kCFErrorFilePathKey, path);
+            
+            CFRelease(path);
+        }
+        
+        CFRelease(scheme);
     }
-
-    return converted;
+    
+    return userInfo;
 }
 
 extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum, CFURLRef url) {
-    CFDictionaryRef userInfo = CFDictionaryCreate(kCFAllocatorDefault,
-                                                  (const void **)&kCFErrorURLKey,
-                                                  (const void **)&url,
-                                                  (url != NULL),
-                                                  &kCFTypeDictionaryKeyCallBacks,
-                                                  &kCFTypeDictionaryValueCallBacks);
+    CFDictionaryRef userInfo = CSASCreateErrorUserInfoForURL(url);
     
     CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainPOSIX, errNum, userInfo);
     
@@ -137,47 +124,24 @@ extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum, CFURLRef url) {
     return error;
 }
 
-extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err, CFURLRef url) {
+extern CFErrorRef CSASCreateCFErrorFromOSStatus(OSStatus err, CFURLRef url) {
     // Prefer POSIX errors over OSStatus ones if possible, as they tend to present nicer error messages to the end user.
     
-    int posixErr;
-    
-    if (CSASOSStatusToErrno(err, &posixErr)) {
-        return CSASCreateCFErrorFromErrno(posixErr, url);
+    if ((err >= errSecErrnoBase) && (err <= errSecErrnoLimit)) {
+        return CSASCreateCFErrorFromErrno(err - errSecErrnoBase, url);
     } else {
-        CFDictionaryRef userInfo = CFDictionaryCreate(kCFAllocatorDefault,
-                                                      (const void **)&kCFErrorURLKey,
-                                                      (const void **)&url,
-                                                      (url != NULL),
-                                                      &kCFTypeDictionaryKeyCallBacks,
-                                                      &kCFTypeDictionaryValueCallBacks);
-        
-        CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainOSStatus, err, userInfo);
-        
-        CFRelease(userInfo);
-        
-        return error;
-    }
-}
-
-extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err) {
-    if (err == errAuthorizationCanceled) {
-        return CSASCreateCFErrorFromErrno(ECANCELED, NULL);
-    } else if (err >= errSecErrnoBase && err <= errSecErrnoLimit) {
-        return CSASCreateCFErrorFromErrno(err - errSecErrnoBase, NULL);
-    } else {
+        CFMutableDictionaryRef userInfo = CSASCreateErrorUserInfoForURL(url);
         CFStringRef errStr = SecCopyErrorMessageString(err, NULL);
-        CFDictionaryRef userInfo = CFDictionaryCreate(kCFAllocatorDefault,
-                                                      (const void **)&kCFErrorLocalizedFailureReasonKey,
-                                                      (const void **)&errStr,
-                                                      1,
-                                                      &kCFTypeDictionaryKeyCallBacks,
-                                                      &kCFTypeDictionaryValueCallBacks);
+        CFErrorRef error;
         
-        CFErrorRef error = CFErrorCreate(kCFAllocatorDefault, kCSASErrorDomainSecurity, err, userInfo);
+        if (errStr != NULL) {
+            CFDictionarySetValue(userInfo, kCFErrorLocalizedFailureReasonKey, errStr);
+            CFRelease(errStr);
+        }
+        
+        error = CFErrorCreate(kCFAllocatorDefault, kCFErrorDomainOSStatus, err, userInfo);
         
         CFRelease(userInfo);
-        CFRelease(errStr);
         
         return error;
     }
@@ -588,7 +552,7 @@ extern bool CSASFindCommand(
             if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOMEM, NULL);
         } else if ( ! CFStringGetCString(commandName, command, bufSize, kCFStringEncodingUTF8) ) {
             success = false;
-            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
         }
     }
     

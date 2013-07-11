@@ -224,7 +224,7 @@ static bool CSASCheckCodeSigningForConnection(xpc_connection_t conn, const char 
     }
     
     if (secErr != errSecSuccess) {
-        if (errorPtr) *errorPtr = CSASCreateCFErrorFromSecurityError(secErr);
+        if (errorPtr) *errorPtr = CSASCreateCFErrorFromOSStatus(secErr, NULL);
         return false;
     } else {
         return true;
@@ -266,7 +266,7 @@ static bool CSASHandleCommand(
         response = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         if (response == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+            error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
         }
     }
     
@@ -312,7 +312,7 @@ static bool CSASHandleCommand(
             if (authErr != noErr) {
                 success = false;
                 
-                error = CSASCreateCFErrorFromSecurityError(authErr);
+                error = CSASCreateCFErrorFromOSStatus(authErr, NULL);
             }
         }
     }
@@ -431,7 +431,7 @@ static void CSASHandleRequest(
         
         if (reply == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+            error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
         }
     }
     
@@ -440,7 +440,7 @@ static void CSASHandleRequest(
         
         if (remote == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+            error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
         }
     }
     
@@ -458,7 +458,7 @@ static void CSASHandleRequest(
         
         if (commandName == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+            error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
         }
     }
     
@@ -467,7 +467,7 @@ static void CSASHandleRequest(
         
         if (authExtFormData == NULL || authExtFormSize > sizeof(authExtForm)) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(EINVAL, NULL);
+            error = CSASCreateCFErrorFromOSStatus(EINVAL, NULL);
         }
     }
     
@@ -478,10 +478,10 @@ static void CSASHandleRequest(
         
         if (authErr != errSecSuccess) {
             success = false;
-            error = CSASCreateCFErrorFromSecurityError(authErr);
+            error = CSASCreateCFErrorFromOSStatus(authErr, NULL);
         } else if (authRef == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+            error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
         }
     }
     
@@ -517,7 +517,7 @@ static void CSASHandleRequest(
         
         if (xpcResponse == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+            error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
         }
     }
     
@@ -550,7 +550,7 @@ static void CSASHandleRequest(
             CFDataRef utf8Error;
             
             if (error == NULL) {
-                error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+                error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
             }
             
             xpcError = CSASCreateXPCMessageFromCFType((CFTypeRef)error);

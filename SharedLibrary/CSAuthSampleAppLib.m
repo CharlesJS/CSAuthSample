@@ -115,14 +115,105 @@ extern const struct _xpc_type_s _xpc_type_error WEAK_IMPORT_ATTRIBUTE;
 
 @end
 
-static NSError *CSASCleanedError(NSError *error) {
-    // Since, AFAIK, there is no pure-C version of the NSUserCancelledError constant (although kCFErrorDomainCocoa does exist),
-    // the underlying C code presents user cancelled errors using the POSIX ECANCELED. However, -[NSApp presentError:] only
-    // treats NSUserCancelledError as a user cancelled event which should be ignored, while displaying error boxes for ECANCELED.
-    // Thus, we convert any ECANCELED errors to NSUserCanceledError here.
+static BOOL CSASConvertErrnoToCocoaError(int err, NSInteger *cocoaError) {
+    BOOL converted = YES;
     
-    if ([error.domain isEqualToString:NSPOSIXErrorDomain] && error.code == ECANCELED) {
-        error = [NSError errorWithDomain:NSCocoaErrorDomain code:NSUserCancelledError userInfo:nil];
+    switch(err) {
+        case ECANCELED:
+            *cocoaError = NSUserCancelledError;
+            break;
+        case ENOENT:
+            *cocoaError = NSFileNoSuchFileError;
+            break;
+        case EFBIG:
+            *cocoaError = NSFileReadTooLargeError;
+            break;
+        case EEXIST:
+            *cocoaError = NSFileWriteFileExistsError;
+            break;
+        case ENOSPC:
+            *cocoaError = NSFileWriteOutOfSpaceError;
+            break;
+        case EROFS:
+            *cocoaError = NSFileWriteVolumeReadOnlyError;
+            break;
+        default:
+            converted = NO;
+    }
+    
+    return converted;
+}
+
+static BOOL CSASConvertOSStatusToCocoaError(OSStatus err, NSInteger *cocoaError) {
+    BOOL converted = YES;
+    
+    if (err >= errSecErrnoBase && err <= errSecErrnoLimit) {
+        converted = CSASConvertErrnoToCocoaError(err - errSecErrnoBase, cocoaError);
+    } else switch(err) {
+        case userCanceledErr:
+        case errAuthorizationCanceled:
+        case errAEWaitCanceled:
+        case kernelCanceledErr:
+        case kOTCanceledErr:
+        case kECANCELErr:
+        case errIACanceled:
+        case kRAConnectionCanceled:
+        case kTXNUserCanceledOperationErr:
+        case kFBCindexingCanceled:
+        case kFBCaccessCanceled:
+        case kFBCsummarizationCanceled:
+            *cocoaError = NSUserCancelledError;
+            break;
+        case fnfErr:
+            *cocoaError = NSFileNoSuchFileError;
+            break;
+        case fileBoundsErr:
+        case fsDataTooBigErr:
+            *cocoaError = NSFileReadTooLargeError;
+            break;
+        case dupFNErr:
+            *cocoaError = NSFileWriteFileExistsError;
+            break;
+        case dskFulErr:
+        case errFSNotEnoughSpaceForOperation:
+            *cocoaError = NSFileWriteOutOfSpaceError;
+            break;
+        case vLckdErr:
+            *cocoaError = NSFileWriteVolumeReadOnlyError;
+            break;
+        default:
+            converted = NO;
+    }
+    
+    return converted;
+}
+
+static NSError *CSASConvertedError(NSError *error) {
+    // Cocoa tends to do a nicer job presenting Cocoa errors than POSIX or OSStatus ones, particularly with NSUserCancelledError,
+    // in which case -presentError: will skip showing the error altogether. For certain other error types, using the Cocoa domain
+    // will provide a little more information, including, sometimes, the filename for which the operation failed.
+    // Therefore, convert errors to NSCocoaErrorDomain when possible.
+    
+    NSInteger cocoaError = 0;
+    BOOL converted = NO;
+    
+    if ([error.domain isEqualToString:NSPOSIXErrorDomain]) {
+        converted = CSASConvertErrnoToCocoaError((int)error.code, &cocoaError);
+    } else if ([error.domain isEqualToString:NSOSStatusErrorDomain]) {
+        converted = CSASConvertOSStatusToCocoaError((OSStatus)error.code, &cocoaError);
+    }
+    
+    if (converted) {
+        NSMutableDictionary *userInfo = error.userInfo.mutableCopy;
+        
+        userInfo[NSUnderlyingErrorKey] = error;
+        
+        // Use the built-in error messages instead
+        if (userInfo[NSLocalizedFailureReasonErrorKey] != nil) {
+            [userInfo removeObjectForKey:NSLocalizedFailureReasonErrorKey];
+        }
+        
+        error = [[NSError alloc] initWithDomain:NSCocoaErrorDomain code:cocoaError userInfo:userInfo];
     }
     
     return error;
@@ -183,7 +274,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
             error = BRIDGING_RELEASE(CSASCreateCFTypeFromXPCMessage(xpc_dictionary_get_value(reply, kCSASErrorKey)));
             
             if (error == nil) {
-                error = BRIDGING_RELEASE(CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL));
+                error = BRIDGING_RELEASE(CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL));
             }
         }
     }
@@ -195,7 +286,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     if (success) {
         if (fileHandlesPtr != NULL) *fileHandlesPtr = fileHandles;
     } else {
-        if (errorPtr != NULL) *errorPtr = CSASCleanedError(error);
+        if (errorPtr != NULL) *errorPtr = CSASConvertedError(error);
         response = nil;
     }
     
@@ -218,7 +309,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     OSStatus err = AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &_authRef);
     
     if (err != errSecSuccess) {
-        if (error) *error = CSASCleanedError(BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(err)));
+        if (error) *error = CSASConvertedError(BRIDGING_RELEASE(CSASCreateCFErrorFromOSStatus(err, NULL)));
         RELEASE(self);
         return nil;
     }
@@ -265,7 +356,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 	/* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
     OSStatus status = AuthorizationCopyRights(_authRef, &authRights, kAuthorizationEmptyEnvironment, flags, NULL);
 	if (status != errAuthorizationSuccess) {
-        if (error) *error = CSASCleanedError(BRIDGING_RELEASE(CSASCreateCFErrorFromSecurityError(status)));
+        if (error) *error = CSASConvertedError(BRIDGING_RELEASE(CSASCreateCFErrorFromOSStatus(status, NULL)));
         success = NO;
 	} else {
         CFErrorRef smError = NULL;
@@ -281,13 +372,13 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         
         if (!success) {
             if (error != NULL) {
-                *error = CSASCleanedError(BRIDGING_RELEASE(smError));
+                *error = CSASConvertedError(BRIDGING_RELEASE(smError));
             } else if (smError != NULL) {
                 CFRelease(smError);
             }
         }
     }
-	
+    
 	return success;
 }
 
@@ -325,7 +416,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         
         if (authErr != errSecSuccess) {
             success = false;
-            error = CSASCreateCFErrorFromSecurityError(authErr);
+            error = CSASCreateCFErrorFromOSStatus(authErr, NULL);
         }
     }
     
@@ -335,7 +426,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 		connection = xpc_connection_create_mach_service(self.helperID.fileSystemRepresentation, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
 		if (connection == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+            error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
 		}
 	}
     
@@ -366,7 +457,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         
         if (message == NULL) {
             success = false;
-            error = CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL);
+            error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
         }
     }
 	
@@ -377,7 +468,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         
         if (authErr != errSecSuccess) {
             success = false;
-            error = CSASCreateCFErrorFromSecurityError(authErr);
+            error = CSASCreateCFErrorFromOSStatus(authErr, NULL);
         }
     }
     
@@ -434,7 +525,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
                 if (replySuccess) {
                     responseHandler(response, fileHandles, helperConnection, nil);
                 } else {
-                    responseHandler(nil, nil, nil, CSASCleanedError(replyError));
+                    responseHandler(nil, nil, nil, CSASConvertedError(replyError));
                 }
             };
             
@@ -454,7 +545,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     // If something failed, let the user know.
     
     if (!success) {
-        if (responseHandler != nil) responseHandler(nil, nil, nil, CSASCleanedError(BRIDGE(NSError *, error)));
+        if (responseHandler != nil) responseHandler(nil, nil, nil, CSASConvertedError(BRIDGE(NSError *, error)));
         
         if (error != NULL) {
             CFRelease(error);
@@ -536,7 +627,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         message = xpc_dictionary_create(NULL, NULL, 0);
         
         if (message == NULL) {
-            error = BRIDGING_RELEASE(CSASCreateCFErrorFromCarbonError(coreFoundationUnknownErr, NULL));
+            error = BRIDGING_RELEASE(CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL));
             success = false;
         }
     }

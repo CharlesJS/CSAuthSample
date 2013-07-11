@@ -309,9 +309,6 @@ typedef struct CSASCommandSpec CSASCommandSpec;
  @functiongroup  Utilities
  */
 
-// Error domain for errors originating in the Security framework.
-extern CFStringRef const kCSASErrorDomainSecurity;
-
 // Our very own error domain.
 extern CFStringRef const kCSASErrorDomain;
 
@@ -326,8 +323,7 @@ enum {
 };
 
 extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum, CFURLRef url);
-extern CFErrorRef CSASCreateCFErrorFromCarbonError(OSStatus err, CFURLRef url);
-extern CFErrorRef CSASCreateCFErrorFromSecurityError(OSStatus err);
+extern CFErrorRef CSASCreateCFErrorFromOSStatus(OSStatus err, CFURLRef url);
 
 extern char *CSASCreateFileSystemRepresentationForURL(CFURLRef url, CFErrorRef *error);
 extern char *CSASCreateFileSystemRepresentationForPath(CFStringRef path);
