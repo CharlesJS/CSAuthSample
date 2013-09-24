@@ -94,9 +94,16 @@ extern void xpc_connection_send_message_with_reply(xpc_connection_t connection, 
 extern bool xpc_dictionary_get_bool(xpc_object_t xdict, const char *key) WEAK_IMPORT_ATTRIBUTE;
 extern xpc_object_t xpc_dictionary_create(const char * const *keys, const xpc_object_t *values, size_t count) WEAK_IMPORT_ATTRIBUTE;
 extern void xpc_connection_cancel(xpc_connection_t connection) WEAK_IMPORT_ATTRIBUTE;
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED > 1080
+extern const struct _xpc_dictionary_s _xpc_error_connection_interrupted WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_dictionary_s _xpc_error_connection_invalid WEAK_IMPORT_ATTRIBUTE;
+extern const struct _xpc_dictionary_s _xpc_error_termination_imminent WEAK_IMPORT_ATTRIBUTE;
+#else
 extern struct _xpc_dictionary_s _xpc_error_connection_interrupted WEAK_IMPORT_ATTRIBUTE;
 extern struct _xpc_dictionary_s _xpc_error_connection_invalid WEAK_IMPORT_ATTRIBUTE;
 extern struct _xpc_dictionary_s _xpc_error_termination_imminent WEAK_IMPORT_ATTRIBUTE;
+#endif
 extern const struct _xpc_type_s _xpc_type_error WEAK_IMPORT_ATTRIBUTE;
 
 @interface CSASRequestSender ()
