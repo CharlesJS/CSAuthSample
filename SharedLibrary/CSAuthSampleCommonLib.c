@@ -408,16 +408,19 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
         for (CFIndex i = 0; i < count; i++) {
             CFStringRef key = keys[i];
             CFIndex keyLen = CFStringGetMaximumSizeForEncoding(CFStringGetLength(key), kCFStringEncodingUTF8) + 1;
+            xpc_object_t xpcObj = NULL;
             char *keyC = malloc(keyLen);
             
             if (CFStringGetCString(key, keyC, keyLen, kCFStringEncodingUTF8)) {
-                xpc_object_t xpcObj = CSASCreateXPCMessageFromCFType(objs[i]);
+                xpcObj = CSASCreateXPCMessageFromCFType(objs[i]);
 
                 if (xpcObj != NULL) {
                     xpcKeys[xpcCount] = keyC;
                     xpcObjs[xpcCount++] = xpcObj;
                 }
-            } else {
+            }
+            
+            if (xpcObj == NULL) {
                 free(keyC);
             }
         }

@@ -887,12 +887,14 @@ extern int CSASHelperToolMain(
     assert(helperURL != NULL);
     
     infoPlist = CFBundleCopyInfoDictionaryForURL(helperURL);
+    CFRelease(helperURL);
     
     assert(infoPlist != NULL);
     
     // Set up default rules which other processes must follow to communicate with this tool.
     
     CSASSetDefaultRules(commands, infoPlist);
+    CFRelease(infoPlist);
     
     // set up the watchdog stuff
     CSASInitWatchdog(timeoutInterval);
@@ -936,14 +938,6 @@ extern int CSASHelperToolMain(
     /*xpc_release(service);
     
     CSASCleanupWatchdog();
-    
-    if (helperURL != NULL) {
-        CFRelease(helperURL);
-    }
-    
-    if (infoPlist != NULL) {
-        CFRelease(infoPlist);
-    }
     
     return EXIT_SUCCESS;*/
 }
