@@ -657,6 +657,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
                 NSDictionary *response = CSASHandleXPCReply(reply, &fileHandles, &replyError);
                 
                 if (response == nil) {
+                    NSLog(@"%@: helper tool returned error: %@", message, replyError);
                     responseHandler(nil, nil, nil, replyError);
                 } else {
                     responseHandler(response, fileHandles, nil, nil);

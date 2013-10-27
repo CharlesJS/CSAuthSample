@@ -331,7 +331,7 @@ extern char *CSASCreateFileSystemRepresentationForPath(CFStringRef path);
 extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message);
 extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj);
 
-extern void CSASLogCFTypeObject(CFTypeRef obj);
+extern void CSASLog(CFStringRef format, ...) CF_FORMAT_FUNCTION(1, 2);
 
 extern bool CSASFindCommand(
                             CFStringRef                 commandName,

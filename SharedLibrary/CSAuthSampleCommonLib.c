@@ -489,20 +489,28 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
     return NULL;
 }
 
-extern void CSASLogCFTypeObject(CFTypeRef obj) {
-    if (obj == NULL) {
+extern void CF_FORMAT_FUNCTION(1, 2) CSASLog(CFStringRef format, ...) {
+    if (format == NULL) {
         syslog(LOG_NOTICE, "(null)");
-    } else {
-        CFStringRef desc = CFCopyDescription(obj);
-        size_t descSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(desc), kCFStringEncodingUTF8) + 1;
-        char *descC = malloc(descSize);
-        CFStringGetCString(desc, descC, descSize, kCFStringEncodingUTF8);
-        
-        syslog(LOG_NOTICE, "%s", descC);
-        
-        free(descC);
-        CFRelease(desc);
+        return;
     }
+    
+    va_list list;
+    
+    va_start(list, format);
+    
+    CFStringRef string = CFStringCreateWithFormatAndArguments(kCFAllocatorDefault, NULL, format, list);
+    
+    va_end(list);
+    
+    size_t size = CFStringGetMaximumSizeForEncoding(CFStringGetLength(string), kCFStringEncodingUTF8) + 1;
+    char *cString = malloc(size);
+    CFStringGetCString(string, cString, size, kCFStringEncodingUTF8);
+    
+    syslog(LOG_NOTICE, "%s", cString);
+    
+    free(cString);
+    CFRelease(string);
 }
 
 extern bool CSASFindCommand(
