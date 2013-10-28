@@ -100,7 +100,7 @@ static CFMutableDictionaryRef CSASCreateErrorUserInfoForURL(CFURLRef url) {
         
         CFDictionarySetValue(userInfo, kCFErrorURLKey, url);
         
-        if (CFEqual(scheme, CFSTR("file"))) {
+        if (scheme != NULL && CFEqual(scheme, CFSTR("file"))) {
             CFStringRef path = CFURLCopyPath(url);
             
             CFDictionarySetValue(userInfo, kCFErrorFilePathKey, path);
@@ -108,7 +108,9 @@ static CFMutableDictionaryRef CSASCreateErrorUserInfoForURL(CFURLRef url) {
             CFRelease(path);
         }
         
-        CFRelease(scheme);
+        if (scheme != NULL) {
+            CFRelease(scheme);
+        }
     }
     
     return userInfo;
@@ -149,9 +151,11 @@ extern CFErrorRef CSASCreateCFErrorFromOSStatus(OSStatus err, CFURLRef url) {
 
 extern char *CSASCreateFileSystemRepresentationForURL(CFURLRef url, CFErrorRef *error) {
     CFStringRef scheme = CFURLCopyScheme(url);
-    bool isFile = CFEqual(scheme, CFSTR("file"));
+    bool isFile = scheme != NULL && CFEqual(scheme, CFSTR("file"));
     
-    CFRelease(scheme);
+    if (scheme != NULL) {
+        CFRelease(scheme);
+    }
     
     if (!isFile) {
         if (error) *error = CSASCreateCFErrorFromErrno(EINVAL, url);
@@ -439,14 +443,16 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
         
         return message;
     } else if (type == CFURLGetTypeID()) {
+        CFURLRef url = CFURLCopyAbsoluteURL(obj);
         CFStringRef key = CFStringCreateWithCString(kCFAllocatorDefault, kCSASEncodedURLKey, kCFStringEncodingUTF8);
-        CFStringRef value = CFURLGetString(obj);
+        CFStringRef value = CFURLGetString(url);
         
         CFDictionaryRef errorDict = CFDictionaryCreate(kCFAllocatorDefault, (const void **)&key, (const void **)&value, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         
         xpc_object_t message = CSASCreateXPCMessageFromCFType(errorDict);
         
         CFRelease(key);
+        CFRelease(url);
         
         return message;
     } else if (type == CFErrorGetTypeID()) {
