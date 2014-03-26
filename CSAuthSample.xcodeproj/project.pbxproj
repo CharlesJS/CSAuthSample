@@ -338,6 +338,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
 				PROVISIONING_PROFILE = "";
+				SKIP_INSTALL = YES;
 				WARNING_CFLAGS = (
 					"-Weverything",
 					"-Werror",
@@ -369,6 +370,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				PROVISIONING_PROFILE = "";
+				SKIP_INSTALL = YES;
 				WARNING_CFLAGS = (
 					"-Weverything",
 					"-Werror",
