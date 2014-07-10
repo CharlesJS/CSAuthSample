@@ -80,32 +80,6 @@
 #define RELEASE_XPC(x)      xpc_release(x)
 #endif
 
-// 10_6
-extern xpc_type_t xpc_get_type(xpc_object_t object) WEAK_IMPORT_ATTRIBUTE;
-extern xpc_object_t xpc_dictionary_get_value(xpc_object_t xdict, const char *key) WEAK_IMPORT_ATTRIBUTE;
-extern size_t xpc_array_get_count(xpc_object_t array) WEAK_IMPORT_ATTRIBUTE;
-extern int xpc_array_dup_fd(xpc_object_t xarray, size_t index) WEAK_IMPORT_ATTRIBUTE;
-extern xpc_connection_t xpc_connection_create_mach_service(const char *name, dispatch_queue_t targetq, uint64_t flags) WEAK_IMPORT_ATTRIBUTE;
-extern void xpc_connection_set_event_handler(xpc_connection_t connection, xpc_handler_t handler) WEAK_IMPORT_ATTRIBUTE;
-extern void xpc_connection_resume(xpc_connection_t connection) WEAK_IMPORT_ATTRIBUTE;
-extern void xpc_dictionary_set_data(xpc_object_t xdict, const char *key, const void *bytes, size_t length) WEAK_IMPORT_ATTRIBUTE;
-extern void xpc_dictionary_set_value(xpc_object_t xdict, const char *key, xpc_object_t value) WEAK_IMPORT_ATTRIBUTE;
-extern void xpc_connection_send_message_with_reply(xpc_connection_t connection, xpc_object_t message, dispatch_queue_t replyq, xpc_handler_t handler) WEAK_IMPORT_ATTRIBUTE;
-extern bool xpc_dictionary_get_bool(xpc_object_t xdict, const char *key) WEAK_IMPORT_ATTRIBUTE;
-extern xpc_object_t xpc_dictionary_create(const char * const *keys, const xpc_object_t *values, size_t count) WEAK_IMPORT_ATTRIBUTE;
-extern void xpc_connection_cancel(xpc_connection_t connection) WEAK_IMPORT_ATTRIBUTE;
-
-#if MAC_OS_X_VERSION_MAX_ALLOWED > 1080
-extern const struct _xpc_dictionary_s _xpc_error_connection_interrupted WEAK_IMPORT_ATTRIBUTE;
-extern const struct _xpc_dictionary_s _xpc_error_connection_invalid WEAK_IMPORT_ATTRIBUTE;
-extern const struct _xpc_dictionary_s _xpc_error_termination_imminent WEAK_IMPORT_ATTRIBUTE;
-#else
-extern struct _xpc_dictionary_s _xpc_error_connection_interrupted WEAK_IMPORT_ATTRIBUTE;
-extern struct _xpc_dictionary_s _xpc_error_connection_invalid WEAK_IMPORT_ATTRIBUTE;
-extern struct _xpc_dictionary_s _xpc_error_termination_imminent WEAK_IMPORT_ATTRIBUTE;
-#endif
-extern const struct _xpc_type_s _xpc_type_error WEAK_IMPORT_ATTRIBUTE;
-
 @interface CSASRequestSender ()
 
 @property (copy) NSString *helperID;
