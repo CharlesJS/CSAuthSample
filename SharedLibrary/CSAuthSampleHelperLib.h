@@ -158,15 +158,26 @@ typedef bool (^CSASConnectionHandler)(
                                       CFErrorRef *				errorPtr
                                       );
 
+typedef bool (^CSASCommandBlock)(
+                                 AuthorizationRef        auth,
+                                 CSASCallerCredentials * creds,
+                                 const void *            userData,
+                                 CFDictionaryRef         request,
+                                 CFMutableDictionaryRef  response,
+                                 CFMutableArrayRef       descriptorArray,
+                                 CSASConnectionHandler * connectionHandler,
+                                 CFErrorRef *            error
+                                 );
+
 typedef bool (*CSASCommandProc)(
-                                AuthorizationRef		auth,
+                                AuthorizationRef        auth,
                                 CSASCallerCredentials * creds,
                                 const void *            userData,
-                                CFDictionaryRef			request,
+                                CFDictionaryRef         request,
                                 CFMutableDictionaryRef  response,
                                 CFMutableArrayRef       descriptorArray,
-                                CSASConnectionHandler *	connectionHandler,
-                                CFErrorRef *			error
+                                CSASConnectionHandler * connectionHandler,
+                                CFErrorRef *            error
                                 );
 
 /*!
@@ -212,9 +223,11 @@ extern int CSASHelperToolMain(
                               const char *              argv[],
                               CFStringRef               helperID,
                               const CSASCommandSpec		commands[],
-                              const CSASCommandProc		commandProcs[],
+                              CFArrayRef                commandBlocks,
                               unsigned int              timeoutInterval
                               );
+
+extern CFArrayRef CSASCreateCommandBlocksForCommandProcs(const CSASCommandProc commandProcs[]);
 
 extern void CSASWatchdogEnableAutomaticTermination();
 extern void CSASWatchdogDisableAutomaticTermination();

@@ -113,25 +113,19 @@ static void CSASRestartWatchdog() {
 
 #if ! defined(NDEBUG)
 
-static bool CSASCommandArraySizeMatchesCommandProcArraySize(
-                                                            const CSASCommandSpec		commands[],
-                                                            const CSASCommandProc		commandProcs[]
-                                                            )
+static bool CSASCommandArraySizeMatchesCommandBlockArraySize(
+                                                             const CSASCommandSpec		commands[],
+                                                             CFArrayRef                 commandBlocks
+                                                             )
 {
     size_t  commandCount;
-    size_t  procCount;
     
     commandCount = 0;
     while ( commands[commandCount].commandName != NULL ) {
         commandCount += 1;
     }
     
-    procCount = 0;
-    while ( commandProcs[procCount] != NULL ) {
-        procCount += 1;
-    }
-    
-    return (commandCount == procCount);
+    return (commandCount == (size_t)CFArrayGetCount(commandBlocks));
 }
 
 #endif
@@ -232,8 +226,8 @@ static bool CSASCheckCodeSigningForConnection(xpc_connection_t conn, const char 
 }
 
 static bool CSASHandleCommand(
-                              const CSASCommandSpec		commands[],
-                              const CSASCommandProc		commandProcs[],
+                              const CSASCommandSpec		     commands[],
+                              CFArrayRef                     commandBlocks,
                               CFStringRef                    commandName,
                               CFDictionaryRef                request,
                               CFDictionaryRef *              responsePtr,
@@ -258,8 +252,8 @@ static bool CSASHandleCommand(
     
 	assert(commands != NULL);
 	assert(commands[0].commandName != NULL);        // there must be at least one command
-    assert(commandProcs != NULL);
-    assert( CSASCommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
+    assert(commandBlocks != NULL);
+    assert( CSASCommandArraySizeMatchesCommandBlockArraySize(commands, commandBlocks) );
     
     // Create a mutable response dictionary before calling the client.
     if (success) {
@@ -320,6 +314,7 @@ static bool CSASHandleCommand(
     if (success) {
         CFMutableArrayRef descriptorArray = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
         CSASCallerCredentials creds;
+        CSASCommandBlock commandBlock = CFArrayGetValueAtIndex(commandBlocks, commandIndex);
         
         creds.processID = xpc_connection_get_pid(connection);
         creds.userID = xpc_connection_get_euid(connection);
@@ -327,7 +322,7 @@ static bool CSASHandleCommand(
         
         // Call callback to execute command based on the request.
         
-        success = commandProcs[commandIndex](authRef, &creds, commands[commandIndex].userData, request, response, descriptorArray, connectionHandler, &error);
+        success = commandBlock(authRef, &creds, commands[commandIndex].userData, request, response, descriptorArray, connectionHandler, &error);
 
         if (descriptorArrayPtr == NULL) {
             CSASCloseFileDescriptors(descriptorArray);
@@ -402,7 +397,7 @@ static void CSASHandleError(
 
 static void CSASHandleRequest(
                               const CSASCommandSpec 	commands[],
-                              const CSASCommandProc 	commandProcs[],
+                              CFArrayRef                commandBlocks,
                               xpc_connection_t      	connection,
                               xpc_object_t          	event
                               )
@@ -495,7 +490,7 @@ static void CSASHandleRequest(
     
     if (success) {
         if (!isPersistent) {
-            success = CSASHandleCommand(commands, commandProcs, commandName, request, &response, &descriptorArray, authRef, connection, &connectionHandler, &error);
+            success = CSASHandleCommand(commands, commandBlocks, commandName, request, &response, &descriptorArray, authRef, connection, &connectionHandler, &error);
         } else if (ctx->connectionHandler != NULL) {
             CFMutableDictionaryRef mutableResponse = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
             CFMutableArrayRef mutableFileDescriptors = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
@@ -607,7 +602,7 @@ static void CSASHandleRequest(
 
 static void CSASHandleEvent(
                             const CSASCommandSpec		commands[],
-                            const CSASCommandProc		commandProcs[],
+                            CFArrayRef                  commandBlocks,
                             xpc_connection_t            connection,
                             xpc_object_t                event
                             )
@@ -617,7 +612,7 @@ static void CSASHandleEvent(
     if (type == XPC_TYPE_ERROR) {
 		CSASHandleError(connection, event);
 	} else if (type == XPC_TYPE_DICTIONARY) {
-        CSASHandleRequest(commands, commandProcs, connection, event);
+        CSASHandleRequest(commands, commandBlocks, connection, event);
 	} else {
         syslog(LOG_NOTICE, "Unhandled event");
     }
@@ -863,7 +858,7 @@ extern int CSASHelperToolMain(
                               const char *              argv[],
                               CFStringRef               helperID,
                               const CSASCommandSpec		commands[],
-                              const CSASCommandProc		commandProcs[],
+                              CFArrayRef                commandBlocks,
                               unsigned int              timeoutInterval
                               )
 // See comment in header.
@@ -877,8 +872,8 @@ extern int CSASHelperToolMain(
     assert(argc >= 1);
 	assert(commands != NULL);
 	assert(commands[0].commandName != NULL);        // there must be at least one command
-	assert(commandProcs != NULL);
-    assert( CSASCommandArraySizeMatchesCommandProcArraySize(commands, commandProcs) );
+	assert(commandBlocks != NULL);
+    assert( CSASCommandArraySizeMatchesCommandBlockArraySize(commands, commandBlocks) );
 
     // Get our embedded Info.plist file.
     
@@ -918,7 +913,7 @@ extern int CSASHelperToolMain(
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
             CSASWatchdogDisableAutomaticTermination();
             
-            CSASHandleEvent(commands, commandProcs, connection, event);
+            CSASHandleEvent(commands, commandBlocks, connection, event);
             
             CSASWatchdogEnableAutomaticTermination();
         });
@@ -940,6 +935,38 @@ extern int CSASHelperToolMain(
     CSASCleanupWatchdog();
     
     return EXIT_SUCCESS;*/
+}
+
+static const void *CSASBlockRetainCallback(CFAllocatorRef allocator, const void *value) {
+    return Block_copy(value);
+}
+
+static void CSASBlockReleaseCallback(CFAllocatorRef allocator, const void *value) {
+    Block_release(value);
+}
+
+extern CFArrayRef CSASCreateCommandBlocksForCommandProcs(const CSASCommandProc commandProcs[]) {
+    CFArrayCallBacks callbacks = { 0, CSASBlockRetainCallback, CSASBlockReleaseCallback, NULL, NULL };
+    
+    CFMutableArrayRef blocks = CFArrayCreateMutable(kCFAllocatorDefault, 0, &callbacks);
+    
+    for (unsigned int i = 0; commandProcs[i] != NULL; i++) {
+        CSASCommandBlock block = ^bool(AuthorizationRef        auth,
+                                       CSASCallerCredentials * creds,
+                                       const void *            userData,
+                                       CFDictionaryRef         request,
+                                       CFMutableDictionaryRef  response,
+                                       CFMutableArrayRef       descriptorArray,
+                                       CSASConnectionHandler * connectionHandler,
+                                       CFErrorRef *            error
+                                       ) {
+            return commandProcs[i](auth, creds, userData, request, response, descriptorArray, connectionHandler, error);
+        };
+        
+        CFArrayAppendValue(blocks, block);
+    }
+    
+    return blocks;
 }
 
 extern void CSASWatchdogEnableAutomaticTermination() {
