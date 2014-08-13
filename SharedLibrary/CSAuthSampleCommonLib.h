@@ -302,6 +302,16 @@ typedef struct CSASCommandSpec CSASCommandSpec;
 
 #define kCSASCanAcceptFurtherInputKey "com.charlessoft.CSAuthSample.canAcceptFurtherInput"
 
+// "GetVersion" gets the version of the helper tool.  This never requires authorization.
+
+#define kCSASGetVersionCommand        "GetVersion"
+#define kCSASGetVersionRightName      "com.charlessoft.CSAuthSample.GetVersion"
+// request keys (none)
+// response keys
+#define kCSASGetVersionResponse		  "Version"                   // CFNumber
+
+extern const CSASCommandSpec kCSASBuiltInCommandSet[];
+
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Utility Routines
 

@@ -363,6 +363,28 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 	return success;
 }
 
+- (void)requestHelperVersion:(void (^)(NSString *, NSError *))handler {
+    [self executeCommandInHelperTool:@kCSASGetVersionCommand userInfo:nil responseHandler:^(NSDictionary *response, __unused NSArray *fileHandles, __unused CSASHelperConnection *persistentConnection, NSError *errorOrNil) {
+        if (handler == nil) {
+            return;
+        }
+        
+        if (errorOrNil != nil) {
+            handler(nil, errorOrNil);
+            return;
+        }
+        
+        NSString *version = response[@kCSASGetVersionResponse];
+            
+        if (version == nil) {
+            handler(nil, [NSError errorWithDomain:NSCocoaErrorDomain code:NSFileReadUnknownError userInfo:nil]);
+            return;
+        }
+        
+        handler(version, nil);
+    }];
+}
+
 - (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary *)userInfo responseHandler:(CSASResponseHandler)responseHandler {
     bool                        success = true;
     size_t                      commandIndex;

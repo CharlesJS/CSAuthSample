@@ -227,6 +227,8 @@ extern int CSASHelperToolMain(
                               unsigned int              timeoutInterval
                               );
 
+extern CFDictionaryRef CSASGetHelperToolInfoPlist();
+
 extern CFArrayRef CSASCreateCommandBlocksForCommandProcs(const CSASCommandProc commandProcs[]);
 
 extern void CSASWatchdogEnableAutomaticTermination();

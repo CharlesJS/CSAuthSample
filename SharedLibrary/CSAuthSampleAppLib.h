@@ -64,6 +64,8 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
 
 - (BOOL)blessHelperToolAndReturnError:(NSError *__autoreleasing *)error;
 
+- (void)requestHelperVersion:(void (^)(NSString *version, NSError *errorOrNil))handler;
+
 /*!
  @function       CSASExecuteRequestInHelperTool
  

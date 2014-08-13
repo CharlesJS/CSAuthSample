@@ -75,6 +75,27 @@ CFStringRef const kCSASErrorDomain = CFSTR("kCSASErrorDomain");
 static const char * const kCSASEncodedURLKey = "kCSAuthSampleEncodedeURLKey";
 static const char * const kCSASEncodedErrorKey = "kCSASEncodedErrorKey";
 
+const CSASCommandSpec kCSASBuiltInCommandSet[] = {
+    {	kCSASGetVersionCommand,                 // commandName
+        NULL,                                   // rightName           -- never authorize
+        NULL,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
+        0,                                      // rightTimeoutInSeconds -- not applicable if rightName is NULL
+        NULL,                                   // rightComment        -- not applicable if rightName is NULL
+        NULL,									// rightDescriptionKey -- not applicable if rightName is NULL
+        NULL,                                   // codeSigningRequirement -- not applicable is rightName is NULL
+        NULL                                    // userData
+    },
+    {   NULL,
+        NULL,
+        NULL,
+        0,
+        NULL
+        ,NULL
+        ,NULL
+        ,NULL
+    }
+};
+
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Common Code
 
@@ -521,7 +542,7 @@ extern bool CSASFindCommand(
 	bool                        success = true;
     char *                      command;
 	CFIndex						commandSize = 0;
-	size_t						index = 0;
+	size_t						index;
 	
 	// Pre-conditions
 	
@@ -539,6 +560,7 @@ extern bool CSASFindCommand(
         success = false;
         if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL, NULL);
     }
+    
 	commandSize = CFStringGetLength(commandName);
 	if ( (success) && (commandSize > 1024) ) {
 		success = false;
@@ -562,18 +584,38 @@ extern bool CSASFindCommand(
     // Search the commands array for that command.
     
     if (success) {
+        bool found = false;
+        
+        index = 0;
+        
         do {
-            if ( strcmp(commands[index].commandName, command) == 0 ) {
+            if ( strcmp(kCSASBuiltInCommandSet[index].commandName, command) == 0 ) {
                 *commandIndexPtr = index;
+                found = true;
                 break;
             }
-            index += 1;
-            if (commands[index].commandName == NULL) {
-                success = false;
-                if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOENT, NULL);
+            index++;
+            if (kCSASBuiltInCommandSet[index].commandName == NULL) {
                 break;
             }
         } while (true);
+        
+        if (!found) {
+            index = 0;
+            
+            do {
+                if ( strcmp(commands[index].commandName, command) == 0 ) {
+                    *commandIndexPtr = index;
+                    break;
+                }
+                index++;
+                if (commands[index].commandName == NULL) {
+                    success = false;
+                    if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOENT, NULL);
+                    break;
+                }
+            } while (true);
+        }
     }
     
     free(command);

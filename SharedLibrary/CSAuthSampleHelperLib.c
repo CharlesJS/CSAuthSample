@@ -64,6 +64,16 @@
 #include <Security/CodeSigning.h>
 #include <syslog.h>
 
+static CFDictionaryRef gInfoPlist = NULL;
+
+static const void *CSASBlockRetainCallback(CFAllocatorRef allocator, const void *value) {
+    return Block_copy(value);
+}
+
+static void CSASBlockReleaseCallback(CFAllocatorRef allocator, const void *value) {
+    Block_release(value);
+}
+
 // watchdog stuff
 
 static dispatch_source_t gWatchdogSource = NULL;
@@ -92,10 +102,10 @@ static void CSASCancelWatchdog() {
 }
 
 /*static void CSASCleanupWatchdog() {
-    CSASCancelWatchdog();
-    dispatch_release(gWatchdogQueue);
-    gWatchdogQueue = NULL;
-}*/
+ CSASCancelWatchdog();
+ dispatch_release(gWatchdogQueue);
+ gWatchdogQueue = NULL;
+ }*/
 
 static void CSASRestartWatchdog() {
     if (gTimeoutInterval != 0) {
@@ -191,12 +201,12 @@ static bool CSASCheckCodeSigningForConnection(xpc_connection_t conn, const char 
     
     if (secErr == errSecSuccess) {
         CFStringRef reqString = CFStringCreateWithCString(kCFAllocatorDefault, requirement, kCFStringEncodingUTF8);
-    
+        
         secErr = SecRequirementCreateWithString(reqString, kSecCSDefaultFlags, &secRequirement);
         
         CFRelease(reqString);
     }
-
+    
     if (secErr == errSecSuccess) {
         secErr = SecCodeCheckValidity(secCode, kSecCSDefaultFlags, secRequirement);
     }
@@ -250,8 +260,8 @@ static bool CSASHandleCommand(
     
     // Pre-conditions
     
-	assert(commands != NULL);
-	assert(commands[0].commandName != NULL);        // there must be at least one command
+    assert(commands != NULL);
+    assert(commands[0].commandName != NULL);        // there must be at least one command
     assert(commandBlocks != NULL);
     assert( CSASCommandArraySizeMatchesCommandBlockArraySize(commands, commandBlocks) );
     
@@ -289,7 +299,7 @@ static bool CSASHandleCommand(
     
     if (success) {
         // Acquire the associated right for the command.  If rightName is NULL, the
-		// commandProc is required to do its own authorization.
+        // commandProc is required to do its own authorization.
         
         if (commands[commandIndex].rightName != NULL) {
             AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
@@ -323,7 +333,7 @@ static bool CSASHandleCommand(
         // Call callback to execute command based on the request.
         
         success = commandBlock(authRef, &creds, commands[commandIndex].userData, request, response, descriptorArray, connectionHandler, &error);
-
+        
         if (descriptorArrayPtr == NULL) {
             CSASCloseFileDescriptors(descriptorArray);
             CFRelease(descriptorArray);
@@ -373,14 +383,14 @@ static void CSASHandleError(
         // the connection is in an invalid state, and you do not need to
         // call xpc_connection_cancel(). Just tear down any associated state
         // here.
-
+        
         CSASXPCConnectionContext *ctx = xpc_connection_get_context(connection);
         
         if (ctx != NULL) {
             if (ctx->connectionHandler != NULL) {
                 xpc_release(connection);
                 CSASWatchdogEnableAutomaticTermination();
-
+                
                 Block_release(ctx->connectionHandler);
             }
             
@@ -610,10 +620,10 @@ static void CSASHandleEvent(
     xpc_type_t type = xpc_get_type(event);
     
     if (type == XPC_TYPE_ERROR) {
-		CSASHandleError(connection, event);
-	} else if (type == XPC_TYPE_DICTIONARY) {
+        CSASHandleError(connection, event);
+    } else if (type == XPC_TYPE_DICTIONARY) {
         CSASHandleRequest(commands, commandBlocks, connection, event);
-	} else {
+    } else {
         syslog(LOG_NOTICE, "Unhandled event");
     }
 }
@@ -757,14 +767,14 @@ static void CSASSetDefaultRules(
 // See comment in header.
 {
     AuthorizationRef            auth;
-	OSStatus					err;
-	size_t						commandIndex;
-	CFDictionaryRef             authPrompts = NULL;
+    OSStatus					err;
+    size_t						commandIndex;
+    CFDictionaryRef             authPrompts = NULL;
     
-	// Pre-conditions
-	
-	assert(commands != NULL);
-	assert(commands[0].commandName != NULL);        // there must be at least one command
+    // Pre-conditions
+    
+    assert(commands != NULL);
+    assert(commands[0].commandName != NULL);        // there must be at least one command
     
     // Get the dictionary containing all the authorization prompts.
     
@@ -775,7 +785,7 @@ static void CSASSetDefaultRules(
     // set up the AuthorizationRef
     
     assert(AuthorizationCreate(NULL, kAuthorizationEmptyEnvironment, kAuthorizationFlagDefaults, &auth) == errSecSuccess);
-	
+    
     // For each command, set up the default authorization right specification, as
     // indicated by the command specification.
     
@@ -834,7 +844,7 @@ static void CSASSetDefaultRules(
                                             NULL,                                       // bundle
                                             NULL					                    // localeTableName
                                             );												// NULL indicates "Localizable.strings"
-
+                
                 assert(err == noErr);
             } else {
                 // A right already exists (err == noErr) or any other error occurs, we
@@ -848,9 +858,86 @@ static void CSASSetDefaultRules(
             }
         }
         commandIndex += 1;
-	}
+    }
     
     AuthorizationFree(auth, kAuthorizationFlagDefaults);
+}
+
+static CSASCommandBlock GetVersionBlock() {
+    CFDictionaryRef infoPlist = CSASGetHelperToolInfoPlist();
+    CFStringRef version;
+    
+    assert(infoPlist != NULL);
+    
+    version = CFDictionaryGetValue(infoPlist, kCFBundleVersionKey);
+    
+    if (version == NULL) {
+        version = CFSTR("0");
+    }
+    
+    return Block_copy(^bool(AuthorizationRef                 auth,
+                            __unused CSASCallerCredentials * creds,
+                            __unused const void *            userData,
+                            __unused CFDictionaryRef         request,
+                            CFMutableDictionaryRef           response,
+                            __unused CFMutableArrayRef       descriptorArray,
+                            __unused CSASConnectionHandler * connectionHandler,
+                            __unused CFErrorRef *            error) {
+        assert(auth != NULL);
+        assert(response != NULL);
+        
+        CFDictionarySetValue(response, CFSTR(kCSASGetVersionResponse), version);
+        
+        return true;
+    });
+}
+
+static CSASCommandSpec *AddBuiltInCommandsToSpecList(const CSASCommandSpec inCommands[], CFArrayRef inBlocks, CFArrayRef *outBlocks) {
+    CFArrayCallBacks callbacks = { 0, CSASBlockRetainCallback, CSASBlockReleaseCallback, NULL, NULL };
+    
+    CSASCommandSpec *newCommands;
+    CFMutableArrayRef newBlocks = CFArrayCreateMutable(kCFAllocatorDefault, 0, &callbacks);
+    
+    size_t builtInCommandCount = 0;
+    size_t passedInCommandCount = 0;
+    size_t totalCommandCount = 0;
+    size_t i;
+    
+    for (builtInCommandCount = 0; kCSASBuiltInCommandSet[builtInCommandCount].commandName != NULL; builtInCommandCount++);
+    
+    if (inCommands != NULL) {
+        for (passedInCommandCount = 0; inCommands[passedInCommandCount].commandName != NULL; passedInCommandCount++);
+    }
+    
+    assert((size_t)CFArrayGetCount(inBlocks) == passedInCommandCount);
+    
+    totalCommandCount = builtInCommandCount + passedInCommandCount;
+    
+    newCommands = malloc((totalCommandCount + 1) * sizeof(CSASCommandSpec));
+    
+    memcpy(newCommands, kCSASBuiltInCommandSet, builtInCommandCount * sizeof(CSASCommandSpec));
+    memcpy(newCommands + builtInCommandCount, inCommands, passedInCommandCount * sizeof(CSASCommandSpec));
+    memset(newCommands + totalCommandCount, '\0', sizeof(CSASCommandSpec));
+    
+    for (i = 0; i < builtInCommandCount; i++) {
+        const char *name = kCSASBuiltInCommandSet[i].commandName;
+        
+        if (strcmp(name, kCSASGetVersionCommand) == 0) {
+            CFArrayAppendValue(newBlocks, GetVersionBlock());
+        } else {
+            assert(0);
+        }
+    }
+    
+    CFArrayAppendArray(newBlocks, inBlocks, CFRangeMake(0, CFArrayGetCount(inBlocks)));
+    
+    if (outBlocks != NULL) {
+        *outBlocks = newBlocks;
+    } else {
+        CFRelease(newBlocks);
+    }
+    
+    return newCommands;
 }
 
 extern int CSASHelperToolMain(
@@ -864,32 +951,32 @@ extern int CSASHelperToolMain(
 // See comment in header.
 {
     CFURLRef                    helperURL = NULL;
-    CFDictionaryRef             infoPlist = NULL;
     char                        helperIDC[PATH_MAX];
-	
-	// Pre-conditions
-	
+    CSASCommandSpec             *newCommands;
+    CFArrayRef                  newCommandBlocks = NULL;
+    
+    // Pre-conditions
+    
     assert(argc >= 1);
-	assert(commands != NULL);
-	assert(commands[0].commandName != NULL);        // there must be at least one command
-	assert(commandBlocks != NULL);
-    assert( CSASCommandArraySizeMatchesCommandBlockArraySize(commands, commandBlocks) );
-
+    
     // Get our embedded Info.plist file.
     
     helperURL = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)argv[0], strlen(argv[0]), false);
     
     assert(helperURL != NULL);
     
-    infoPlist = CFBundleCopyInfoDictionaryForURL(helperURL);
+    gInfoPlist = CFBundleCopyInfoDictionaryForURL(helperURL);
     CFRelease(helperURL);
     
-    assert(infoPlist != NULL);
+    assert(gInfoPlist != NULL);
+    
+    newCommands = AddBuiltInCommandsToSpecList(commands, commandBlocks, &newCommandBlocks);
+    
+    assert( CSASCommandArraySizeMatchesCommandBlockArraySize(newCommands, newCommandBlocks) );
     
     // Set up default rules which other processes must follow to communicate with this tool.
     
-    CSASSetDefaultRules(commands, infoPlist);
-    CFRelease(infoPlist);
+    CSASSetDefaultRules(newCommands, gInfoPlist);
     
     // set up the watchdog stuff
     CSASInitWatchdog(timeoutInterval);
@@ -913,7 +1000,7 @@ extern int CSASHelperToolMain(
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
             CSASWatchdogDisableAutomaticTermination();
             
-            CSASHandleEvent(commands, commandBlocks, connection, event);
+            CSASHandleEvent(newCommands, newCommandBlocks, connection, event);
             
             CSASWatchdogEnableAutomaticTermination();
         });
@@ -921,7 +1008,7 @@ extern int CSASHelperToolMain(
         xpc_connection_resume(connection);
         
         CSASWatchdogEnableAutomaticTermination();
-	});
+    });
     
     xpc_connection_resume(service);
     
@@ -931,18 +1018,14 @@ extern int CSASHelperToolMain(
     // (actually, don't, since the compiler gives a warning that the code will never be executed)
     
     /*xpc_release(service);
-    
-    CSASCleanupWatchdog();
-    
-    return EXIT_SUCCESS;*/
+     
+     CSASCleanupWatchdog();
+     
+     return EXIT_SUCCESS;*/
 }
 
-static const void *CSASBlockRetainCallback(CFAllocatorRef allocator, const void *value) {
-    return Block_copy(value);
-}
-
-static void CSASBlockReleaseCallback(CFAllocatorRef allocator, const void *value) {
-    Block_release(value);
+extern CFDictionaryRef CSASGetHelperToolInfoPlist() {
+    return gInfoPlist;
 }
 
 extern CFArrayRef CSASCreateCommandBlocksForCommandProcs(const CSASCommandProc commandProcs[]) {
