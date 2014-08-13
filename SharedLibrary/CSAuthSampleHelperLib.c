@@ -899,7 +899,6 @@ static CSASCommandSpec *AddBuiltInCommandsToSpecList(const CSASCommandSpec inCom
 extern int CSASHelperToolMain(
                               int                       argc,
                               const char *              argv[],
-                              CFStringRef               helperID,
                               const CSASCommandSpec		commands[],
                               CFArrayRef                commandBlocks,
                               unsigned int              timeoutInterval
@@ -907,6 +906,7 @@ extern int CSASHelperToolMain(
 // See comment in header.
 {
     CFURLRef                    helperURL = NULL;
+    CFStringRef                 helperID;
     char                        helperIDC[PATH_MAX];
     CSASCommandSpec             *newCommands;
     CFArrayRef                  newCommandBlocks = NULL;
@@ -938,8 +938,10 @@ extern int CSASHelperToolMain(
     CSASInitWatchdog(timeoutInterval);
     
     // Set up XPC service.
+
+    helperID = CFDictionaryGetValue(gInfoPlist, kCFBundleIdentifierKey);
     
-    if ( ! CFStringGetFileSystemRepresentation(helperID, helperIDC, sizeof(helperIDC)) ) {
+    if ( helperID == NULL || ! CFStringGetFileSystemRepresentation(helperID, helperIDC, sizeof(helperIDC)) ) {
         return EXIT_FAILURE;
     }
     

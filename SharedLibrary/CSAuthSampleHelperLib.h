@@ -62,7 +62,6 @@ typedef bool (*CSASCommandProc)(
 extern int CSASHelperToolMain(
                               int                       argc,
                               const char *              argv[],
-                              CFStringRef               helperID,
                               const CSASCommandSpec		commands[],
                               CFArrayRef                commandBlocks,
                               unsigned int              timeoutInterval
