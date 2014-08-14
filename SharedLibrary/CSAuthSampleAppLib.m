@@ -372,7 +372,11 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     // single threaded, so if it's waiting for an authentication dialog for user A
     // it can't handle requests from user B.
     
-    command = self.commandSet[commandName];
+    command = BRIDGING_RELEASE(CSASCreateBuiltInCommandSet())[commandName];
+    
+    if (command == nil) {
+        command = self.commandSet[commandName];
+    }
     
     if (command == nil) {
         error = CSASCreateCFErrorFromErrno(EINVAL, NULL);

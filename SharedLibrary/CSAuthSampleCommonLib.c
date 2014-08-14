@@ -541,3 +541,14 @@ extern void CF_FORMAT_FUNCTION(1, 2) CSASLog(CFStringRef format, ...) {
     free(cString);
     CFRelease(string);
 }
+
+extern CFDictionaryRef CSASCreateBuiltInCommandSet() {
+    CFStringRef name = CFSTR(kCSASGetVersionCommand);
+    CFDictionaryRef commandSpec = CSASCommandSpecCreate(name, CFSTR(kCSASGetVersionRightName), CFSTR(kCSASRuleAllow), 0, NULL, NULL, NULL);
+    
+    CFDictionaryRef newCommandSet = CFDictionaryCreate(kCFAllocatorDefault, (const void **)&name, (const void **)&commandSpec, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    
+    CFRelease(commandSpec);
+    
+    return newCommandSet;
+}

@@ -50,17 +50,44 @@ static CSASCommandBlock GetVersionBlock() {
     });
 }
 
-static CFDictionaryRef CSASBuiltInCommandSet() {
-    CFStringRef name = CFSTR(kCSASGetVersionCommand);
-    CFDictionaryRef commandSpec = CSASCommandSpecCreate(name, CFSTR(kCSASGetVersionRightName), CFSTR(kCSASRuleAllow), 0, NULL, NULL, NULL);
-    CSASCommandBlock commandBlock = GetVersionBlock();
-    CFDictionaryRef newCommandSpec = CSASCommandSpecCreateCopyWithBlock(commandSpec, commandBlock);
+static CFDictionaryRef CSASCreateBuiltInCommandSetWithBlocks() {
+    CFDictionaryRef builtInCommands = CSASCreateBuiltInCommandSet();
+    CFIndex commandCount = CFDictionaryGetCount(builtInCommands);
     
-    CFDictionaryRef newCommandSet = CFDictionaryCreate(kCFAllocatorDefault, (const void **)&name, (const void **)&newCommandSpec, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    CFStringRef *keys = malloc((size_t)commandCount * sizeof(CFStringRef));
+    CFDictionaryRef *values = malloc((size_t)commandCount * sizeof(CFDictionaryRef));
+    CFDictionaryRef *newValues = malloc((size_t)commandCount * sizeof(CFDictionaryRef));
     
-    CFRelease(commandSpec);
-    CFRelease(newCommandSpec);
-    Block_release(commandBlock);
+    CFDictionaryRef newCommandSet;
+    
+    CFIndex i;
+    
+    CFDictionaryGetKeysAndValues(builtInCommands, (const void **)keys, (const void **)values);
+    
+    for (i = 0; i < commandCount; i++) {
+        CFStringRef name = keys[i];
+        CSASCommandBlock commandBlock = NULL;
+        
+        if (CFEqual(name, CFSTR(kCSASGetVersionCommand))) {
+            commandBlock = GetVersionBlock();
+        }
+        
+        assert(commandBlock != NULL);
+        
+        newValues[i] = CSASCommandSpecCreateCopyWithBlock(values[i], commandBlock);
+    }
+    
+    newCommandSet = CFDictionaryCreate(kCFAllocatorDefault, (const void **)keys, (const void **)newValues, commandCount, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    
+    for (i = 0; i < commandCount; i++) {
+        CFRelease(newValues[i]);
+    }
+    
+    free(keys);
+    free(values);
+    free(newValues);
+    
+    CFRelease(builtInCommands);
     
     return newCommandSet;
 }
@@ -775,11 +802,11 @@ static void CSASSetDefaultRules(CFDictionaryRef commandSet) {
     commands = malloc((size_t)commandCount * sizeof(CFDictionaryRef));
     
     CFDictionaryGetKeysAndValues(commandSet, (const void **)names, (const void **)commands);
-    
+
     for (commandIndex = 0; commandIndex < commandCount; commandIndex++) {
         CFStringRef name = names[commandIndex];
         CFDictionaryRef command = commands[commandIndex];
-        
+
         CFStringRef rightName = CFDictionaryGetValue(command, kCSASCommandSpecRightNameKey);
         CFStringRef rightDefaultRule = CFDictionaryGetValue(command, kCSASCommandSpecRightDefaultRuleKey);
         CFStringRef rightDesc = CFDictionaryGetValue(command, kCSASCommandSpecRightDescriptionKey);
@@ -833,7 +860,7 @@ static void CSASSetDefaultRules(CFDictionaryRef commandSet) {
             if (existingRight == NULL || !CFEqual(existingRight, rightDict)) {
                 // The right is not already defined.  Set up a definition based on
                 // the fields in the command specification.
-                
+
                 err = AuthorizationRightSet(
                                             auth,										// authRef
                                             cRightName,                                 // rightName
@@ -854,7 +881,6 @@ static void CSASSetDefaultRules(CFDictionaryRef commandSet) {
             free(cRightName);
             CFRelease(rightDict);
         }
-        commandIndex += 1;
     }
     
     free(names);
@@ -865,16 +891,15 @@ static void CSASSetDefaultRules(CFDictionaryRef commandSet) {
 
 static CFDictionaryRef AddBuiltInCommandsToSpecList(CFDictionaryRef inCommandSet) {
     CFMutableDictionaryRef newCommandSet = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, inCommandSet);
-    CFDictionaryRef builtInCommands = CSASBuiltInCommandSet();
-    CFIndex inCommandCount = CFDictionaryGetCount(inCommandSet);
-    CFIndex builtInCommandCount = CFDictionaryGetCount(builtInCommands);
+    CFDictionaryRef builtInCommandSet = CSASCreateBuiltInCommandSetWithBlocks();
+    CFIndex builtInCommandCount = CFDictionaryGetCount(builtInCommandSet);
     
-    CFStringRef *names = malloc((size_t)inCommandCount * sizeof(CFStringRef));
-    CFDictionaryRef *commands = malloc((size_t)inCommandCount * sizeof(CFDictionaryRef));
+    CFStringRef *names = malloc((size_t)builtInCommandCount * sizeof(CFStringRef));
+    CFDictionaryRef *commands = malloc((size_t)builtInCommandCount * sizeof(CFDictionaryRef));
     
     CFIndex i;
-    
-    CFDictionaryGetKeysAndValues(inCommandSet, (const void **)names, (const void **)commands);
+
+    CFDictionaryGetKeysAndValues(builtInCommandSet, (const void **)names, (const void **)commands);
     
     for (i = 0; i < builtInCommandCount; i++) {
         CFDictionarySetValue(newCommandSet, names[i], commands[i]);
@@ -882,6 +907,8 @@ static CFDictionaryRef AddBuiltInCommandsToSpecList(CFDictionaryRef inCommandSet
     
     free(names);
     free(commands);
+    
+    CFRelease(builtInCommandSet);
     
     return newCommandSet;
 }
@@ -914,7 +941,7 @@ extern int CSASHelperToolMain(
     assert(gInfoPlist != NULL);
     
     commandSet = AddBuiltInCommandsToSpecList(commandSet);
-    
+
     // Set up default rules which other processes must follow to communicate with this tool.
     
     CSASSetDefaultRules(commandSet);
