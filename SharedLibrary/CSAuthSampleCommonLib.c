@@ -24,36 +24,96 @@
 //////////////////////////////////////////////////////////////////////////////////
 #pragma mark ***** Constants
 
-CFStringRef const kCSASErrorDomain = CFSTR("kCSASErrorDomain");
+const CFStringRef kCSASErrorDomain = CFSTR("kCSASErrorDomain");
+
+const CFStringRef kCSASCommandSpecCommandNameKey = CFSTR("CommandName");
+const CFStringRef kCSASCommandSpecRightNameKey = CFSTR("RightName");
+const CFStringRef kCSASCommandSpecRightDefaultRuleKey = CFSTR("RightDefaultRule");
+const CFStringRef kCSASCommandSpecRightTimeoutInSecondsKey = CFSTR("Timeout");
+const CFStringRef kCSASCommandSpecRightCommentKey = CFSTR("RightComment");
+const CFStringRef kCSASCommandSpecRightDescriptionKey = CFSTR("RightDescription");
+const CFStringRef kCSASCommandSpecCodeSigningRequirementKey = CFSTR("CodeSigningRequirement");
+const CFStringRef kCSASCommandSpecExecutionBlockKey = CFSTR("ExecutionBlock");
 
 // For encoding NSURLs and NSErrors in a manner that will allow them to be passed along the message port without complaints.
 
 static const char * const kCSASEncodedURLKey = "kCSAuthSampleEncodedeURLKey";
 static const char * const kCSASEncodedErrorKey = "kCSASEncodedErrorKey";
 
-const CSASCommandSpec kCSASBuiltInCommandSet[] = {
-    {	kCSASGetVersionCommand,                 // commandName
-        NULL,                                   // rightName           -- never authorize
-        NULL,                                   // rightDefaultRule	   -- not applicable if rightName is NULL
-        0,                                      // rightTimeoutInSeconds -- not applicable if rightName is NULL
-        NULL,                                   // rightComment        -- not applicable if rightName is NULL
-        NULL,									// rightDescriptionKey -- not applicable if rightName is NULL
-        NULL,                                   // codeSigningRequirement -- not applicable is rightName is NULL
-        NULL                                    // userData
-    },
-    {   NULL,
-        NULL,
-        NULL,
-        0,
-        NULL
-        ,NULL
-        ,NULL
-        ,NULL
-    }
-};
-
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Common Code
+
+CFDictionaryRef CSASCommandSpecCreate(CFStringRef commandName,
+                                      CFStringRef rightName,
+                                      CFStringRef rightDefaultRule,
+                                      uint64_t    rightTimeoutInSeconds,
+                                      CFStringRef rightComment,
+                                      CFStringRef rightDescription,
+                                      CFStringRef codeSigningRequirement
+                                      ) {
+    const size_t maxValueCount = 7;
+    size_t valueCount = 0;
+    
+    CFStringRef *keys = malloc(maxValueCount * sizeof(CFStringRef));
+    CFTypeRef *values = malloc(maxValueCount * sizeof(CFTypeRef));
+    
+    CFNumberRef timeout = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &rightTimeoutInSeconds);
+    
+    CFDictionaryRef commandSpec;
+    
+    if (commandName != NULL) {
+        keys[valueCount] = kCSASCommandSpecCommandNameKey;
+        values[valueCount] = commandName;
+        valueCount++;
+    }
+    
+    if (rightName != NULL) {
+        keys[valueCount] = kCSASCommandSpecRightNameKey;
+        values[valueCount] = rightName;
+        valueCount++;
+    }
+    
+    if (rightDefaultRule != NULL) {
+        keys[valueCount] = kCSASCommandSpecRightDefaultRuleKey;
+        values[valueCount] = rightDefaultRule;
+        valueCount++;
+    }
+    
+    if (timeout != NULL) {
+        keys[valueCount] = kCSASCommandSpecRightTimeoutInSecondsKey;
+        values[valueCount] = timeout;
+        valueCount++;
+    }
+    
+    if (rightComment != NULL) {
+        keys[valueCount] = kCSASCommandSpecRightCommentKey;
+        values[valueCount] = rightComment;
+        valueCount++;
+    }
+    
+    if (rightDescription != NULL) {
+        keys[valueCount] = kCSASCommandSpecRightDescriptionKey;
+        values[valueCount] = rightDescription;
+        valueCount++;
+    }
+    
+    if (codeSigningRequirement != NULL) {
+        keys[valueCount] = kCSASCommandSpecCodeSigningRequirementKey;
+        values[valueCount] = codeSigningRequirement;
+        valueCount++;
+    }
+    
+    commandSpec = CFDictionaryCreate(kCFAllocatorDefault, (const void **)keys, (const void **)values, valueCount, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    
+    if (timeout != NULL) {
+        CFRelease(timeout);
+    }
+    
+    free(keys);
+    free(values);
+    
+    return commandSpec;
+}
 
 static CFMutableDictionaryRef CSASCreateErrorUserInfoForURL(CFURLRef url) {
     CFMutableDictionaryRef userInfo = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
@@ -480,101 +540,4 @@ extern void CF_FORMAT_FUNCTION(1, 2) CSASLog(CFStringRef format, ...) {
     
     free(cString);
     CFRelease(string);
-}
-
-extern bool CSASFindCommand(
-                            CFStringRef                 commandName,
-                            const CSASCommandSpec		commands[],
-                            size_t *                    commandIndexPtr,
-                            CFErrorRef *                errorPtr
-                            )
-// CSASFindCommand is a simple utility routine for checking that the
-// command name within a request is valid (that is, matches one of the command
-// names in the CSASCommandSpec array).
-//
-// On success, *commandIndexPtr will be the index of the requested command
-// in the commands array.  On error, the value in *commandIndexPtr is undefined.
-{
-	bool                        success = true;
-    char *                      command;
-	CFIndex						commandSize = 0;
-	size_t						index;
-	
-	// Pre-conditions
-	
-	assert(commandName != NULL);
-	assert(commands != NULL);
-	assert(commands[0].commandName != NULL);        // there must be at least one command
-	assert(commandIndexPtr != NULL);
-    
-    command = NULL;
-    
-    // Get the command as a C string.  To prevent untrusted command string from
-	// trying to run us out of memory, we limit its length to 1024 UTF-16 values.
-    
-    if ( (commandName == NULL) || (CFGetTypeID(commandName) != CFStringGetTypeID()) ) {
-        success = false;
-        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL, NULL);
-    }
-    
-	commandSize = CFStringGetLength(commandName);
-	if ( (success) && (commandSize > 1024) ) {
-		success = false;
-        if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(EINVAL, NULL);
-	}
-    if (success) {
-        size_t      bufSize;
-        
-        bufSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(commandName), kCFStringEncodingUTF8) + 1;
-        command = malloc(bufSize);
-        
-        if (command == NULL) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOMEM, NULL);
-        } else if ( ! CFStringGetCString(commandName, command, bufSize, kCFStringEncodingUTF8) ) {
-            success = false;
-            if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
-        }
-    }
-    
-    // Search the commands array for that command.
-    
-    if (success) {
-        bool found = false;
-        
-        index = 0;
-        
-        do {
-            if ( strcmp(kCSASBuiltInCommandSet[index].commandName, command) == 0 ) {
-                *commandIndexPtr = index;
-                found = true;
-                break;
-            }
-            index++;
-            if (kCSASBuiltInCommandSet[index].commandName == NULL) {
-                break;
-            }
-        } while (true);
-        
-        if (!found) {
-            index = 0;
-            
-            do {
-                if ( strcmp(commands[index].commandName, command) == 0 ) {
-                    *commandIndexPtr = index;
-                    break;
-                }
-                index++;
-                if (commands[index].commandName == NULL) {
-                    success = false;
-                    if (errorPtr != NULL) *errorPtr = CSASCreateCFErrorFromErrno(ENOENT, NULL);
-                    break;
-                }
-            } while (true);
-        }
-    }
-    
-    free(command);
-    
-	return success;
 }

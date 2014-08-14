@@ -22,12 +22,47 @@
 
 static CFDictionaryRef gInfoPlist = NULL;
 
-static const void *CSASBlockRetainCallback(CFAllocatorRef allocator, const void *value) {
-    return Block_copy(value);
+static CSASCommandBlock GetVersionBlock() {
+    CFDictionaryRef infoPlist = CSASGetHelperToolInfoPlist();
+    CFStringRef version;
+    
+    assert(infoPlist != NULL);
+    
+    version = CFDictionaryGetValue(infoPlist, kCFBundleVersionKey);
+    
+    if (version == NULL) {
+        version = CFSTR("0");
+    }
+    
+    return Block_copy(^bool(AuthorizationRef                 auth,
+                            __unused CSASCallerCredentials * creds,
+                            __unused CFDictionaryRef         request,
+                            CFMutableDictionaryRef           response,
+                            __unused CFMutableArrayRef       descriptorArray,
+                            __unused CSASConnectionHandler * connectionHandler,
+                            __unused CFErrorRef *            error) {
+        assert(auth != NULL);
+        assert(response != NULL);
+        
+        CFDictionarySetValue(response, CFSTR(kCSASGetVersionResponse), version);
+        
+        return true;
+    });
 }
 
-static void CSASBlockReleaseCallback(CFAllocatorRef allocator, const void *value) {
-    Block_release(value);
+static CFDictionaryRef CSASBuiltInCommandSet() {
+    CFStringRef name = CFSTR(kCSASGetVersionCommand);
+    CFDictionaryRef commandSpec = CSASCommandSpecCreate(name, CFSTR(kCSASGetVersionRightName), CFSTR(kCSASRuleAllow), 0, NULL, NULL, NULL);
+    CSASCommandBlock commandBlock = GetVersionBlock();
+    CFDictionaryRef newCommandSpec = CSASCommandSpecCreateCopyWithBlock(commandSpec, commandBlock);
+    
+    CFDictionaryRef newCommandSet = CFDictionaryCreate(kCFAllocatorDefault, (const void **)&name, (const void **)&newCommandSpec, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    
+    CFRelease(commandSpec);
+    CFRelease(newCommandSpec);
+    Block_release(commandBlock);
+    
+    return newCommandSet;
 }
 
 // watchdog stuff
@@ -79,21 +114,6 @@ static void CSASRestartWatchdog() {
 
 #if ! defined(NDEBUG)
 
-static bool CSASCommandArraySizeMatchesCommandBlockArraySize(
-                                                             const CSASCommandSpec		commands[],
-                                                             CFArrayRef                 commandBlocks
-                                                             )
-{
-    size_t  commandCount;
-    
-    commandCount = 0;
-    while ( commands[commandCount].commandName != NULL ) {
-        commandCount += 1;
-    }
-    
-    return (commandCount == (size_t)CFArrayGetCount(commandBlocks));
-}
-
 #endif
 
 // write file descriptors to the XPC message
@@ -136,7 +156,7 @@ static void CSASCloseFileDescriptors(CFArrayRef descriptorArray) {
     }
 }
 
-static bool CSASCheckCodeSigningForConnection(xpc_connection_t conn, const char *requirement, CFErrorRef *errorPtr) {
+static bool CSASCheckCodeSigningForConnection(xpc_connection_t conn, CFStringRef requirement, CFErrorRef *errorPtr) {
     SecCodeRef                  secCode = NULL;
     SecRequirementRef           secRequirement = NULL;
     CFDictionaryRef             codeAttrs;
@@ -156,11 +176,7 @@ static bool CSASCheckCodeSigningForConnection(xpc_connection_t conn, const char 
     secErr = SecCodeCopyGuestWithAttributes(NULL, codeAttrs, kSecCSDefaultFlags, &secCode);
     
     if (secErr == errSecSuccess) {
-        CFStringRef reqString = CFStringCreateWithCString(kCFAllocatorDefault, requirement, kCFStringEncodingUTF8);
-        
-        secErr = SecRequirementCreateWithString(reqString, kSecCSDefaultFlags, &secRequirement);
-        
-        CFRelease(reqString);
+        secErr = SecRequirementCreateWithString(requirement, kSecCSDefaultFlags, &secRequirement);
     }
     
     if (secErr == errSecSuccess) {
@@ -192,8 +208,7 @@ static bool CSASCheckCodeSigningForConnection(xpc_connection_t conn, const char 
 }
 
 static bool CSASHandleCommand(
-                              const CSASCommandSpec		     commands[],
-                              CFArrayRef                     commandBlocks,
+                              CFDictionaryRef                commandSet,
                               CFStringRef                    commandName,
                               CFDictionaryRef                request,
                               CFDictionaryRef *              responsePtr,
@@ -209,17 +224,15 @@ static bool CSASHandleCommand(
 // execute a command.  Finally, fd is the file descriptor from which the request
 // should be read, and to which the response should be sent.
 {
-    size_t                      commandIndex = 0;
+    CFDictionaryRef             commandSpec = NULL;
     CFMutableDictionaryRef		response	= NULL;
     bool                        success = true;
     CFErrorRef                  error = NULL;
     
     // Pre-conditions
     
-    assert(commands != NULL);
-    assert(commands[0].commandName != NULL);        // there must be at least one command
-    assert(commandBlocks != NULL);
-    assert( CSASCommandArraySizeMatchesCommandBlockArraySize(commands, commandBlocks) );
+    assert(commandSet != NULL);
+    assert(CFDictionaryGetCount(commandSet));        // there must be at least one command
     
     // Create a mutable response dictionary before calling the client.
     if (success) {
@@ -246,20 +259,44 @@ static bool CSASHandleCommand(
         // not the command is valid by comparing with the CSASCommandSpec array.  Also,
         // if the command is valid, return the associated right (if any).
         
-        success = CSASFindCommand(commandName, commands, &commandIndex, &error);
-    }
-    
-    if (success && (commands[commandIndex].codeSigningRequirement != NULL)) {
-        success = CSASCheckCodeSigningForConnection(connection, commands[commandIndex].codeSigningRequirement, &error);
+        commandSpec = CFDictionaryGetValue(commandSet, commandName);
+        
+        if (commandSpec == NULL) {
+            if (errorPtr) *errorPtr = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
+            success = false;
+        }
     }
     
     if (success) {
+        CFStringRef req = CFDictionaryGetValue(commandSpec, kCSASCommandSpecCodeSigningRequirementKey);
+        
+        if (req != NULL) {
+            success = CSASCheckCodeSigningForConnection(connection, req, &error);
+        }
+    }
+    
+    if (success) {
+        CFStringRef rightName = CFDictionaryGetValue(commandSpec, kCSASCommandSpecRightNameKey);
+        
         // Acquire the associated right for the command.  If rightName is NULL, the
         // commandProc is required to do its own authorization.
         
-        if (commands[commandIndex].rightName != NULL) {
-            AuthorizationItem   item   = { commands[commandIndex].rightName, 0, NULL, 0 };
-            AuthorizationRights rights = { 1, &item };
+        if (rightName != NULL) {
+            size_t cRightNameSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(rightName), kCFStringEncodingUTF8) + 1;
+            char *cRightName = malloc(cRightNameSize);
+            
+            AuthorizationItem item;
+            AuthorizationRights rights;
+            
+            CFStringGetCString(rightName, cRightName, cRightNameSize, kCFStringEncodingUTF8);
+            
+            item.name = cRightName;
+            item.valueLength = 0;
+            item.value = NULL;
+            item.flags = 0;
+            
+            rights.count = 1;
+            rights.items = &item;
             
             OSStatus authErr = AuthorizationCopyRights(
                                                        authRef,
@@ -268,6 +305,8 @@ static bool CSASHandleCommand(
                                                        kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed,
                                                        NULL
                                                        );
+            
+            free(cRightName);
             
             if (authErr != noErr) {
                 success = false;
@@ -280,7 +319,9 @@ static bool CSASHandleCommand(
     if (success) {
         CFMutableArrayRef descriptorArray = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
         CSASCallerCredentials creds;
-        CSASCommandBlock commandBlock = CFArrayGetValueAtIndex(commandBlocks, commandIndex);
+        CSASCommandBlock commandBlock = CFDictionaryGetValue(commandSpec, kCSASCommandSpecExecutionBlockKey);
+        
+        assert(commandBlock != NULL);
         
         creds.processID = xpc_connection_get_pid(connection);
         creds.userID = xpc_connection_get_euid(connection);
@@ -288,7 +329,7 @@ static bool CSASHandleCommand(
         
         // Call callback to execute command based on the request.
         
-        success = commandBlock(authRef, &creds, commands[commandIndex].userData, request, response, descriptorArray, connectionHandler, &error);
+        success = commandBlock(authRef, &creds, request, response, descriptorArray, connectionHandler, &error);
         
         if (descriptorArrayPtr == NULL) {
             CSASCloseFileDescriptors(descriptorArray);
@@ -362,8 +403,7 @@ static void CSASHandleError(
 }
 
 static void CSASHandleRequest(
-                              const CSASCommandSpec 	commands[],
-                              CFArrayRef                commandBlocks,
+                              CFDictionaryRef           commandSet,
                               xpc_connection_t      	connection,
                               xpc_object_t          	event
                               )
@@ -456,7 +496,7 @@ static void CSASHandleRequest(
     
     if (success) {
         if (!isPersistent) {
-            success = CSASHandleCommand(commands, commandBlocks, commandName, request, &response, &descriptorArray, authRef, connection, &connectionHandler, &error);
+            success = CSASHandleCommand(commandSet, commandName, request, &response, &descriptorArray, authRef, connection, &connectionHandler, &error);
         } else if (ctx->connectionHandler != NULL) {
             CFMutableDictionaryRef mutableResponse = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
             CFMutableArrayRef mutableFileDescriptors = CFArrayCreateMutable(kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks);
@@ -567,8 +607,7 @@ static void CSASHandleRequest(
 }
 
 static void CSASHandleEvent(
-                            const CSASCommandSpec		commands[],
-                            CFArrayRef                  commandBlocks,
+                            CFDictionaryRef             commandSet,
                             xpc_connection_t            connection,
                             xpc_object_t                event
                             )
@@ -578,19 +617,14 @@ static void CSASHandleEvent(
     if (type == XPC_TYPE_ERROR) {
         CSASHandleError(connection, event);
     } else if (type == XPC_TYPE_DICTIONARY) {
-        CSASHandleRequest(commands, commandBlocks, connection, event);
+        CSASHandleRequest(commandSet, connection, event);
     } else {
         syslog(LOG_NOTICE, "Unhandled event");
     }
 }
 
-static CFDictionaryRef CSASCreateAuthorizationPrompt(CFDictionaryRef authPrompts, const char *descKeyC) {
+static CFDictionaryRef CSASCreateAuthorizationPrompt(CFDictionaryRef authPrompts, CFStringRef descKey) {
     CFDictionaryRef authPrompt = NULL;
-    CFStringRef descKey = NULL;
-    
-    if (descKeyC != NULL) {
-        descKey = CFStringCreateWithCString(kCFAllocatorDefault, descKeyC, kCFStringEncodingUTF8);
-    }
     
     if (descKey != NULL) {
         if (authPrompts != NULL) {
@@ -608,71 +642,71 @@ static CFDictionaryRef CSASCreateAuthorizationPrompt(CFDictionaryRef authPrompts
             
             authPrompt = CFDictionaryCreate(kCFAllocatorDefault, (const void **)&key, (const void **)&descKey, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
         }
-        
-        CFRelease(descKey);
     }
     
     return authPrompt;
 }
 
-static CFDictionaryRef CSASCreateRightForCommandSpec(CSASCommandSpec commandSpec, CFDictionaryRef authPrompts) {
-    const char *ruleName = commandSpec.rightDefaultRule;
+static CFDictionaryRef CSASCreateRightForCommandSpec(CFDictionaryRef commandSpec, CFDictionaryRef authPrompts) {
+    CFStringRef ruleName = CFDictionaryGetValue(commandSpec, kCSASCommandSpecRightDefaultRuleKey);
     
     if (ruleName == NULL) {
         return NULL;
     } else {
         CFMutableDictionaryRef rightDict = CFDictionaryCreateMutable(kCFAllocatorDefault, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
-        CFDictionaryRef authPrompt = CSASCreateAuthorizationPrompt(authPrompts, commandSpec.rightDescriptionKey);
+        CFStringRef rightDesc = CFDictionaryGetValue(commandSpec, kCSASCommandSpecRightDescriptionKey);
+        CFStringRef rightComment = CFDictionaryGetValue(commandSpec, kCSASCommandSpecRightCommentKey);
+        CFDictionaryRef authPrompt = CSASCreateAuthorizationPrompt(authPrompts, rightDesc);
         bool isOneOfOurs = true;
         
         // Replicate all the Apple-supplied rules found in /etc/authorization, but with the "shared" attribute set to false.
         
-        if (strcmp(ruleName, kCSASRuleAllow) == 0) {
+        if (CFEqual(ruleName, CFSTR(kCSASRuleAllow))) {
             // Allow anyone.
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("allow"));
-        } else if (strcmp(ruleName, kCSASRuleDeny) == 0) {
+        } else if (CFEqual(ruleName, CFSTR(kCSASRuleDeny))) {
             // Deny everyone.
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("deny"));
-        } else if (strcmp(ruleName, kCSASRuleAuthenticateAdmin) == 0) {
+        } else if (CFEqual(ruleName, CFSTR(kCSASRuleAuthenticateAdmin))) {
             // Authenticate as admin.
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
             CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("admin"));
-        } else if (strcmp(ruleName, kCSASRuleAuthenticateDeveloper) == 0) {
+        } else if (CFEqual(ruleName, CFSTR(kCSASRuleAuthenticateDeveloper))) {
             // Authenticate as developer.
             
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
             CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("_developer"));
-        } else if (strcmp(ruleName, kCSASRuleAuthenticateSessionOwner) == 0) {
+        } else if (CFEqual(ruleName, CFSTR(kCSASRuleAuthenticateSessionOwner))) {
             // Authenticate as session owner.
             
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
             CFDictionarySetValue(rightDict, CFSTR("session-owner"), kCFBooleanTrue);
-        } else if (strcmp(ruleName, kCSASRuleAuthenticateSessionOwnerOrAdmin) == 0) {
+        } else if (CFEqual(ruleName, CFSTR(kCSASRuleAuthenticateSessionOwnerOrAdmin))) {
             // Authenticate as admin or session owner.
             
             CFDictionarySetValue(rightDict, CFSTR("allow-root"), kCFBooleanFalse);
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
             CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("admin"));
             CFDictionarySetValue(rightDict, CFSTR("session-owner"), kCFBooleanTrue);
-        } else if (strcmp(ruleName, kCSASRuleIsAdmin) == 0) {
+        } else if (CFEqual(ruleName, CFSTR(kCSASRuleIsAdmin))) {
             // Verify that the user asking for authorization is an administrator.
             
             CFDictionarySetValue(rightDict, CFSTR("authenticate-user"), kCFBooleanFalse);
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
             CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("admin"));
-        } else if (strcmp(ruleName, kCSASRuleIsDeveloper) == 0) {
+        } else if (CFEqual(ruleName, CFSTR(kCSASRuleIsDeveloper))) {
             // Verify that the user asking for authorization is a developer.
             
             CFDictionarySetValue(rightDict, CFSTR("authenticate-user"), kCFBooleanFalse);
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
             CFDictionarySetValue(rightDict, CFSTR("group"), CFSTR("_developer"));
-        } else if (strcmp(ruleName, kCSASRuleIsRoot) == 0) {
+        } else if (CFEqual(ruleName, CFSTR(kCSASRuleIsRoot))) {
             // Verify that the process that created this AuthorizationRef is running as root.
             
             CFDictionarySetValue(rightDict, CFSTR("allow-root"), kCFBooleanTrue);
             CFDictionarySetValue(rightDict, CFSTR("authenticate-user"), kCFBooleanFalse);
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
-        } else if (strcmp(ruleName, kCSASRuleIsSessionOwner) == 0) {
+        } else if (CFEqual(ruleName, CFSTR(kCSASRuleIsSessionOwner))) {
             // Verify that the requesting process is running as the session owner.
             
             CFDictionarySetValue(rightDict, CFSTR("allow-root"), kCFBooleanFalse);
@@ -680,30 +714,22 @@ static CFDictionaryRef CSASCreateRightForCommandSpec(CSASCommandSpec commandSpec
             CFDictionarySetValue(rightDict, CFSTR("class"), CFSTR("user"));
             CFDictionarySetValue(rightDict, CFSTR("session-owner"), kCFBooleanTrue);
         } else {
-            CFStringRef nameString = CFStringCreateWithCString(kCFAllocatorDefault, ruleName, kCFStringEncodingUTF8);
-            
-            CFDictionarySetValue(rightDict, CFSTR("rule"), nameString);
-            
-            CFRelease(nameString);
+            CFDictionarySetValue(rightDict, CFSTR("rule"), ruleName);
             
             isOneOfOurs = false;
         }
         
         if (isOneOfOurs) {
-            CFNumberRef timeout = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt64Type, &commandSpec.rightTimeoutInSeconds);
+            CFNumberRef timeout = CFDictionaryGetValue(commandSpec, kCSASCommandSpecRightTimeoutInSecondsKey);
             
-            CFDictionarySetValue(rightDict, CFSTR("shared"), CFSTR("false"));
-            CFDictionarySetValue(rightDict, CFSTR("timeout"), timeout);
-            
-            CFRelease(timeout);
+            if (timeout != NULL) {
+                CFDictionarySetValue(rightDict, CFSTR("shared"), CFSTR("false"));
+                CFDictionarySetValue(rightDict, CFSTR("timeout"), timeout);
+            }
         }
         
-        if (commandSpec.rightComment != NULL) {
-            CFStringRef comment = CFStringCreateWithCString(kCFAllocatorDefault, commandSpec.rightComment, kCFStringEncodingUTF8);
-            
-            CFDictionarySetValue(rightDict, CFSTR("comment"), comment);
-            
-            CFRelease(comment);
+        if (rightComment != NULL) {
+            CFDictionarySetValue(rightDict, CFSTR("comment"), rightComment);
         }
         
         if (authPrompt != NULL) {
@@ -716,21 +742,21 @@ static CFDictionaryRef CSASCreateRightForCommandSpec(CSASCommandSpec commandSpec
     }
 }
 
-static void CSASSetDefaultRules(
-                                const CSASCommandSpec		commands[],
-                                CFDictionaryRef             infoPlist
-                                )
-// See comment in header.
-{
+static void CSASSetDefaultRules(CFDictionaryRef commandSet) {
     AuthorizationRef            auth;
     OSStatus					err;
-    size_t						commandIndex;
+    CFIndex						commandIndex;
     CFDictionaryRef             authPrompts = NULL;
+    CFIndex                     commandCount = CFDictionaryGetCount(commandSet);
+    CFDictionaryRef             infoPlist = CSASGetHelperToolInfoPlist();
+    
+    CFStringRef *               names;
+    CFDictionaryRef *           commands;
     
     // Pre-conditions
     
-    assert(commands != NULL);
-    assert(commands[0].commandName != NULL);        // there must be at least one command
+    assert(commandSet != NULL);
+    assert(commandCount != 0);        // there must be at least one command
     
     // Get the dictionary containing all the authorization prompts.
     
@@ -745,8 +771,19 @@ static void CSASSetDefaultRules(
     // For each command, set up the default authorization right specification, as
     // indicated by the command specification.
     
-    commandIndex = 0;
-    while (commands[commandIndex].commandName != NULL) {
+    names = malloc((size_t)commandCount * sizeof(CFStringRef));
+    commands = malloc((size_t)commandCount * sizeof(CFDictionaryRef));
+    
+    CFDictionaryGetKeysAndValues(commandSet, (const void **)names, (const void **)commands);
+    
+    for (commandIndex = 0; commandIndex < commandCount; commandIndex++) {
+        CFStringRef name = names[commandIndex];
+        CFDictionaryRef command = commands[commandIndex];
+        
+        CFStringRef rightName = CFDictionaryGetValue(command, kCSASCommandSpecRightNameKey);
+        CFStringRef rightDefaultRule = CFDictionaryGetValue(command, kCSASCommandSpecRightDefaultRuleKey);
+        CFStringRef rightDesc = CFDictionaryGetValue(command, kCSASCommandSpecRightDescriptionKey);
+        
         CFDictionaryRef rightDict = NULL;
         
         // Some no-obvious assertions:
@@ -754,17 +791,17 @@ static void CSASSetDefaultRules(
         // If you have a right name, you must supply a default rule.
         // If you have no right name, you can't supply a default rule.
         
-        assert( (commands[commandIndex].rightName == NULL) == (commands[commandIndex].rightDefaultRule == NULL) );
+        assert( (name == NULL) == (rightDefaultRule == NULL) );
         
         // If you have no right name, you can't supply a right description.
         // OTOH, if you have a right name, you may supply a NULL right description
         // (in which case you get no custom prompt).
         
-        assert( (commands[commandIndex].rightName != NULL) || (commands[commandIndex].rightDescriptionKey == NULL) );
+        assert( (name != NULL) || (rightDesc == NULL) );
         
         // Get the right dictionary for our specified right.
         
-        rightDict = CSASCreateRightForCommandSpec(commands[commandIndex], authPrompts);
+        rightDict = CSASCreateRightForCommandSpec(command, authPrompts);
         
         // If there's a right name but no current right specification, set up the
         // right specification.
@@ -772,7 +809,12 @@ static void CSASSetDefaultRules(
         if (rightDict != NULL) {
             CFDictionaryRef existingRight = NULL;
             
-            err = AuthorizationRightGet(commands[commandIndex].rightName, &existingRight);
+            size_t cRightNameSize = CFStringGetMaximumSizeForEncoding(CFStringGetLength(rightName), kCFStringEncodingUTF8) + 1;
+            char *cRightName = malloc(cRightNameSize);
+            
+            CFStringGetCString(rightName, cRightName, cRightNameSize, kCFStringEncodingUTF8);
+            
+            err = AuthorizationRightGet(cRightName, &existingRight);
             
             // The original BetterAuthorizationSample code just passes NULL to AuthorizationRightGet, and
             // then checks err against errAuthorizationDenied.
@@ -794,7 +836,7 @@ static void CSASSetDefaultRules(
                 
                 err = AuthorizationRightSet(
                                             auth,										// authRef
-                                            commands[commandIndex].rightName,           // rightName
+                                            cRightName,                                 // rightName
                                             rightDict,                                  // rightDefinition
                                             NULL,            							// descriptionKey
                                             NULL,                                       // bundle
@@ -809,98 +851,45 @@ static void CSASSetDefaultRules(
                 // us to do.
             }
             
-            if (rightDict != NULL) {
-                CFRelease(rightDict);
-            }
+            free(cRightName);
+            CFRelease(rightDict);
         }
         commandIndex += 1;
     }
     
+    free(names);
+    free(commands);
+    
     AuthorizationFree(auth, kAuthorizationFlagDefaults);
 }
 
-static CSASCommandBlock GetVersionBlock() {
-    CFDictionaryRef infoPlist = CSASGetHelperToolInfoPlist();
-    CFStringRef version;
+static CFDictionaryRef AddBuiltInCommandsToSpecList(CFDictionaryRef inCommandSet) {
+    CFMutableDictionaryRef newCommandSet = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, inCommandSet);
+    CFDictionaryRef builtInCommands = CSASBuiltInCommandSet();
+    CFIndex inCommandCount = CFDictionaryGetCount(inCommandSet);
+    CFIndex builtInCommandCount = CFDictionaryGetCount(builtInCommands);
     
-    assert(infoPlist != NULL);
+    CFStringRef *names = malloc((size_t)inCommandCount * sizeof(CFStringRef));
+    CFDictionaryRef *commands = malloc((size_t)inCommandCount * sizeof(CFDictionaryRef));
     
-    version = CFDictionaryGetValue(infoPlist, kCFBundleVersionKey);
+    CFIndex i;
     
-    if (version == NULL) {
-        version = CFSTR("0");
-    }
-    
-    return Block_copy(^bool(AuthorizationRef                 auth,
-                            __unused CSASCallerCredentials * creds,
-                            __unused const void *            userData,
-                            __unused CFDictionaryRef         request,
-                            CFMutableDictionaryRef           response,
-                            __unused CFMutableArrayRef       descriptorArray,
-                            __unused CSASConnectionHandler * connectionHandler,
-                            __unused CFErrorRef *            error) {
-        assert(auth != NULL);
-        assert(response != NULL);
-        
-        CFDictionarySetValue(response, CFSTR(kCSASGetVersionResponse), version);
-        
-        return true;
-    });
-}
-
-static CSASCommandSpec *AddBuiltInCommandsToSpecList(const CSASCommandSpec inCommands[], CFArrayRef inBlocks, CFArrayRef *outBlocks) {
-    CFArrayCallBacks callbacks = { 0, CSASBlockRetainCallback, CSASBlockReleaseCallback, NULL, NULL };
-    
-    CSASCommandSpec *newCommands;
-    CFMutableArrayRef newBlocks = CFArrayCreateMutable(kCFAllocatorDefault, 0, &callbacks);
-    
-    size_t builtInCommandCount = 0;
-    size_t passedInCommandCount = 0;
-    size_t totalCommandCount = 0;
-    size_t i;
-    
-    for (builtInCommandCount = 0; kCSASBuiltInCommandSet[builtInCommandCount].commandName != NULL; builtInCommandCount++);
-    
-    if (inCommands != NULL) {
-        for (passedInCommandCount = 0; inCommands[passedInCommandCount].commandName != NULL; passedInCommandCount++);
-    }
-    
-    assert((size_t)CFArrayGetCount(inBlocks) == passedInCommandCount);
-    
-    totalCommandCount = builtInCommandCount + passedInCommandCount;
-    
-    newCommands = malloc((totalCommandCount + 1) * sizeof(CSASCommandSpec));
-    
-    memcpy(newCommands, kCSASBuiltInCommandSet, builtInCommandCount * sizeof(CSASCommandSpec));
-    memcpy(newCommands + builtInCommandCount, inCommands, passedInCommandCount * sizeof(CSASCommandSpec));
-    memset(newCommands + totalCommandCount, '\0', sizeof(CSASCommandSpec));
+    CFDictionaryGetKeysAndValues(inCommandSet, (const void **)names, (const void **)commands);
     
     for (i = 0; i < builtInCommandCount; i++) {
-        const char *name = kCSASBuiltInCommandSet[i].commandName;
-        
-        if (strcmp(name, kCSASGetVersionCommand) == 0) {
-            CFArrayAppendValue(newBlocks, GetVersionBlock());
-        } else {
-            assert(0);
-        }
+        CFDictionarySetValue(newCommandSet, names[i], commands[i]);
     }
     
-    CFArrayAppendArray(newBlocks, inBlocks, CFRangeMake(0, CFArrayGetCount(inBlocks)));
+    free(names);
+    free(commands);
     
-    if (outBlocks != NULL) {
-        *outBlocks = newBlocks;
-    } else {
-        CFRelease(newBlocks);
-    }
-    
-    return newCommands;
+    return newCommandSet;
 }
 
 extern int CSASHelperToolMain(
                               int                       argc,
                               const char *              argv[],
-                              const CSASCommandSpec		commands[],
-                              CFArrayRef                commandBlocks,
+                              CFDictionaryRef           commandSet,
                               unsigned int              timeoutInterval
                               )
 // See comment in header.
@@ -908,8 +897,6 @@ extern int CSASHelperToolMain(
     CFURLRef                    helperURL = NULL;
     CFStringRef                 helperID;
     char                        helperIDC[PATH_MAX];
-    CSASCommandSpec             *newCommands;
-    CFArrayRef                  newCommandBlocks = NULL;
     
     // Pre-conditions
     
@@ -926,13 +913,11 @@ extern int CSASHelperToolMain(
     
     assert(gInfoPlist != NULL);
     
-    newCommands = AddBuiltInCommandsToSpecList(commands, commandBlocks, &newCommandBlocks);
-    
-    assert( CSASCommandArraySizeMatchesCommandBlockArraySize(newCommands, newCommandBlocks) );
+    commandSet = AddBuiltInCommandsToSpecList(commandSet);
     
     // Set up default rules which other processes must follow to communicate with this tool.
     
-    CSASSetDefaultRules(newCommands, gInfoPlist);
+    CSASSetDefaultRules(commandSet);
     
     // set up the watchdog stuff
     CSASInitWatchdog(timeoutInterval);
@@ -958,7 +943,7 @@ extern int CSASHelperToolMain(
         xpc_connection_set_event_handler(connection, ^(xpc_object_t event) {
             CSASWatchdogDisableAutomaticTermination();
             
-            CSASHandleEvent(newCommands, newCommandBlocks, connection, event);
+            CSASHandleEvent(commandSet, connection, event);
             
             CSASWatchdogEnableAutomaticTermination();
         });
@@ -982,32 +967,16 @@ extern int CSASHelperToolMain(
      return EXIT_SUCCESS;*/
 }
 
-extern CFDictionaryRef CSASGetHelperToolInfoPlist() {
-    return gInfoPlist;
+extern CFDictionaryRef CSASCommandSpecCreateCopyWithBlock(CFDictionaryRef commandSpec, CSASCommandBlock commandBlock) {
+    CFMutableDictionaryRef newCommandSpec = CFDictionaryCreateMutableCopy(kCFAllocatorDefault, 0, commandSpec);
+    
+    CFDictionarySetValue(newCommandSpec, kCSASCommandSpecExecutionBlockKey, commandBlock);
+    
+    return newCommandSpec;
 }
 
-extern CFArrayRef CSASCreateCommandBlocksForCommandProcs(const CSASCommandProc commandProcs[]) {
-    CFArrayCallBacks callbacks = { 0, CSASBlockRetainCallback, CSASBlockReleaseCallback, NULL, NULL };
-    
-    CFMutableArrayRef blocks = CFArrayCreateMutable(kCFAllocatorDefault, 0, &callbacks);
-    
-    for (unsigned int i = 0; commandProcs[i] != NULL; i++) {
-        CSASCommandBlock block = ^bool(AuthorizationRef        auth,
-                                       CSASCallerCredentials * creds,
-                                       const void *            userData,
-                                       CFDictionaryRef         request,
-                                       CFMutableDictionaryRef  response,
-                                       CFMutableArrayRef       descriptorArray,
-                                       CSASConnectionHandler * connectionHandler,
-                                       CFErrorRef *            error
-                                       ) {
-            return commandProcs[i](auth, creds, userData, request, response, descriptorArray, connectionHandler, error);
-        };
-        
-        CFArrayAppendValue(blocks, block);
-    }
-    
-    return blocks;
+extern CFDictionaryRef CSASGetHelperToolInfoPlist() {
+    return gInfoPlist;
 }
 
 extern void CSASWatchdogEnableAutomaticTermination() {

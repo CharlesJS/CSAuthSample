@@ -40,7 +40,6 @@ typedef bool (^CSASConnectionHandler)(
 typedef bool (^CSASCommandBlock)(
                                  AuthorizationRef        auth,
                                  CSASCallerCredentials * creds,
-                                 const void *            userData,
                                  CFDictionaryRef         request,
                                  CFMutableDictionaryRef  response,
                                  CFMutableArrayRef       descriptorArray,
@@ -48,28 +47,16 @@ typedef bool (^CSASCommandBlock)(
                                  CFErrorRef *            error
                                  );
 
-typedef bool (*CSASCommandProc)(
-                                AuthorizationRef        auth,
-                                CSASCallerCredentials * creds,
-                                const void *            userData,
-                                CFDictionaryRef         request,
-                                CFMutableDictionaryRef  response,
-                                CFMutableArrayRef       descriptorArray,
-                                CSASConnectionHandler * connectionHandler,
-                                CFErrorRef *            error
-                                );
-
 extern int CSASHelperToolMain(
                               int                       argc,
                               const char *              argv[],
-                              const CSASCommandSpec		commands[],
-                              CFArrayRef                commandBlocks,
+                              CFDictionaryRef           commandSet,
                               unsigned int              timeoutInterval
                               );
 
-extern CFDictionaryRef CSASGetHelperToolInfoPlist();
+extern CFDictionaryRef CSASCommandSpecCreateCopyWithBlock(CFDictionaryRef commandSpec, CSASCommandBlock commandBlock);
 
-extern CFArrayRef CSASCreateCommandBlocksForCommandProcs(const CSASCommandProc commandProcs[]);
+extern CFDictionaryRef CSASGetHelperToolInfoPlist();
 
 extern void CSASWatchdogEnableAutomaticTermination();
 extern void CSASWatchdogDisableAutomaticTermination();

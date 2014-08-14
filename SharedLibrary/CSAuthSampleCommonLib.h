@@ -17,19 +17,25 @@ extern "C" {
 #endif
 
 /////////////////////////////////////////////////////////////////
-#pragma mark ***** Command Description
+#pragma mark ***** Command Specification Dictionary Keys
 
-struct CSASCommandSpec {
-    const char *		commandName;
-    const char *		rightName;
-    const char *		rightDefaultRule;
-    const uint64_t		rightTimeoutInSeconds;
-    const char *        rightComment;
-    const char *		rightDescriptionKey;
-    const char *    	codeSigningRequirement;
-    const void *    	userData;
-};
-typedef struct CSASCommandSpec CSASCommandSpec;
+extern const CFStringRef kCSASCommandSpecCommandNameKey;
+extern const CFStringRef kCSASCommandSpecRightNameKey;
+extern const CFStringRef kCSASCommandSpecRightDefaultRuleKey;
+extern const CFStringRef kCSASCommandSpecRightTimeoutInSecondsKey;
+extern const CFStringRef kCSASCommandSpecRightCommentKey;
+extern const CFStringRef kCSASCommandSpecRightDescriptionKey;
+extern const CFStringRef kCSASCommandSpecCodeSigningRequirementKey;
+extern const CFStringRef kCSASCommandSpecExecutionBlockKey;
+
+CFDictionaryRef CSASCommandSpecCreate(CFStringRef commandName,
+                                      CFStringRef rightName,
+                                      CFStringRef rightDefaultRule,
+                                      uint64_t    rightTimeoutInSeconds,
+                                      CFStringRef rightComment,
+                                      CFStringRef rightDescription,
+                                      CFStringRef codeSigningRequirement
+                                      );
 
 //////////////////////////////////////////////////////////////////////////////////
 #pragma mark ***** Constants
@@ -107,8 +113,6 @@ typedef struct CSASCommandSpec CSASCommandSpec;
 // response keys
 #define kCSASGetVersionResponse		  "Version"                   // CFNumber
 
-extern const CSASCommandSpec kCSASBuiltInCommandSet[];
-
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Utility Routines
 
@@ -117,7 +121,7 @@ extern const CSASCommandSpec kCSASBuiltInCommandSet[];
  */
 
 // Our very own error domain.
-extern CFStringRef const kCSASErrorDomain;
+extern const CFStringRef kCSASErrorDomain;
 
 // Possible errors that could be returned with kCSASErrorDomain.
 
@@ -139,13 +143,6 @@ extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message);
 extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj);
 
 extern void CSASLog(CFStringRef format, ...) CF_FORMAT_FUNCTION(1, 2);
-
-extern bool CSASFindCommand(
-                            CFStringRef                 commandName,
-                            const CSASCommandSpec		commands[],
-                            size_t *                    commandIndexPtr,
-                            CFErrorRef *                errorPtr
-                            );
 
 #ifdef __cplusplus
 }

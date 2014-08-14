@@ -230,12 +230,17 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     return response;
 }
 
+@interface CSASRequestSender ()
+
+@property (nonatomic, copy) NSDictionary *commandSet;
+
+@end
+
 @implementation CSASRequestSender {
     AuthorizationRef _authRef;
-    const CSASCommandSpec *_commands;
 }
 
-- (instancetype)initWithCommandSet:(const CSASCommandSpec *)commands helperID:(NSString *)helperID error:(NSError *__autoreleasing *)error {
+- (instancetype)initWithCommandSet:(NSDictionary *)commandSet helperID:(NSString *)helperID error:(NSError *__autoreleasing *)error {
     self = [super init];
     
     if (self == nil) {
@@ -251,13 +256,13 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         return nil;
     }
     
-    if (_authRef == NULL || helperID == nil || commands == NULL || commands[0].commandName == NULL) { // there must be at least one command
+    if (_authRef == NULL || helperID == nil || commandSet == NULL || commandSet.count == 0) { // there must be at least one command
         if (error) *error = [NSError errorWithDomain:NSPOSIXErrorDomain code:EINVAL userInfo:nil];
         RELEASE(self);
         return nil;
     }
     
-    _commands = commands;
+    _commandSet = [commandSet copy];
     _helperID = [helperID copy];
     
     return self;
@@ -343,10 +348,12 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 
 - (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary *)userInfo responseHandler:(CSASResponseHandler)responseHandler {
     bool                        success = true;
-    size_t                      commandIndex;
 	AuthorizationExternalForm	extAuth;
     xpc_connection_t            connection = NULL;
     xpc_object_t 				message = NULL;
+
+    NSDictionary *              command;
+    
     CFErrorRef                  error = NULL;
     __block NSError *           connectionError = nil;
 	
@@ -365,17 +372,26 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     // single threaded, so if it's waiting for an authentication dialog for user A
     // it can't handle requests from user B.
     
-    success = CSASFindCommand(BRIDGE(CFStringRef, commandName), _commands, &commandIndex, &error);
+    command = self.commandSet[commandName];
     
-    if ( success && (_commands[commandIndex].rightName != NULL) ) {
-        AuthorizationItem   item   = { _commands[commandIndex].rightName, 0, NULL, 0 };
-        AuthorizationRights rights = { 1, &item };
+    if (command == nil) {
+        error = CSASCreateCFErrorFromErrno(EINVAL, NULL);
+        success = false;
+    }
+    
+    if (success) {
+        NSString *rightName = command[BRIDGE(NSString *, kCSASCommandSpecRightNameKey)];
         
-        OSStatus authErr = AuthorizationCopyRights(_authRef, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagPreAuthorize, NULL);
-        
-        if (authErr != errSecSuccess) {
-            success = false;
-            error = CSASCreateCFErrorFromOSStatus(authErr, NULL);
+        if (rightName != NULL) {
+            AuthorizationItem   item   = { rightName.UTF8String, 0, NULL, 0 };
+            AuthorizationRights rights = { 1, &item };
+            
+            OSStatus authErr = AuthorizationCopyRights(_authRef, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagPreAuthorize, NULL);
+            
+            if (authErr != errSecSuccess) {
+                success = false;
+                error = CSASCreateCFErrorFromOSStatus(authErr, NULL);
+            }
         }
     }
     
