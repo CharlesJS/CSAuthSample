@@ -20,6 +20,7 @@
 #include <Security/CodeSigning.h>
 #include <syslog.h>
 
+static CFURLRef gHelperURL = NULL;
 static CFDictionaryRef gInfoPlist = NULL;
 
 static CSASCommandBlock GetVersionBlock() {
@@ -50,6 +51,39 @@ static CSASCommandBlock GetVersionBlock() {
     });
 }
 
+static CSASCommandBlock RemoveHelperBlock() {
+    CSASCommandBlock block = Block_copy(^bool(AuthorizationRef                 auth,
+                                              __unused CSASCallerCredentials * creds,
+                                              __unused CFDictionaryRef         request,
+                                              __unused CFMutableDictionaryRef  response,
+                                              __unused CFMutableArrayRef       descriptorArray,
+                                              __unused CSASConnectionHandler * connectionHandler,
+                                              CFErrorRef *                     error) {
+        assert(auth != NULL);
+        
+        const size_t bufsize = PATH_MAX + 1;
+        uint8_t helperPath[bufsize];
+        
+        bool success = true;
+        
+        if (success && !CFURLGetFileSystemRepresentation(gHelperURL, true, helperPath, bufsize)) {
+            if (error) *error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, gHelperURL);
+            success = false;
+        }
+        
+        if (success && CFURLResourceIsReachable(gHelperURL, NULL)) {
+            if (unlink((const char *)helperPath) != 0) {
+                if (error) *error = CSASCreateCFErrorFromErrno(errno, gHelperURL);
+                success = false;
+            }
+        }
+        
+        return success;
+    });
+        
+    return block;
+}
+
 static CFDictionaryRef CSASCreateBuiltInCommandSetWithBlocks() {
     CFDictionaryRef builtInCommands = CSASCreateBuiltInCommandSet();
     CFIndex commandCount = CFDictionaryGetCount(builtInCommands);
@@ -70,6 +104,10 @@ static CFDictionaryRef CSASCreateBuiltInCommandSetWithBlocks() {
         
         if (CFEqual(name, CFSTR(kCSASGetVersionCommand))) {
             commandBlock = GetVersionBlock();
+        }
+        
+        if (CFEqual(name, CFSTR(kCSASRemoveHelperCommand))) {
+            commandBlock = RemoveHelperBlock();
         }
         
         assert(commandBlock != NULL);
@@ -921,7 +959,6 @@ extern int CSASHelperToolMain(
                               )
 // See comment in header.
 {
-    CFURLRef                    helperURL = NULL;
     CFStringRef                 helperID;
     char                        helperIDC[PATH_MAX];
     
@@ -931,12 +968,11 @@ extern int CSASHelperToolMain(
     
     // Get our embedded Info.plist file.
     
-    helperURL = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)argv[0], strlen(argv[0]), false);
+    gHelperURL = CFURLCreateFromFileSystemRepresentation(kCFAllocatorDefault, (const UInt8 *)argv[0], strlen(argv[0]), false);
     
-    assert(helperURL != NULL);
+    assert(gHelperURL != NULL);
     
-    gInfoPlist = CFBundleCopyInfoDictionaryForURL(helperURL);
-    CFRelease(helperURL);
+    gInfoPlist = CFBundleCopyInfoDictionaryForURL(gHelperURL);
     
     assert(gInfoPlist != NULL);
     

@@ -20,6 +20,8 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
 
 - (BOOL)blessHelperToolAndReturnError:(NSError *__autoreleasing *)error;
 
+- (void)removeHelperTool:(void (^)(NSError *errorOrNil))handler;
+
 - (void)requestHelperVersion:(void (^)(NSString *version, NSError *errorOrNil))handler;
 
 - (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary *)userInfo responseHandler:(CSASResponseHandler)responseHandler;

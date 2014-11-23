@@ -113,6 +113,11 @@ CFDictionaryRef CSASCommandSpecCreate(CFStringRef commandName,
 // response keys
 #define kCSASGetVersionResponse		  "Version"                   // CFNumber
 
+// "UninstallHelper" uninstalls the helper tool. This never requires authorization.
+
+#define kCSASRemoveHelperCommand      "RemoveHelper"
+#define kCSASRemoveHelperRightName    "com.charlessoft.CSAuthSample.RemoveHelper"
+
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Utility Routines
 

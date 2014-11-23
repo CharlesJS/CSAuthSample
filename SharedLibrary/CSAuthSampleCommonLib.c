@@ -543,12 +543,22 @@ extern void CF_FORMAT_FUNCTION(1, 2) CSASLog(CFStringRef format, ...) {
 }
 
 extern CFDictionaryRef CSASCreateBuiltInCommandSet() {
-    CFStringRef name = CFSTR(kCSASGetVersionCommand);
-    CFDictionaryRef commandSpec = CSASCommandSpecCreate(name, CFSTR(kCSASGetVersionRightName), CFSTR(kCSASRuleAllow), 0, NULL, NULL, NULL);
+    const size_t count = 2;
     
-    CFDictionaryRef newCommandSet = CFDictionaryCreate(kCFAllocatorDefault, (const void **)&name, (const void **)&commandSpec, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    CFStringRef names[count];
+    CFDictionaryRef specs[count];
     
-    CFRelease(commandSpec);
+    names[0] = CFSTR(kCSASGetVersionCommand);
+    specs[0] = CSASCommandSpecCreate(names[0], CFSTR(kCSASGetVersionRightName), CFSTR(kCSASRuleAllow), 0, NULL, NULL, NULL);
+    
+    names[1] = CFSTR(kCSASRemoveHelperCommand);
+    specs[1] = CSASCommandSpecCreate(names[1], CFSTR(kCSASRemoveHelperRightName), CFSTR(kCSASRuleAllow), 0, NULL, NULL, NULL);
+    
+    CFDictionaryRef newCommandSet = CFDictionaryCreate(kCFAllocatorDefault, (const void **)names, (const void **)specs, count, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+    
+    for (size_t i = 0; i < count; i++) {
+        CFRelease(specs[i]);
+    }
     
     return newCommandSet;
 }

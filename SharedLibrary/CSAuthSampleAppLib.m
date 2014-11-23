@@ -303,14 +303,14 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 	} else {
         CFErrorRef smError = NULL;
         
-        SMJobRemove(kSMDomainSystemLaunchd, BRIDGE(CFStringRef, self.helperID), _authRef, YES, NULL);
+        [self syncRemoveHelperTool:error];
         
         /* This does all the work of verifying the helper tool against the application
-		 * and vice-versa. Once verification has passed, the embedded launchd.plist
-		 * is extracted and placed in /Library/LaunchDaemons and then loaded. The
-		 * executable is placed in /Library/PrivilegedHelperTools.
-		 */
-		success = SMJobBless(kSMDomainSystemLaunchd, BRIDGE(CFStringRef, self.helperID), _authRef, &smError);
+         * and vice-versa. Once verification has passed, the embedded launchd.plist
+         * is extracted and placed in /Library/LaunchDaemons and then loaded. The
+         * executable is placed in /Library/PrivilegedHelperTools.
+         */
+        success = SMJobBless(kSMDomainSystemLaunchd, BRIDGE(CFStringRef, self.helperID), _authRef, &smError);
         
         if (!success) {
             if (error != NULL) {
@@ -320,8 +320,46 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
             }
         }
     }
-    
+
 	return success;
+}
+
+- (void)removeHelperTool:(void (^)(NSError *))handler {
+    NSString *helperID = self.helperID;
+    AuthorizationRef authRef = _authRef;
+    
+    [self executeCommandInHelperTool:@kCSASRemoveHelperCommand userInfo:nil responseHandler:^(__unused NSDictionary *response, __unused NSArray *handles, __unused CSASHelperConnection *persistentConnection, NSError *errorOrNil) {
+        CFErrorRef smError = NULL;
+        if (!SMJobRemove(kSMDomainSystemLaunchd, BRIDGE(CFStringRef, helperID), authRef, YES, &smError)) {
+            errorOrNil = CFBridgingRelease(smError);
+        }
+        
+        if (handler == nil) {
+            return;
+        }
+        
+        handler(errorOrNil);
+    }];
+}
+
+- (BOOL)syncRemoveHelperTool:(NSError * __autoreleasing *)error {
+    dispatch_semaphore_t semaphore = dispatch_semaphore_create(0);
+    __block NSError *outError;
+    
+    [self removeHelperTool:^(NSError *errorOrNil) {
+        outError = errorOrNil;
+        
+        dispatch_semaphore_signal(semaphore);
+    }];
+    
+    dispatch_semaphore_wait(semaphore, DISPATCH_TIME_FOREVER);
+    
+    if (outError != nil) {
+        if (error) *error = outError;
+        return NO;
+    }
+    
+    return YES;
 }
 
 - (void)requestHelperVersion:(void (^)(NSString *, NSError *))handler {
