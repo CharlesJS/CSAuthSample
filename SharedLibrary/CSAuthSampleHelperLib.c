@@ -327,7 +327,7 @@ static bool CSASHandleCommand(
         commandSpec = CFDictionaryGetValue(commandSet, commandName);
         
         if (commandSpec == NULL) {
-            if (errorPtr) *errorPtr = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
+            error = CSASCreateCFErrorFromOSStatus(coreFoundationUnknownErr, NULL);
             success = false;
         }
     }
@@ -990,14 +990,14 @@ extern int CSASHelperToolMain(
     helperID = CFDictionaryGetValue(gInfoPlist, kCFBundleIdentifierKey);
     
     if ( helperID == NULL || ! CFStringGetFileSystemRepresentation(helperID, helperIDC, sizeof(helperIDC)) ) {
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
     
     xpc_connection_t service = xpc_connection_create_mach_service(helperIDC, NULL, XPC_CONNECTION_MACH_SERVICE_LISTENER);
     
     if (!service) {
         syslog(LOG_NOTICE, "Failed to create service.");
-        return EXIT_FAILURE;
+        exit(EXIT_FAILURE);
     }
     
     xpc_connection_set_event_handler(service, ^(xpc_object_t connection) {
