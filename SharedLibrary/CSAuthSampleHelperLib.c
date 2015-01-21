@@ -1,5 +1,5 @@
 // CSAuthSampleHelperLib.c
-// Copyright Charles Srstka, 2013-2014.
+// Copyright Charles Srstka, 2013-2015.
 // Based on "BetterAuthorizationSampleLib.c" by Apple Computer.
 
 #include "CSAuthSampleHelperLib.h"
