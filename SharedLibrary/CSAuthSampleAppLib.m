@@ -290,8 +290,8 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 	AuthorizationItem authItem		= { kSMRightBlessPrivilegedHelper, 0, NULL, 0 };
 	AuthorizationRights authRights	= { 1, &authItem };
 	AuthorizationFlags flags		= (kAuthorizationFlagDefaults             |
-                                       kAuthorizationFlagInteractionAllowed	|
-                                       kAuthorizationFlagPreAuthorize			|
+                                       kAuthorizationFlagInteractionAllowed	  |
+                                       kAuthorizationFlagPreAuthorize         |
                                        kAuthorizationFlagExtendRights
                                        );
 	

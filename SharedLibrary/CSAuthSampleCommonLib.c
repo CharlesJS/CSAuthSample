@@ -452,7 +452,7 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
             }
         }
         
-        xpc_object_t message = xpc_dictionary_create((const char **)xpcKeys, xpcObjs, xpcCount);
+        xpc_object_t message = xpc_dictionary_create((const char * const *)xpcKeys, xpcObjs, xpcCount);
         
         for (size_t i = 0; i < xpcCount; i++) {
             free((void *)xpcKeys[i]);
