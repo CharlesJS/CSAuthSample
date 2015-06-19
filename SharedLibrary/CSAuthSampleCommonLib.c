@@ -139,6 +139,21 @@ static CFMutableDictionaryRef CSASCreateErrorUserInfoForURL(CFURLRef url) {
     return userInfo;
 }
 
+static CFTimeInterval CSASUNIXEpoch() {
+    CFCalendarRef calendar = CFCalendarCreateWithIdentifier(kCFAllocatorDefault, kCFGregorianCalendar);
+    CFTimeZoneRef timeZone = CFTimeZoneCreateWithName(kCFAllocatorDefault, CFSTR("UTC"), true);
+    CFAbsoluteTime epoch = 0;
+    
+    CFCalendarSetTimeZone(calendar, timeZone);
+    
+    CFCalendarComposeAbsoluteTime(calendar, &epoch, "yMdHms", 1970, 1, 1, 0, 0, 0);
+    
+    CFRelease(timeZone);
+    CFRelease(calendar);
+    
+    return epoch;
+}
+
 extern CFErrorRef CSASCreateCFErrorFromErrno(int errNum, CFURLRef url) {
     CFDictionaryRef userInfo = CSASCreateErrorUserInfoForURL(url);
     
@@ -241,10 +256,7 @@ extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message) {
         int64_t sec = nsSince1970 / NSEC_PER_SEC;
         int64_t ns = nsSince1970 % NSEC_PER_SEC;
         
-        CFGregorianDate jan1970 = { 1970, 01, 01, 00, 00, 00 };
-        CFAbsoluteTime absJan1970 = CFGregorianDateGetAbsoluteTime(jan1970, NULL);
-        
-        CFAbsoluteTime absTime = absJan1970 + (CFAbsoluteTime)sec + ((CFAbsoluteTime)ns / (CFAbsoluteTime)NSEC_PER_SEC);
+        CFAbsoluteTime absTime = CSASUNIXEpoch() + (CFAbsoluteTime)sec + ((CFAbsoluteTime)ns / (CFAbsoluteTime)NSEC_PER_SEC);
         
         return CFDateCreate(kCFAllocatorDefault, absTime);
     } else if (type == XPC_TYPE_DATA) {
@@ -366,10 +378,7 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
     } else if (type == CFDateGetTypeID()) {
         CFAbsoluteTime absTime = CFDateGetAbsoluteTime(obj);
         
-        CFGregorianDate jan1970 = { 1970, 01, 01, 00, 00, 00 };
-        CFAbsoluteTime absJan1970 = CFGregorianDateGetAbsoluteTime(jan1970, NULL);
-        
-        CFAbsoluteTime timeSince1970 = absTime - absJan1970;
+        CFAbsoluteTime timeSince1970 = absTime - CSASUNIXEpoch();
         
         double iPart = 0.0;
         double fPart = modf(timeSince1970, &iPart);
