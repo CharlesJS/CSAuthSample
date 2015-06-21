@@ -130,7 +130,7 @@ extern const CFStringRef kCSASErrorDomain;
 
 // Possible errors that could be returned with kCSASErrorDomain.
 
-enum {
+typedef CF_ENUM(unsigned int, CSASError) {
     kCSASErrorSuccess,
     kCSASErrorConnectionInterrupted,
     kCSASErrorConnectionInvalid,
