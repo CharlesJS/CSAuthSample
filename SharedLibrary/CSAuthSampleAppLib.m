@@ -425,7 +425,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
         NSString *rightName = command[BRIDGE(NSString *, kCSASCommandSpecRightNameKey)];
         
         if (rightName != NULL) {
-            AuthorizationItem   item   = { rightName.UTF8String, 0, NULL, 0 };
+            AuthorizationItem   item   = { (const char * _Nonnull)rightName.UTF8String, 0, NULL, 0 };
             AuthorizationRights rights = { 1, &item };
             
             OSStatus authErr = AuthorizationCopyRights(_authRef, &rights, kAuthorizationEmptyEnvironment, kAuthorizationFlagExtendRights | kAuthorizationFlagInteractionAllowed | kAuthorizationFlagPreAuthorize, NULL);
