@@ -7,13 +7,13 @@
 
 @class CSASHelperConnection;
 
-typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles, CSASHelperConnection *persistentConnection, NSError *errorOrNil);
+typedef void (^CSASResponseHandler)(NSDictionary<NSString *, id> *response, NSArray<NSFileHandle *> *fileHandles, CSASHelperConnection *persistentConnection, NSError *errorOrNil);
 
 @interface CSASRequestSender : NSObject
 
 @property (strong) NSOperationQueue *operationQueue;
 
-- (instancetype)initWithCommandSet:(NSDictionary *)commandSet helperID:(NSString *)helperID error:(NSError *__autoreleasing *)error;
+- (instancetype)initWithCommandSet:(NSDictionary<NSString *, NSDictionary<NSString *, id> *> *)commandSet helperID:(NSString *)helperID error:(NSError *__autoreleasing *)error;
 
 // Make sure this is called before your application exits.
 - (void)cleanUp;
@@ -24,7 +24,7 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
 
 - (void)requestHelperVersion:(void (^)(NSString *version, NSError *errorOrNil))handler;
 
-- (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary *)userInfo responseHandler:(CSASResponseHandler)responseHandler;
+- (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary<NSString *, id> *)userInfo responseHandler:(CSASResponseHandler)responseHandler;
 
 @end
 
@@ -32,7 +32,7 @@ typedef void (^CSASResponseHandler)(NSDictionary *response, NSArray *fileHandles
 
 @property (readonly) BOOL isValid;
 
-- (void)sendMessage:(NSDictionary *)message responseHandler:(CSASResponseHandler)responseHandler;
+- (void)sendMessage:(NSDictionary<NSString *, id> *)message responseHandler:(CSASResponseHandler)responseHandler;
 
 - (void)closeConnection;
 

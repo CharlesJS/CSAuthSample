@@ -141,7 +141,7 @@ static NSError *CSASConvertedError(NSError *error) {
     }
     
     if (converted) {
-        NSMutableDictionary *userInfo = error.userInfo.mutableCopy;
+        NSMutableDictionary<NSString *, id> *userInfo = error.userInfo.mutableCopy;
         
         userInfo[NSUnderlyingErrorKey] = error;
         
@@ -173,8 +173,8 @@ static NSError *CSASErrorFromXPCEvent(xpc_object_t event) {
     return error;
 }
 
-static NSArray *CSASFileHandlesFromXPCReply(xpc_object_t reply) {
-    NSMutableArray *handleArray = [NSMutableArray array];
+static NSArray<NSFileHandle *> *CSASFileHandlesFromXPCReply(xpc_object_t reply) {
+    NSMutableArray<NSFileHandle *> *handleArray = [NSMutableArray array];
     xpc_object_t descriptorArray = xpc_dictionary_get_value(reply, kCSASDescriptorArrayKey);
     size_t descriptorCount = 0;
     
@@ -197,9 +197,9 @@ static NSArray *CSASFileHandlesFromXPCReply(xpc_object_t reply) {
     return handleArray;
 }
 
-static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandlesPtr, NSError **errorPtr) {
-    NSDictionary *response = NULL;
-    NSArray *fileHandles = nil;
+static NSDictionary<NSString *, id> *CSASHandleXPCReply(xpc_object_t reply, NSArray<NSFileHandle *> **fileHandlesPtr, NSError **errorPtr) {
+    NSDictionary<NSString *, id> *response = NULL;
+    NSArray<NSFileHandle *> *fileHandles = nil;
     bool success = true;
     NSError *error = NULL;
     
@@ -232,7 +232,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 
 @interface CSASRequestSender ()
 
-@property (nonatomic, copy) NSDictionary *commandSet;
+@property (nonatomic, copy) NSDictionary<NSString *, NSDictionary<NSString *, id> *> *commandSet;
 
 @end
 
@@ -240,7 +240,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     AuthorizationRef _authRef;
 }
 
-- (instancetype)initWithCommandSet:(NSDictionary *)commandSet helperID:(NSString *)helperID error:(NSError *__autoreleasing *)error {
+- (instancetype)initWithCommandSet:(NSDictionary<NSString *, NSDictionary<NSString *, id> *> *)commandSet helperID:(NSString *)helperID error:(NSError *__autoreleasing *)error {
     self = [super init];
     
     if (self == nil) {
@@ -328,7 +328,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     NSString *helperID = self.helperID;
     AuthorizationRef authRef = _authRef;
     
-    [self executeCommandInHelperTool:@kCSASRemoveHelperCommand userInfo:nil responseHandler:^(__unused NSDictionary *response, __unused NSArray *handles, __unused CSASHelperConnection *persistentConnection, NSError *errorOrNil) {
+    [self executeCommandInHelperTool:@kCSASRemoveHelperCommand userInfo:nil responseHandler:^(__unused NSDictionary<NSString *, id> *response, __unused NSArray<NSFileHandle *> *handles, __unused CSASHelperConnection *persistentConnection, NSError *errorOrNil) {
         CFErrorRef smError = NULL;
         if (!SMJobRemove(kSMDomainSystemLaunchd, BRIDGE(CFStringRef, helperID), authRef, YES, &smError)) {
             errorOrNil = CFBridgingRelease(smError);
@@ -363,7 +363,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
 }
 
 - (void)requestHelperVersion:(void (^)(NSString *, NSError *))handler {
-    [self executeCommandInHelperTool:@kCSASGetVersionCommand userInfo:nil responseHandler:^(NSDictionary *response, __unused NSArray *fileHandles, __unused CSASHelperConnection *persistentConnection, NSError *errorOrNil) {
+    [self executeCommandInHelperTool:@kCSASGetVersionCommand userInfo:nil responseHandler:^(NSDictionary<NSString *, id> *response, __unused NSArray<NSFileHandle *> *fileHandles, __unused CSASHelperConnection *persistentConnection, NSError *errorOrNil) {
         if (handler == nil) {
             return;
         }
@@ -384,13 +384,13 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     }];
 }
 
-- (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary *)userInfo responseHandler:(CSASResponseHandler)responseHandler {
+- (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary<NSString *, id> *)userInfo responseHandler:(CSASResponseHandler)responseHandler {
     bool                        success = true;
 	AuthorizationExternalForm	extAuth;
     xpc_connection_t            connection = NULL;
     xpc_object_t 				message = NULL;
 
-    NSDictionary *              command;
+    NSDictionary<NSString *, id> *              command;
     
     CFErrorRef                  error = NULL;
     __block NSError *           connectionError = nil;
@@ -515,8 +515,8 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     
     if (success) {
         xpc_connection_send_message_with_reply(connection, message, DISPATCH_TARGET_QUEUE_DEFAULT, ^(xpc_object_t reply) {
-            NSDictionary *response = nil;
-            NSArray *fileHandles = nil;
+            NSDictionary<NSString *, id> *response = nil;
+            NSArray<NSFileHandle *> *fileHandles = nil;
             CSASHelperConnection *helperConnection = nil;
             bool replySuccess = true;
             NSError *replyError = nil;
@@ -628,7 +628,7 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
     SUPER_DEALLOC;
 }
 
-- (void)sendMessage:(NSDictionary *)messageDict responseHandler:(CSASResponseHandler)responseHandler {
+- (void)sendMessage:(NSDictionary<NSString *, id> *)messageDict responseHandler:(CSASResponseHandler)responseHandler {
     xpc_object_t message = nil;
     NSError *error = nil;
     bool success = true;
@@ -662,9 +662,9 @@ static NSDictionary *CSASHandleXPCReply(xpc_object_t reply, NSArray **fileHandle
             if (self.connectionError != nil) {
                 responseHandler(nil, nil, nil, self.connectionError);
             } else {
-                NSArray *fileHandles = nil;
+                NSArray<NSFileHandle *> *fileHandles = nil;
                 NSError *replyError = nil;
-                NSDictionary *response = CSASHandleXPCReply(reply, &fileHandles, &replyError);
+                NSDictionary<NSString *, id> *response = CSASHandleXPCReply(reply, &fileHandles, &replyError);
                 
                 if (response == nil) {
                     responseHandler(nil, nil, nil, replyError);
