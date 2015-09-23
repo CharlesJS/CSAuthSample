@@ -7,24 +7,24 @@
 
 @class CSASHelperConnection;
 
-typedef void (^CSASResponseHandler)(NSDictionary<NSString *, id> *response, NSArray<NSFileHandle *> *fileHandles, CSASHelperConnection *persistentConnection, NSError *errorOrNil);
+typedef void (^CSASResponseHandler)(NSDictionary<NSString *, id> * _Nonnull response, NSArray<NSFileHandle *> * _Nonnull fileHandles, CSASHelperConnection * _Nullable persistentConnection, NSError * _Nullable errorOrNil);
 
 @interface CSASRequestSender : NSObject
 
-@property (strong) NSOperationQueue *operationQueue;
+@property (strong, nullable) NSOperationQueue *operationQueue;
 
-- (instancetype)initWithCommandSet:(NSDictionary<NSString *, NSDictionary<NSString *, id> *> *)commandSet helperID:(NSString *)helperID error:(NSError *__autoreleasing *)error;
+- (nullable instancetype)initWithCommandSet:(nonnull NSDictionary<NSString *, NSDictionary<NSString *, id> *> *)commandSet helperID:(nonnull NSString *)helperID error:(NSError * _Nullable __autoreleasing * _Nullable)error;
 
 // Make sure this is called before your application exits.
 - (void)cleanUp;
 
-- (BOOL)blessHelperToolAndReturnError:(NSError *__autoreleasing *)error;
+- (BOOL)blessHelperToolAndReturnError:(NSError * _Nullable __autoreleasing * _Nullable)error;
 
-- (void)removeHelperTool:(void (^)(NSError *errorOrNil))handler;
+- (void)removeHelperTool:(nullable void (^)(NSError * _Nullable errorOrNil))handler;
 
-- (void)requestHelperVersion:(void (^)(NSString *version, NSError *errorOrNil))handler;
+- (void)requestHelperVersion:(nonnull void (^)(NSString * _Nonnull version, NSError * _Nonnull errorOrNil))handler;
 
-- (void)executeCommandInHelperTool:(NSString *)commandName userInfo:(NSDictionary<NSString *, id> *)userInfo responseHandler:(CSASResponseHandler)responseHandler;
+- (void)executeCommandInHelperTool:(nonnull NSString *)commandName userInfo:(nullable NSDictionary<NSString *, id> *)userInfo responseHandler:(nullable CSASResponseHandler)responseHandler;
 
 @end
 
@@ -32,7 +32,7 @@ typedef void (^CSASResponseHandler)(NSDictionary<NSString *, id> *response, NSAr
 
 @property (readonly) BOOL isValid;
 
-- (void)sendMessage:(NSDictionary<NSString *, id> *)message responseHandler:(CSASResponseHandler)responseHandler;
+- (void)sendMessage:(nonnull NSDictionary<NSString *, id> *)message responseHandler:(nullable CSASResponseHandler)responseHandler;
 
 - (void)closeConnection;
 

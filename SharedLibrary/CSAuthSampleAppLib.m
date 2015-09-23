@@ -542,7 +542,7 @@ static NSDictionary<NSString *, id> *CSASHandleXPCReply(xpc_object_t reply, NSAr
                 if (replySuccess) {
                     responseHandler(response, fileHandles, helperConnection, nil);
                 } else {
-                    responseHandler(nil, nil, nil, CSASConvertedError(replyError));
+                    responseHandler(@{}, @[], nil, CSASConvertedError(replyError));
                 }
             };
             
@@ -562,7 +562,7 @@ static NSDictionary<NSString *, id> *CSASHandleXPCReply(xpc_object_t reply, NSAr
     // If something failed, let the user know.
     
     if (!success) {
-        if (responseHandler != nil) responseHandler(nil, nil, nil, CSASConvertedError(BRIDGE(NSError *, error)));
+        if (responseHandler != nil) responseHandler(@{}, @[], nil, CSASConvertedError(BRIDGE(NSError *, error)));
         
         if (error != NULL) {
             CFRelease(error);
@@ -660,14 +660,14 @@ static NSDictionary<NSString *, id> *CSASHandleXPCReply(xpc_object_t reply, NSAr
     if (success) {
         xpc_connection_send_message_with_reply(_connection, message, dispatch_get_main_queue(), ^(xpc_object_t reply) {
             if (self.connectionError != nil) {
-                responseHandler(nil, nil, nil, self.connectionError);
+                responseHandler(@{}, @[], nil, self.connectionError);
             } else {
                 NSArray<NSFileHandle *> *fileHandles = nil;
                 NSError *replyError = nil;
                 NSDictionary<NSString *, id> *response = CSASHandleXPCReply(reply, &fileHandles, &replyError);
                 
                 if (response == nil) {
-                    responseHandler(nil, nil, nil, replyError);
+                    responseHandler(@{}, @[], nil, replyError);
                 } else {
                     responseHandler(response, fileHandles, nil, nil);
                 }
@@ -676,7 +676,7 @@ static NSDictionary<NSString *, id> *CSASHandleXPCReply(xpc_object_t reply, NSAr
     }
     
     if (!success) {
-        responseHandler(nil, nil, nil, error);
+        responseHandler(@{}, @[], nil, error);
     }
     
     if (message != NULL) {
