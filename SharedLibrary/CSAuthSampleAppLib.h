@@ -22,7 +22,7 @@ typedef void (^CSASResponseHandler)(NSDictionary<NSString *, id> * _Nonnull resp
 
 - (void)removeHelperTool:(nullable void (^)(NSError * _Nullable errorOrNil))handler;
 
-- (void)requestHelperVersion:(nonnull void (^)(NSString * _Nonnull version, NSError * _Nonnull errorOrNil))handler;
+- (void)requestHelperVersion:(nonnull void (^)(NSString * _Nonnull version, NSError * _Nullable errorOrNil))handler;
 
 - (void)executeCommandInHelperTool:(nonnull NSString *)commandName userInfo:(nullable NSDictionary<NSString *, id> *)userInfo responseHandler:(nullable CSASResponseHandler)responseHandler;
 
