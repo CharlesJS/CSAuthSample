@@ -1,5 +1,5 @@
 // CSAuthSampleAppLib.h
-// Copyright Charles Srstka, 2013-2015.
+// Copyright Charles Srstka, 2013-2016.
 // Based on "BetterAuthorizationSampleLib.h" by Apple Computer.
 
 #import <Foundation/Foundation.h>

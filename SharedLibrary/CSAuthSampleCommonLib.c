@@ -1,5 +1,5 @@
 // CSAuthSampleCommonLib.c
-// Copyright Charles Srstka, 2013-2015.
+// Copyright Charles Srstka, 2013-2016.
 // Based on "BetterAuthorizationSampleLib.c" by Apple Computer.
 
 #include <sys/ucred.h>
