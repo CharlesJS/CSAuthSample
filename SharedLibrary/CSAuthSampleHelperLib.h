@@ -56,9 +56,9 @@ extern int CSASHelperToolMain(
 
 extern CFDictionaryRef CSASCommandSpecCreateCopyWithBlock(CFDictionaryRef commandSpec, CSASCommandBlock commandBlock);
 
-extern CFDictionaryRef CSASGetHelperToolInfoPlist();
+extern CFDictionaryRef CSASGetHelperToolInfoPlist(void);
 
-extern void CSASWatchdogEnableAutomaticTermination();
-extern void CSASWatchdogDisableAutomaticTermination();
+extern void CSASWatchdogEnableAutomaticTermination(void);
+extern void CSASWatchdogDisableAutomaticTermination(void);
 
 #endif

@@ -149,7 +149,7 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj);
 
 extern void CSASLog(CFStringRef format, ...) CF_FORMAT_FUNCTION(1, 2);
 
-extern CFDictionaryRef CSASCreateBuiltInCommandSet();
+extern CFDictionaryRef CSASCreateBuiltInCommandSet(void);
 
 #ifdef __cplusplus
 }

@@ -538,7 +538,7 @@ static NSDictionary<NSString *, id> *CSASHandleXPCReply(xpc_object_t reply, NSAr
                 helperConnection = AUTORELEASE([[CSASHelperConnection alloc] initWithXPCConnection:connection]);
             }
             
-            void (^completionHandler)() = ^{
+            void (^completionHandler)(void) = ^{
                 if (replySuccess) {
                     responseHandler(response, fileHandles, helperConnection, nil);
                 } else {
