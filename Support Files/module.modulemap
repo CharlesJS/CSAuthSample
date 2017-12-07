@@ -1,0 +1,4 @@
+module CSAuthSampleCommon {
+    header "../SharedLibrary/CSAuthSampleCommonLib.h"
+    export *
+}
