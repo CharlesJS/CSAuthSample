@@ -415,9 +415,9 @@ extension CocoaError.Code {
     }
 }
 
-extension CSASError: Error {
-    public static var domain: String { return kCSASErrorDomain as String }
-    public var code: Int { return Int(self.rawValue) }
+extension CSASError: CustomNSError {
+    public static var errorDomain: String { return kCSASErrorDomain as String }
+    public var errorCode: Int { return Int(self.rawValue) }
 }
     
 extension xpc_object_t {
@@ -440,7 +440,7 @@ extension xpc_object_t {
             return []
         }
         
-        return (0..<xpc_array_get_count(descriptors)).flatMap {
+        return (0..<xpc_array_get_count(descriptors)).compactMap {
             let fd = xpc_array_dup_fd(descriptors, $0)
             
             if fd < 0 { return nil }
