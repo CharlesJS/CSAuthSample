@@ -37,7 +37,7 @@ const CFStringRef kCSASCommandSpecExecutionBlockKey = CFSTR("ExecutionBlock");
 
 // For encoding NSURLs and NSErrors in a manner that will allow them to be passed along the message port without complaints.
 
-static const char * const kCSASEncodedURLKey = "kCSAuthSampleEncodedeURLKey";
+static const char * const kCSASEncodedURLKey = "kCSAuthSampleEncodedURLKey";
 static const char * const kCSASEncodedErrorKey = "kCSASEncodedErrorKey";
 
 /////////////////////////////////////////////////////////////////
@@ -483,6 +483,7 @@ extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) {
         
         xpc_object_t message = CSASCreateXPCMessageFromCFType(errorDict);
         
+        CFRelease(errorDict);
         CFRelease(key);
         CFRelease(url);
         
