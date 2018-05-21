@@ -358,7 +358,8 @@ public class CSASRequestSender {
 
     private static func handleXPCReply(_ reply: xpc_object_t) throws -> (response: [String : Any], fileHandles: [FileHandle]) {
         guard let response = reply[kCSASRequestKey] as? [String : Any] else {
-            if let err = reply[kCSASErrorKey] as? Error {
+            // SR-7732: Casting to 'Error' results in a leak
+            if let err = reply[kCSASErrorKey] as? NSError {
                 throw self.convertError(err)
             } else {
                 throw CocoaError(.fileReadUnknown)
