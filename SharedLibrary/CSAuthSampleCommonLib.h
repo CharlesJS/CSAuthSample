@@ -16,6 +16,12 @@ extern "C" {
 #endif
 #endif
 
+#ifdef __OBJC__
+#define RETURNS_RETAINED __attribute__((ns_returns_retained))
+#else
+#define RETURNS_RETAINED
+#endif
+
 /////////////////////////////////////////////////////////////////
 #pragma mark ***** Command Specification Dictionary Keys
 
@@ -145,7 +151,7 @@ extern char *CSASCreateFileSystemRepresentationForURL(CFURLRef url, CFErrorRef *
 extern char *CSASCreateFileSystemRepresentationForPath(CFStringRef path);
 
 extern CFTypeRef CSASCreateCFTypeFromXPCMessage(xpc_object_t message);
-extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj);
+extern xpc_object_t CSASCreateXPCMessageFromCFType(CFTypeRef obj) RETURNS_RETAINED;
 
 extern void CSASLog(CFStringRef format, ...) CF_FORMAT_FUNCTION(1, 2);
 

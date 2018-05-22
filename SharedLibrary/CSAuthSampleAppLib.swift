@@ -456,16 +456,10 @@ extension xpc_object_t {
         }
         set {
             let xpcMessage = newValue.flatMap {
-                sr7734_createXPC($0 as CFTypeRef).takeRetainedValue() as? xpc_object_t
+                CSASCreateXPCMessageFromCFType($0 as CFTypeRef)
             }
             
             xpc_dictionary_set_value(self, key, xpcMessage)
         }
     }
 }
-
-// Workaround for SR-7734
-private let sr7734_createXPC: @convention(c) (Optional<AnyObject>) -> Unmanaged<AnyObject> = {
-    let sym = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "CSASCreateXPCMessageFromCFType")!
-    return unsafeBitCast(sym, to: (@convention(c) (Optional<AnyObject>) -> Unmanaged<AnyObject>).self)
-}()
