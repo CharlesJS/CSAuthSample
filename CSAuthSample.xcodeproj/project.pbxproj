@@ -186,6 +186,11 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0930;
+				TargetAttributes = {
+					28116D4B16ABD7F80046A911 = {
+						LastSwiftMigration = 1000;
+					};
+				};
 			};
 			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "CSAuthSample" */;
 			compatibilityVersion = "Xcode 8.0";
@@ -253,7 +258,7 @@
 				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 				SWIFT_INCLUDE_PATHS = "$SRCROOT/\"Support Files\"";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = Debug;
 		};
@@ -279,7 +284,7 @@
 				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 				SWIFT_INCLUDE_PATHS = "$SRCROOT/\"Support Files\"";
-				SWIFT_VERSION = 4.0;
+				SWIFT_VERSION = 4.2;
 			};
 			name = Release;
 		};
@@ -419,7 +424,6 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				PROVISIONING_PROFILE = "";
 				SKIP_INSTALL = YES;
-				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
 				WARNING_CFLAGS = (
 					"-Weverything",
