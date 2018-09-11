@@ -12,11 +12,22 @@ import CSASCommon
 public struct HelperClient {
     private let authRef: AuthorizationRef
 
-    public init(commandSet: CommandSet, bundle: Bundle? = nil, tableName: String? = nil) throws {
-        var authRef: AuthorizationRef? = nil
-        let err = AuthorizationCreate(nil, nil, [], &authRef)
-        if err != errSecSuccess { throw HelperClient.convertOSStatus(err) }
-        self.authRef = try authRef ?? { throw CocoaError(.fileReadUnknown) }()
+    public init(authData: Data? = nil, commandSet: CommandSet, bundle: Bundle? = nil, tableName: String? = nil) throws {
+        if let data = authData {
+            self.authRef = try data.withUnsafeBytes { (extForm: UnsafePointer<AuthorizationExternalForm>) -> AuthorizationRef in
+                var authRef: AuthorizationRef? = nil
+                
+                let err = AuthorizationCreateFromExternalForm(extForm, &authRef)
+                if err != errSecSuccess { throw HelperClient.convertOSStatus(err) }
+                
+                return try authRef ?? { throw CocoaError(.fileReadUnknown) }()
+            }
+        } else {
+            var authRef: AuthorizationRef? = nil
+            let err = AuthorizationCreate(nil, nil, [], &authRef)
+            if err != errSecSuccess { throw HelperClient.convertOSStatus(err) }
+            self.authRef = try authRef ?? { throw CocoaError(.fileReadUnknown) }()
+        }
         
         commandSet.setupAuthorizationRights(self.authRef, bundle: bundle, tableName: tableName)
     }
