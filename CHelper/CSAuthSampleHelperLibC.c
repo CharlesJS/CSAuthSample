@@ -2,7 +2,7 @@
 // Copyright Charles Srstka, 2013-2018.
 // Based on "BetterAuthorizationSampleLib.c" by Apple Computer.
 
-#include "CSAuthSampleHelperLib.h"
+#include "CSAuthSampleHelperLibC.h"
 
 // At runtime CSAS only requires CoreFoundation.  However, at build time we need
 // CoreServices for the various OSStatus error codes in "MacErrors.h".  Thus, by default,
@@ -157,12 +157,6 @@ static void CSASCancelWatchdog() {
     }
 }
 
-/*static void CSASCleanupWatchdog() {
- CSASCancelWatchdog();
- dispatch_release(gWatchdogQueue);
- gWatchdogQueue = NULL;
- }*/
-
 static void CSASRestartWatchdog() {
     if (gTimeoutInterval != 0) {
         gWatchdogSource = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, gWatchdogQueue);
@@ -176,10 +170,6 @@ static void CSASRestartWatchdog() {
         dispatch_resume(gWatchdogSource);
     }
 }
-
-#if ! defined(NDEBUG)
-
-#endif
 
 // write file descriptors to the XPC message
 
@@ -1019,15 +1009,6 @@ extern int CSASHelperToolMain(
     xpc_connection_resume(service);
     
     dispatch_main();
-    
-    // we'll never get here, but eh, release stuff anyway
-    // (actually, don't, since the compiler gives a warning that the code will never be executed)
-    
-    /*xpc_release(service);
-     
-     CSASCleanupWatchdog();
-     
-     return EXIT_SUCCESS;*/
 }
 
 extern CFDictionaryRef CSASCommandSpecCreateCopyWithBlock(CFDictionaryRef commandSpec, CSASCommandBlock commandBlock) {

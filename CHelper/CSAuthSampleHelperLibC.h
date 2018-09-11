@@ -5,7 +5,7 @@
 #ifndef CSAuthSampleHelperLib_h
 #define CSAuthSampleHelperLib_h
 
-#include "CSAuthSampleCommonLib.h"
+#include "CSAuthSampleCommonLibC.h"
 #include <CoreFoundation/CoreFoundation.h>
 
 /*!

@@ -1,9 +1,10 @@
 // CSAuthSampleAppLib.swift
+// For use with C-based helper tool.
 // Copyright Charles Srstka, 2013-2018.
 // Based on "BetterAuthorizationSampleLib.c" by Apple Computer.
 
 import Foundation
-import CSAuthSampleCommon
+import CSAuthSampleCCommon
 import ServiceManagement
 
 public class CSASRequestSender {
