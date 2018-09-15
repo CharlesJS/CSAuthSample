@@ -7,13 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		28116D5A16ABD81D0046A911 /* CSAuthSampleAppLibCHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28978DC81699251900134EC1 /* CSAuthSampleAppLibCHelper.swift */; };
-		28116D5B16ABD81D0046A911 /* CSAuthSampleCommonLibC.h in Headers */ = {isa = PBXBuildFile; fileRef = 28C4DA891692686C00BBB7D2 /* CSAuthSampleCommonLibC.h */; };
-		28116D5C16ABD81D0046A911 /* CSAuthSampleCommonLibC.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C4DA881692686C00BBB7D2 /* CSAuthSampleCommonLibC.c */; };
-		28116D6516ABD8A80046A911 /* CSAuthSampleHelperLibC.h in Headers */ = {isa = PBXBuildFile; fileRef = 28116CED16AB851C0046A911 /* CSAuthSampleHelperLibC.h */; };
-		28116D6616ABD8A80046A911 /* CSAuthSampleHelperLibC.c in Sources */ = {isa = PBXBuildFile; fileRef = 28116CEC16AB851C0046A911 /* CSAuthSampleHelperLibC.c */; };
-		28116D6716ABD8A80046A911 /* CSAuthSampleCommonLibC.h in Headers */ = {isa = PBXBuildFile; fileRef = 28C4DA891692686C00BBB7D2 /* CSAuthSampleCommonLibC.h */; };
-		28116D6816ABD8A80046A911 /* CSAuthSampleCommonLibC.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C4DA881692686C00BBB7D2 /* CSAuthSampleCommonLibC.c */; };
 		281ACA8E20E93EFE0006B59B /* Common.swift in Sources */ = {isa = PBXBuildFile; fileRef = 281ACA8C20E93D640006B59B /* Common.swift */; };
 		281ACABD20E962740006B59B /* CSASHelperConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = 281ACABA20E960A50006B59B /* CSASHelperConnection.m */; };
 		281ACABE20E9672B0006B59B /* CSASHelperConnection.h in Headers */ = {isa = PBXBuildFile; fileRef = 281ACAB920E960A50006B59B /* CSASHelperConnection.h */; };
@@ -28,6 +21,16 @@
 		2835DBCB20E169C00006B59B /* module.modulemap in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2835DBC420E165A70006B59B /* module.modulemap */; };
 		287DBE80214AF5370006B59B /* SandboxWorkaround.swift in Sources */ = {isa = PBXBuildFile; fileRef = 287DBE7E214AF0CE0006B59B /* SandboxWorkaround.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		28C77306214DAEFB0006B59B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 29B97313FDCFA39411CA2CEA /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2835DB8520E13DD30006B59B;
+			remoteInfo = "Helper Library";
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		2835DBC820E169AC0006B59B /* CopyFiles */ = {
@@ -48,10 +51,6 @@
 /* Begin PBXFileReference section */
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
-		28116CEC16AB851C0046A911 /* CSAuthSampleHelperLibC.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = CSAuthSampleHelperLibC.c; sourceTree = "<group>"; };
-		28116CED16AB851C0046A911 /* CSAuthSampleHelperLibC.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSAuthSampleHelperLibC.h; sourceTree = "<group>"; };
-		28116D4C16ABD7F80046A911 /* libCSAuthSampleApp.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCSAuthSampleApp.a; sourceTree = BUILT_PRODUCTS_DIR; };
-		28116D6116ABD8980046A911 /* libCSAuthSampleHelper.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libCSAuthSampleHelper.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		281ACA8C20E93D640006B59B /* Common.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Common.swift; sourceTree = "<group>"; };
 		281ACAB920E960A50006B59B /* CSASHelperConnection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSASHelperConnection.h; sourceTree = "<group>"; };
 		281ACABA20E960A50006B59B /* CSASHelperConnection.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CSASHelperConnection.m; sourceTree = "<group>"; };
@@ -64,12 +63,9 @@
 		2835DB9420E13E350006B59B /* CSASCommon.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CSASCommon.m; sourceTree = "<group>"; };
 		2835DBC420E165A70006B59B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		287DBE7E214AF0CE0006B59B /* SandboxWorkaround.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxWorkaround.swift; sourceTree = "<group>"; };
-		28978DC81699251900134EC1 /* CSAuthSampleAppLibCHelper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CSAuthSampleAppLibCHelper.swift; sourceTree = "<group>"; };
 		289E508420F50B6F0006B59B /* CSASHelperToolInternal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSASHelperToolInternal.h; sourceTree = "<group>"; };
 		289E508520F50B730006B59B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		28A6F66B16918ECD006F0A93 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = ../../../../System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<group>"; };
-		28C4DA881692686C00BBB7D2 /* CSAuthSampleCommonLibC.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = CSAuthSampleCommonLibC.c; sourceTree = "<group>"; };
-		28C4DA891692686C00BBB7D2 /* CSAuthSampleCommonLibC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSAuthSampleCommonLibC.h; sourceTree = "<group>"; };
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		4BE4906310445F2F006BE471 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
@@ -77,20 +73,6 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		28116D4916ABD7F80046A911 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		28116D5E16ABD8980046A911 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		2835DB5620E13D720006B59B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -132,42 +114,10 @@
 		19C28FACFE9D520D11CA2CBB /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				28116D4C16ABD7F80046A911 /* libCSAuthSampleApp.a */,
-				28116D6116ABD8980046A911 /* libCSAuthSampleHelper.a */,
 				2835DB5820E13D720006B59B /* libCSAuthSampleApp.a */,
 				2835DB8620E13DD30006B59B /* libCSAuthSampleHelper.a */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		2835DB5020E13BD80006B59B /* CHelper */ = {
-			isa = PBXGroup;
-			children = (
-				28978DC81699251900134EC1 /* CSAuthSampleAppLibCHelper.swift */,
-				28116CED16AB851C0046A911 /* CSAuthSampleHelperLibC.h */,
-				28116CEC16AB851C0046A911 /* CSAuthSampleHelperLibC.c */,
-				28C4DA891692686C00BBB7D2 /* CSAuthSampleCommonLibC.h */,
-				28C4DA881692686C00BBB7D2 /* CSAuthSampleCommonLibC.c */,
-			);
-			path = CHelper;
-			sourceTree = "<group>";
-		};
-		2835DB5120E13C6F0006B59B /* ObjCHelper */ = {
-			isa = PBXGroup;
-			children = (
-				2835DB5220E13CFB0006B59B /* HelperClient.swift */,
-				287DBE7E214AF0CE0006B59B /* SandboxWorkaround.swift */,
-				2835DB9220E13E250006B59B /* CSASHelperTool.h */,
-				2835DB9020E13DF60006B59B /* CSASHelperTool.m */,
-				281ACAB920E960A50006B59B /* CSASHelperConnection.h */,
-				281ACABA20E960A50006B59B /* CSASHelperConnection.m */,
-				281ACA8C20E93D640006B59B /* Common.swift */,
-				2835DB9320E13E350006B59B /* CSASCommon.h */,
-				2835DB9420E13E350006B59B /* CSASCommon.m */,
-				2835DBC420E165A70006B59B /* module.modulemap */,
-				289E508320F50B620006B59B /* Internal */,
-			);
-			path = ObjCHelper;
 			sourceTree = "<group>";
 		};
 		289E508320F50B620006B59B /* Internal */ = {
@@ -182,8 +132,17 @@
 		29B97314FDCFA39411CA2CEA /* SMJobBless */ = {
 			isa = PBXGroup;
 			children = (
-				2835DB5120E13C6F0006B59B /* ObjCHelper */,
-				2835DB5020E13BD80006B59B /* CHelper */,
+				2835DB5220E13CFB0006B59B /* HelperClient.swift */,
+				287DBE7E214AF0CE0006B59B /* SandboxWorkaround.swift */,
+				2835DB9220E13E250006B59B /* CSASHelperTool.h */,
+				2835DB9020E13DF60006B59B /* CSASHelperTool.m */,
+				281ACAB920E960A50006B59B /* CSASHelperConnection.h */,
+				281ACABA20E960A50006B59B /* CSASHelperConnection.m */,
+				281ACA8C20E93D640006B59B /* Common.swift */,
+				2835DB9320E13E350006B59B /* CSASCommon.h */,
+				2835DB9420E13E350006B59B /* CSASCommon.m */,
+				2835DBC420E165A70006B59B /* module.modulemap */,
+				289E508320F50B620006B59B /* Internal */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
 			);
@@ -202,23 +161,6 @@
 /* End PBXGroup section */
 
 /* Begin PBXHeadersBuildPhase section */
-		28116D4A16ABD7F80046A911 /* Headers */ = {
-			isa = PBXHeadersBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				28116D5B16ABD81D0046A911 /* CSAuthSampleCommonLibC.h in Headers */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		28116D5F16ABD8980046A911 /* Headers */ = {
-			isa = PBXHeadersBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				28116D6516ABD8A80046A911 /* CSAuthSampleHelperLibC.h in Headers */,
-				28116D6716ABD8A80046A911 /* CSAuthSampleCommonLibC.h in Headers */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		2835DB5420E13D720006B59B /* Headers */ = {
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
@@ -238,43 +180,9 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
-		28116D4B16ABD7F80046A911 /* App Library (C Helper) */ = {
+		2835DB5720E13D720006B59B /* App Library */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 28116D5716ABD7F80046A911 /* Build configuration list for PBXNativeTarget "App Library (C Helper)" */;
-			buildPhases = (
-				28116D4816ABD7F80046A911 /* Sources */,
-				28116D4916ABD7F80046A911 /* Frameworks */,
-				28116D4A16ABD7F80046A911 /* Headers */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "App Library (C Helper)";
-			productName = libCSAuthSampleApp;
-			productReference = 28116D4C16ABD7F80046A911 /* libCSAuthSampleApp.a */;
-			productType = "com.apple.product-type.library.static";
-		};
-		28116D6016ABD8980046A911 /* C Helper Library */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 28116D6216ABD8980046A911 /* Build configuration list for PBXNativeTarget "C Helper Library" */;
-			buildPhases = (
-				28116D5D16ABD8980046A911 /* Sources */,
-				28116D5E16ABD8980046A911 /* Frameworks */,
-				28116D5F16ABD8980046A911 /* Headers */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "C Helper Library";
-			productName = "Static Library for Helper";
-			productReference = 28116D6116ABD8980046A911 /* libCSAuthSampleHelper.a */;
-			productType = "com.apple.product-type.library.static";
-		};
-		2835DB5720E13D720006B59B /* App Library (ObjC Helper) */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 2835DB5E20E13D720006B59B /* Build configuration list for PBXNativeTarget "App Library (ObjC Helper)" */;
+			buildConfigurationList = 2835DB5E20E13D720006B59B /* Build configuration list for PBXNativeTarget "App Library" */;
 			buildPhases = (
 				2835DB5420E13D720006B59B /* Headers */,
 				2835DB5520E13D720006B59B /* Sources */,
@@ -283,15 +191,16 @@
 			buildRules = (
 			);
 			dependencies = (
+				28C77307214DAEFB0006B59B /* PBXTargetDependency */,
 			);
-			name = "App Library (ObjC Helper)";
+			name = "App Library";
 			productName = "App Library (ObjC Helper)";
 			productReference = 2835DB5820E13D720006B59B /* libCSAuthSampleApp.a */;
 			productType = "com.apple.product-type.library.static";
 		};
-		2835DB8520E13DD30006B59B /* ObjC Helper Library */ = {
+		2835DB8520E13DD30006B59B /* Helper Library */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 2835DB8C20E13DD30006B59B /* Build configuration list for PBXNativeTarget "ObjC Helper Library" */;
+			buildConfigurationList = 2835DB8C20E13DD30006B59B /* Build configuration list for PBXNativeTarget "Helper Library" */;
 			buildPhases = (
 				2835DB8220E13DD30006B59B /* Headers */,
 				2835DBC820E169AC0006B59B /* CopyFiles */,
@@ -302,7 +211,7 @@
 			);
 			dependencies = (
 			);
-			name = "ObjC Helper Library";
+			name = "Helper Library";
 			productName = "ObjC Helper Library";
 			productReference = 2835DB8620E13DD30006B59B /* libCSAuthSampleHelper.a */;
 			productType = "com.apple.product-type.library.static";
@@ -315,9 +224,6 @@
 			attributes = {
 				LastUpgradeCheck = 0930;
 				TargetAttributes = {
-					28116D4B16ABD7F80046A911 = {
-						LastSwiftMigration = 1000;
-					};
 					2835DB5720E13D720006B59B = {
 						CreatedOnToolsVersion = 10.0;
 					};
@@ -337,33 +243,13 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				28116D4B16ABD7F80046A911 /* App Library (C Helper) */,
-				28116D6016ABD8980046A911 /* C Helper Library */,
-				2835DB5720E13D720006B59B /* App Library (ObjC Helper) */,
-				2835DB8520E13DD30006B59B /* ObjC Helper Library */,
+				2835DB5720E13D720006B59B /* App Library */,
+				2835DB8520E13DD30006B59B /* Helper Library */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
-		28116D4816ABD7F80046A911 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				28116D5A16ABD81D0046A911 /* CSAuthSampleAppLibCHelper.swift in Sources */,
-				28116D5C16ABD81D0046A911 /* CSAuthSampleCommonLibC.c in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		28116D5D16ABD8980046A911 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				28116D6616ABD8A80046A911 /* CSAuthSampleHelperLibC.c in Sources */,
-				28116D6816ABD8A80046A911 /* CSAuthSampleCommonLibC.c in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 		2835DB5520E13D720006B59B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -387,117 +273,15 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		28C77307214DAEFB0006B59B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2835DB8520E13DD30006B59B /* Helper Library */;
+			targetProxy = 28C77306214DAEFB0006B59B /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
-		28116D5516ABD7F80046A911 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				DEFINES_MODULE = YES;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				PRODUCT_MODULE_NAME = CSAuthSampleAppLib;
-				PRODUCT_NAME = CSAuthSampleApp;
-				SDKROOT = macosx;
-				SWIFT_INCLUDE_PATHS = "$SRCROOT/\"Support Files\"";
-				SWIFT_VERSION = 4.2;
-			};
-			name = Debug;
-		};
-		28116D5616ABD7F80046A911 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEFINES_MODULE = YES;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_PRECOMPILE_PREFIX_HEADER = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				PRODUCT_MODULE_NAME = CSAuthSampleAppLib;
-				PRODUCT_NAME = CSAuthSampleApp;
-				SDKROOT = macosx;
-				SWIFT_INCLUDE_PATHS = "$SRCROOT/\"Support Files\"";
-				SWIFT_VERSION = 4.2;
-			};
-			name = Release;
-		};
-		28116D6316ABD8980046A911 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = NO;
-				DEFINES_MODULE = YES;
-				EXECUTABLE_PREFIX = lib;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				PRODUCT_MODULE_NAME = CSAuthSampleHelperLib;
-				PRODUCT_NAME = CSAuthSampleHelper;
-				SDKROOT = macosx;
-			};
-			name = Debug;
-		};
-		28116D6416ABD8980046A911 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
-				CLANG_CXX_LIBRARY = "libc++";
-				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = YES;
-				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEFINES_MODULE = YES;
-				EXECUTABLE_PREFIX = lib;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				PRODUCT_MODULE_NAME = CSAuthSampleHelperLib;
-				PRODUCT_NAME = CSAuthSampleHelper;
-				SDKROOT = macosx;
-			};
-			name = Release;
-		};
 		2835DB5F20E13D720006B59B /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -532,7 +316,6 @@
 				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SWIFT_INCLUDE_PATHS = $SRCROOT/ObjCHelper/Private/;
 				USER_HEADER_SEARCH_PATHS = (
 					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
 					$SRCROOT/ObjCHelper/Internal,
@@ -570,7 +353,6 @@
 				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
-				SWIFT_INCLUDE_PATHS = $SRCROOT/ObjCHelper/Private/;
 				USER_HEADER_SEARCH_PATHS = (
 					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
 					$SRCROOT/ObjCHelper/Internal,
@@ -609,9 +391,9 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = (
 					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
-					$SRCROOT/ObjCHelper/Internal,
+					$SRCROOT/Internal,
 				);
-				MODULEMAP_FILE = $SRCROOT/ObjCHelper/module.modulemap;
+				MODULEMAP_FILE = $SRCROOT/module.modulemap;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				PRODUCT_MODULE_NAME = CSAuthSampleHelperLib;
 				PRODUCT_NAME = CSAuthSampleHelper;
@@ -647,9 +429,9 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = (
 					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
-					$SRCROOT/ObjCHelper/Internal,
+					$SRCROOT/Internal,
 				);
-				MODULEMAP_FILE = $SRCROOT/ObjCHelper/module.modulemap;
+				MODULEMAP_FILE = $SRCROOT/module.modulemap;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				PRODUCT_MODULE_NAME = CSAuthSampleHelperLib;
 				PRODUCT_NAME = CSAuthSampleHelper;
@@ -762,25 +544,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		28116D5716ABD7F80046A911 /* Build configuration list for PBXNativeTarget "App Library (C Helper)" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				28116D5516ABD7F80046A911 /* Debug */,
-				28116D5616ABD7F80046A911 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		28116D6216ABD8980046A911 /* Build configuration list for PBXNativeTarget "C Helper Library" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				28116D6316ABD8980046A911 /* Debug */,
-				28116D6416ABD8980046A911 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		2835DB5E20E13D720006B59B /* Build configuration list for PBXNativeTarget "App Library (ObjC Helper)" */ = {
+		2835DB5E20E13D720006B59B /* Build configuration list for PBXNativeTarget "App Library" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2835DB5F20E13D720006B59B /* Debug */,
@@ -789,7 +553,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		2835DB8C20E13DD30006B59B /* Build configuration list for PBXNativeTarget "ObjC Helper Library" */ = {
+		2835DB8C20E13DD30006B59B /* Build configuration list for PBXNativeTarget "Helper Library" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				2835DB8D20E13DD30006B59B /* Debug */,
