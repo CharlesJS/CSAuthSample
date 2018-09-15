@@ -4,8 +4,9 @@
 // Based on "BetterAuthorizationSampleLib.c" by Apple Computer.
 
 import Foundation
-import CSAuthSampleCCommon
+import CSAuthSampleCommonLib
 import ServiceManagement
+import XPC
 
 public class CSASRequestSender {
     public enum Result<T> {

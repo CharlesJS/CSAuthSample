@@ -1,0 +1,3 @@
+module CSAuthSampleCommonLib {
+    header "../CSAuthSampleCommonLib.h"
+}
