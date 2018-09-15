@@ -83,7 +83,7 @@ static NSString * const rightValueKey = @"com.charlessoft.CSAuthSample.CSASComma
         NSString *rightName = @"com.charlessoft.CSAuthSample.UninstallHelper";
         const char *rule = kAuthorizationRuleClassAllow;
         
-        rightsDict[versionName] = [[CSASAuthorizationRight alloc] initWithSelector:uninstallSel
+        rightsDict[uninstallName] = [[CSASAuthorizationRight alloc] initWithSelector:uninstallSel
                                                                               name:rightName
                                                                               rule:rule
                                                                             prompt:nil];
@@ -277,21 +277,116 @@ static NSString * const promptKey = @"com.charlessoft.CSAuthSample.CSASAuthoriza
 
 @end
 
-extern NSError *CSASConvertOSStatus(OSStatus err) {
-    // Prefer POSIX errors over OSStatus ones if possible, as they tend to present nicer error messages to the end user.
-    
-    if ((err >= errSecErrnoBase) && (err <= errSecErrnoLimit)) {
-        return [[NSError alloc] initWithDomain:NSPOSIXErrorDomain code:err - errSecErrnoBase userInfo:nil];
-    } else {
-        NSString *errStr = CFBridgingRelease(SecCopyErrorMessageString(err, NULL));
-        NSDictionary *userInfo = nil;
-        
-        if (errStr != nil) {
-            userInfo = @{ NSLocalizedFailureReasonErrorKey : errStr };
-        }
-        
-        return [[NSError alloc] initWithDomain:NSOSStatusErrorDomain code:err userInfo:userInfo];
+static NSInteger CSASConvertPOSIXErrorCode(NSInteger code) {
+    switch (code) {
+        case ECANCELED:
+            return NSUserCancelledError;
+        case ENOENT:
+            return NSFileNoSuchFileError;
+        case EFBIG:
+            return NSFileReadTooLargeError;
+        case EEXIST:
+            return NSFileWriteFileExistsError;
+        case ENOSPC:
+            return NSFileWriteOutOfSpaceError;
+        case EROFS:
+            return NSFileWriteVolumeReadOnlyError;
+        default:
+            return 0;
     }
+}
+
+static NSInteger CSASConvertOSStatusErrorCode(NSInteger code) {
+    if (code >= errSecErrnoBase && code <= errSecErrnoLimit) {
+        NSInteger newCode = CSASConvertPOSIXErrorCode(code - errSecErrnoBase);
+        
+        if (newCode != 0) {
+            return newCode;
+        }
+    }
+    
+    switch (code) {
+        case userCanceledErr:
+        case errAuthorizationCanceled:
+        case errSecCSCancelled:
+        case errAEWaitCanceled:
+        case kernelCanceledErr:
+        case kOTCanceledErr:
+        case kECANCELErr:
+        case errIACanceled:
+        case kRAConnectionCanceled:
+        case kTXNUserCanceledOperationErr:
+        case kFBCindexingCanceled:
+        case kFBCaccessCanceled:
+        case kFBCsummarizationCanceled:
+            return NSUserCancelledError;
+        case fnfErr:
+            return NSFileNoSuchFileError;
+        case fileBoundsErr:
+        case fsDataTooBigErr:
+            return NSFileReadTooLargeError;
+        case dupFNErr:
+            return NSFileWriteFileExistsError;
+        case dskFulErr:
+        case errFSNotEnoughSpaceForOperation:
+            return NSFileWriteOutOfSpaceError;
+        case vLckdErr:
+            return NSFileWriteVolumeReadOnlyError;
+        default:
+            return 0;
+    }
+}
+
+FOUNDATION_EXPORT NSError *CSASConvertNSError(NSError *error) {
+    // If we can find a NSCocoaError that corresponds to the same error condition as this error, use it.
+    // NSCocoaError tends to present nicer error messages to the user.
+    NSInteger newCode = 0;
+    
+    if ([error.domain isEqualToString:NSPOSIXErrorDomain]) {
+        newCode = CSASConvertPOSIXErrorCode(error.code);
+    } else if ([error.domain isEqualToString:NSOSStatusErrorDomain]) {
+        newCode = CSASConvertOSStatusErrorCode(error.code);
+    } else {
+        newCode = 0;
+    }
+    
+    if (newCode != 0) {
+        NSMutableDictionary *userInfo = error.userInfo.mutableCopy;
+        
+        userInfo[NSUnderlyingErrorKey] = error;
+        
+        // Use the built-in error messages instead
+        userInfo[NSLocalizedFailureReasonErrorKey] = nil;
+        
+        return [[NSError alloc] initWithDomain:NSCocoaErrorDomain code:newCode userInfo:userInfo];
+    } else if ([error.domain isEqualToString:NSOSStatusErrorDomain]) {
+        // At least try to find a nicer error string to display to the user.
+        
+        CFStringRef errString = SecCopyErrorMessageString((OSStatus)error.code, NULL);
+        
+        if (errString != NULL) {
+            NSMutableDictionary *userInfo = error.userInfo.mutableCopy;
+            
+            userInfo[NSLocalizedFailureReasonErrorKey] = CFBridgingRelease(errString);
+            
+            return [[NSError alloc] initWithDomain:NSOSStatusErrorDomain code:error.code userInfo:userInfo];
+        }
+    }
+    
+    // We weren't able to improve this error message; just return it as is
+    return error;
+}
+
+FOUNDATION_EXPORT NSError *CSASConvertCFError(CFErrorRef error) {
+    return CSASConvertNSError((__bridge NSError *)error);
+}
+
+FOUNDATION_EXPORT NSError *CSASConvertPOSIXError(int err) {
+    return CSASConvertNSError([[NSError alloc] initWithDomain:NSPOSIXErrorDomain code:err userInfo:nil]);
+}
+
+FOUNDATION_EXPORT NSError *CSASConvertOSStatus(OSStatus err) {
+    return CSASConvertNSError([[NSError alloc] initWithDomain:NSOSStatusErrorDomain code:err userInfo:nil]);
 }
 
 NS_ASSUME_NONNULL_END

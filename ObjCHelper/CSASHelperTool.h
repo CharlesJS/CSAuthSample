@@ -12,21 +12,23 @@ NS_ASSUME_NONNULL_BEGIN
 
 NS_SWIFT_NAME(HelperTool) @interface CSASHelperTool: NSObject
 
+@property (nonatomic, readonly) NSString *helperID;
+
 // If nil is passed for senderRequirements, the value for the
 // "SMAuthorizedClients" key will be read from the helper tool's
 // built-in Info.plist.
 
-- (instancetype)initWithMachServiceName:(NSString *)machServiceName
-                             commandSet:(CSASCommandSet *)commandSet
-                     senderRequirements:(nullable NSArray<NSString *> *)senderRequirements
-                        connectionClass:(Class)connectionClass // must be CSASHelperConnection subclass
-                               protocol:(Protocol *)protocol;
+- (instancetype)initWithHelperID:(NSString *)helperID
+                      commandSet:(CSASCommandSet *)commandSet
+              senderRequirements:(nullable NSArray<NSString *> *)senderRequirements
+                 connectionClass:(Class)connectionClass // must be CSASHelperConnection subclass
+                        protocol:(Protocol *)protocol;
 
-- (instancetype)initWithMachServiceName:(NSString *)machServiceName
-                             commandSet:(CSASCommandSet *)commandSet
-                     senderRequirements:(nullable NSArray<NSString *> *)senderRequirements
-                        connectionClass:(Class)connectionClass // must be CSASHelperConnection subclass
-                              interface:(NSXPCInterface *)interface;
+- (instancetype)initWithHelperID:(NSString *)helperID
+                      commandSet:(CSASCommandSet *)commandSet
+              senderRequirements:(nullable NSArray<NSString *> *)senderRequirements
+                 connectionClass:(Class)connectionClass // must be CSASHelperConnection subclass
+                       interface:(NSXPCInterface *)interface;
 
 - (void)run __attribute__((noreturn));
 

@@ -12,6 +12,7 @@
 @import CSASHelperTool;
 @import CSASHelperToolInternal;
 @import Darwin.POSIX.syslog;
+@import ObjectiveC.runtime;
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -28,21 +29,25 @@ NS_ASSUME_NONNULL_BEGIN
 
 @implementation CSASHelperTool
 
-- (instancetype)initWithMachServiceName:(NSString *)machServiceName
-                             commandSet:(CSASCommandSet *)commandSet
-                     senderRequirements:(nullable NSArray<NSString *> *)senderRequirements
-                        connectionClass:(Class)connectionClass
-                               protocol:(Protocol *)protocol {
+- (instancetype)initWithHelperID:(NSString *)helperID
+                      commandSet:(CSASCommandSet *)commandSet
+              senderRequirements:(nullable NSArray<NSString *> *)senderRequirements
+                 connectionClass:(Class)connectionClass
+                        protocol:(Protocol *)protocol {
     NSXPCInterface *interface = [NSXPCInterface interfaceWithProtocol:protocol];
     
-    return [self initWithMachServiceName:machServiceName commandSet:commandSet senderRequirements:senderRequirements connectionClass:connectionClass interface: interface];
+    return [self initWithHelperID:helperID
+                       commandSet:commandSet
+               senderRequirements:senderRequirements
+                  connectionClass:connectionClass
+                        interface:interface];
 }
 
-- (instancetype)initWithMachServiceName:(NSString *)machServiceName
-                             commandSet:(CSASCommandSet *)commandSet
-                     senderRequirements:(nullable NSArray<NSString *> *)_senderRequirements
-                        connectionClass:(Class)connectionClass // must be CSASHelperConnection subclass
-                              interface:(NSXPCInterface *)interface {
+- (instancetype)initWithHelperID:(NSString *)helperID
+                      commandSet:(CSASCommandSet *)commandSet
+              senderRequirements:(nullable NSArray<NSString *> *)_senderRequirements
+                 connectionClass:(Class)connectionClass // must be CSASHelperConnection subclass
+                       interface:(NSXPCInterface *)interface {
     self = [super init];
     if (self == nil) {
         return nil;
@@ -58,13 +63,14 @@ NS_ASSUME_NONNULL_BEGIN
     [CSASHelperTool configureDefaultsForInterface:interface commandSet:commandSet];
     
     // Set up our XPC listener to handle requests on our Mach service.
-    self->_listener = [[NSXPCListener alloc] initWithMachServiceName:machServiceName];
+    self->_listener = [[NSXPCListener alloc] initWithMachServiceName:helperID];
     self->_listener.delegate = self;
     self->_commandSet = commandSet;
     self->_requirements = [senderRequirements copy];
     self->_connectionClass = connectionClass;
     self->_interface = interface;
     self->_connectionCount = 0;
+    self->_helperID = [helperID copy];
     
     return self;
 }
@@ -92,6 +98,11 @@ NS_ASSUME_NONNULL_BEGIN
     [interface setClasses:error forSelector:uninstall argumentIndex:0 ofReply:YES];
     
     for (CSASAuthorizationRight *eachRight in commandSet.authorizationRights) {
+        // getVersion is allowed not to have an auth parameter
+        if (sel_isEqual(eachRight.selector, getVersion)) {
+            continue;
+        }
+        
         if (![[interface classesForSelector:eachRight.selector argumentIndex:0 ofReply:NO] isEqualToSet:data]) {
             NSString *name = @"CSAuthSampleMissingAuthorizationData";
             NSString *reason = @"All privileged operations must include an authorizationData parameter.";
@@ -113,7 +124,6 @@ NS_ASSUME_NONNULL_BEGIN
 }
 
 - (BOOL)listener:(NSXPCListener *)listener shouldAcceptNewConnection:(NSXPCConnection *)conn {
-    NSLog(@"Accept new connection");
     assert(listener == self.listener);
     assert(conn != nil);
     
@@ -128,7 +138,6 @@ NS_ASSUME_NONNULL_BEGIN
     // This will prevent the helper tool from sticking around long after we're done with it.
     self.connectionCount++;
     conn.invalidationHandler = ^{
-        NSLog(@"Exiting");
         self.connectionCount--;
         
         if (self.connectionCount == 0) {

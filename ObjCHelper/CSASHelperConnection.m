@@ -78,7 +78,7 @@
     OSStatus err = AuthorizationCopyRights(auth, &rights, NULL, flags, NULL);
     
     if (err != errAuthorizationSuccess) {
-        *error = [[NSError alloc] initWithDomain:NSPOSIXErrorDomain code:err userInfo:nil];
+        *error = CSASConvertOSStatus(err);
         return NO;
     }
     
@@ -87,16 +87,7 @@
 
 #pragma mark * CSASBuiltInCommands
 
-// IMPORTANT: NSXPCConnection can call these methods on any thread.  It turns out that our
-// implementation of these methods is thread safe but if that's not the case for your code
-// you have to implement your own protection (for example, having your own serial queue and
-// dispatching over to it).
-
 - (void)getEndpointWithAuthorizationData:(NSData *)authData endpoint:(void (^)(NSXPCListenerEndpoint * _Nullable, NSError * _Nullable))reply {
-    // Part of CSASBuiltInCommands.  Not used by the standard app (it's part of the sandboxed
-    // XPC service support).  Called by the XPC service to get an endpoint for our listener.  It then
-    // passes this endpoint to the app so that the sandboxed app can talk us directly.
-    
     NSError *error = nil;
     if (![self checkAuthorization:authData forCommand:_cmd error:&error]) {
         reply(nil, error);
@@ -107,28 +98,51 @@
 }
 
 - (void)getVersionWithReply:(void (^)(NSString * _Nullable, NSError * _Nullable))reply {
-    // Part of CSASBuiltInCommands. Returns the version number of the tool.
+    NSString *vers = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
     
-    reply([[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"], nil);
+    if (vers != nil) {
+        reply(vers, nil);
+    } else {
+        reply(nil, [[NSError alloc] initWithDomain:NSCocoaErrorDomain code:NSFileReadUnknownError userInfo:nil]);
+    }
 }
 
 - (void)uninstallHelperToolWithAuthorizationData:(NSData *)authData reply:(void (^)(NSError * _Nullable))reply {
-    // Part of CSASBuiltInCommands. Uninstalls the helper tool.
+    NSFileManager *fm = [NSFileManager defaultManager];
     
     NSURL *helperURL = [NSURL fileURLWithPath:[NSProcessInfo processInfo].arguments[0]];
-    NSError *error = nil;
-    
-    if ([self checkAuthorization:authData forCommand:_cmd error:&error]) {
-        if (helperURL == nil) {
-            error = [[NSError alloc] initWithDomain:NSCocoaErrorDomain code:NSFileWriteUnknownError userInfo:nil];
-        } else if ([helperURL checkResourceIsReachableAndReturnError:&error]) {
-            if ([[NSFileManager defaultManager] removeItemAtURL:helperURL error:&error]) {
-                error = nil;
-            }
-        }
+
+    if (helperURL == nil) {
+        reply([[NSError alloc] initWithDomain:NSCocoaErrorDomain code:NSFileWriteUnknownError userInfo:nil]);
+        return;
     }
     
-    reply(error);
+    NSURL *libraryURL = [fm URLForDirectory:NSLibraryDirectory inDomain:NSLocalDomainMask appropriateForURL:nil create:NO error:NULL];
+    
+    NSURL *daemonsURL = [libraryURL URLByAppendingPathComponent:@"LaunchDaemons"];
+    
+    NSURL *serviceURL = [[daemonsURL URLByAppendingPathComponent:self.helperTool.helperID] URLByAppendingPathExtension:@"plist"];
+    
+    NSError *error = nil;
+    
+    if (![self checkAuthorization:authData forCommand:_cmd error:&error]) {
+        reply(error);
+        return;
+    }
+        
+    if ([helperURL checkResourceIsReachableAndReturnError:NULL] &&
+        ![fm removeItemAtURL:helperURL error:&error]) {
+        reply(error);
+        return;
+    }
+    
+    if ([serviceURL checkResourceIsReachableAndReturnError:NULL] &&
+        ![fm removeItemAtURL:serviceURL error:&error]) {
+        reply(error);
+        return;
+    }
+    
+    reply(nil);
 }
 
 @end
