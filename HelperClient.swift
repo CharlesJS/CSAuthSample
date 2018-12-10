@@ -101,7 +101,14 @@ public struct HelperClient {
     }
     
     public func requestHelperVersion(helperID: String, completionHandler: @escaping (Result<String>) -> ()) {
-        let conn = self._openConnection(helperID: helperID)
+        let conn: NSXPCConnection
+            
+        do {
+            conn = try self._openConnection(helperID: helperID, interface: nil, protocol: BuiltInCommands.self)
+        } catch {
+            completionHandler(.error(error))
+            return
+        }
         
         self.checkHelperVersion(connection: conn, completionHandler: completionHandler)
     }
@@ -113,7 +120,14 @@ public struct HelperClient {
                                                         installIfNecessary: Bool = true,
                                                         errorHandler: @escaping (Error) -> (),
                                                         connectionHandler: @escaping (P) -> ()) {
-        let conn = self._openConnection(helperID: helperID)
+        let conn: NSXPCConnection
+            
+        do {
+            conn = try self._openConnection(helperID: helperID, interface: interface, protocol: proto)
+        } catch {
+            errorHandler(error)
+            return
+        }
         
         if let expectedVersion = expectedVersion {
             self.checkHelperVersion(connection: conn) {
@@ -158,14 +172,6 @@ public struct HelperClient {
                                               protocol proto: P.Type,
                                               interface: NSXPCInterface?,
                                               errorHandler: @escaping (Error) -> ()) throws -> P {
-        guard let objcProto = proto as Any as AnyObject as? Protocol else {
-            throw CocoaError(.fileReadUnknown)
-        }
-        
-        conn.remoteObjectInterface = interface ?? NSXPCInterface(with: objcProto)
-        
-        conn.resume()
-        
         let proxy = conn.remoteObjectProxyWithErrorHandler(errorHandler)
         
         return try proxy as? P ?? { throw CocoaError(.fileReadUnknown) }()
@@ -243,8 +249,19 @@ public struct HelperClient {
         }
     }
     
-    private func _openConnection(helperID: String) -> NSXPCConnection {
-        return NSXPCConnection(machServiceName: helperID, options: .privileged)
+    private func _openConnection<P: BuiltInCommands>(helperID: String,
+                                                     interface: NSXPCInterface?,
+                                                     protocol proto: P.Type) throws -> NSXPCConnection {
+        guard let objcProto = proto as Any as AnyObject as? Protocol else {
+            throw CocoaError(.fileReadUnknown)
+        }
+        
+        let conn = NSXPCConnection(machServiceName: helperID, options: .privileged)
+        
+        conn.remoteObjectInterface = interface ?? NSXPCInterface(with: objcProto)
+        conn.resume()
+        
+        return conn
     }
     
     private func _connectToHelperTool<P: BuiltInCommands>(connection conn: NSXPCConnection,
@@ -262,9 +279,10 @@ public struct HelperClient {
     
     private func checkHelperVersion(connection: NSXPCConnection, completionHandler: @escaping (Result<String>) -> ()) {
         let sema = DispatchSemaphore(value: 1)
-        let alreadyReturned = false
+        var alreadyReturned = false
         
         let errorHandler: (Error) -> () = { error in
+            print("get error")
             sema.wait()
             defer { sema.signal() }
             
@@ -272,6 +290,7 @@ public struct HelperClient {
                 return
             }
             
+            alreadyReturned = true
             completionHandler(.error(error))
         }
         
@@ -287,6 +306,8 @@ public struct HelperClient {
             if alreadyReturned {
                 return
             }
+            
+            alreadyReturned = true
             
             if let error = $1 {
                 completionHandler(.error(error))
