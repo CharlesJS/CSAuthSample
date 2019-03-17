@@ -228,6 +228,7 @@
 				TargetAttributes = {
 					2835DB5720E13D720006B59B = {
 						CreatedOnToolsVersion = 10.0;
+						LastSwiftMigration = 1020;
 					};
 					2835DB8520E13DD30006B59B = {
 						CreatedOnToolsVersion = 10.0;
@@ -239,6 +240,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 1;
 			knownRegions = (
+				English,
 				en,
 				Base,
 			);
@@ -319,6 +321,7 @@
 				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = (
 					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
 					$SRCROOT/ObjCHelper/Internal,
@@ -356,6 +359,7 @@
 				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = (
 					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
 					$SRCROOT/ObjCHelper/Internal,

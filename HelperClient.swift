@@ -14,7 +14,9 @@ public struct HelperClient {
 
     public init(authData: Data? = nil, commandSet: CommandSet, bundle: Bundle? = nil, tableName: String? = nil) throws {
         if let data = authData {
-            self.authRef = try data.withUnsafeBytes { (extForm: UnsafePointer<AuthorizationExternalForm>) -> AuthorizationRef in
+            self.authRef = try data.withUnsafeBytes {
+                guard let extForm = $0.bindMemory(to: AuthorizationExternalForm.self).baseAddress else { throw CocoaError(.fileReadUnknown) }
+                
                 var authRef: AuthorizationRef? = nil
                 
                 let err = AuthorizationCreateFromExternalForm(extForm, &authRef)
@@ -35,10 +37,13 @@ public struct HelperClient {
     public func authorizationData() throws -> Data {
         var authData = Data(count: MemoryLayout<AuthorizationExternalForm>.size)
         
-        let err = authData.withUnsafeMutableBytes { AuthorizationMakeExternalForm(self.authRef, $0) }
+        try authData.withUnsafeMutableBytes {
+            guard let ptr = $0.bindMemory(to: AuthorizationExternalForm.self).baseAddress else { throw CocoaError(.fileReadUnknown) }
+            let err = AuthorizationMakeExternalForm(self.authRef, ptr)
         
-        if (err != errAuthorizationSuccess) {
-            throw ConvertOSStatus(err)
+            if (err != errAuthorizationSuccess) {
+                throw ConvertOSStatus(err)
+            }
         }
         
         return authData
