@@ -105,13 +105,13 @@ public struct HelperClient {
         }
     }
     
-    public func requestHelperVersion(helperID: String, completionHandler: @escaping (Result<String>) -> ()) {
+    public func requestHelperVersion(helperID: String, completionHandler: @escaping (Result<String, Error>) -> ()) {
         let conn: NSXPCConnection
             
         do {
             conn = try self._openConnection(helperID: helperID, interface: nil, protocol: BuiltInCommands.self)
         } catch {
-            completionHandler(.error(error))
+            completionHandler(.failure(error))
             return
         }
         
@@ -143,13 +143,13 @@ public struct HelperClient {
                                               interface: interface,
                                               errorHandler: errorHandler,
                                               connectionHandler: connectionHandler)
-                case .error where installIfNecessary, .success where installIfNecessary:
+                case .failure where installIfNecessary, .success where installIfNecessary:
                     self._installAndConnect(helperID: helperID,
                                             protocol: proto,
                                             interface: interface,
                                             errorHandler: errorHandler,
                                             connectionHandler: connectionHandler)
-                case let .error(error) where !installIfNecessary:
+                case let .failure(error) where !installIfNecessary:
                     errorHandler(error)
                 default:
                     errorHandler(CocoaError(.fileReadUnknown))
@@ -282,7 +282,7 @@ public struct HelperClient {
         }
     }
     
-    private func checkHelperVersion(connection: NSXPCConnection, completionHandler: @escaping (Result<String>) -> ()) {
+    private func checkHelperVersion(connection: NSXPCConnection, completionHandler: @escaping (Result<String, Error>) -> ()) {
         let sema = DispatchSemaphore(value: 1)
         var alreadyReturned = false
         
@@ -296,11 +296,11 @@ public struct HelperClient {
             }
             
             alreadyReturned = true
-            completionHandler(.error(error))
+            completionHandler(.failure(error))
         }
         
         guard let proxy = connection.remoteObjectProxyWithErrorHandler(errorHandler) as? BuiltInCommands else {
-            completionHandler(.error(CocoaError(.fileReadUnknown)))
+            completionHandler(.failure(CocoaError(.fileReadUnknown)))
             return
         }
         
@@ -315,11 +315,11 @@ public struct HelperClient {
             alreadyReturned = true
             
             if let error = $1 {
-                completionHandler(.error(error))
+                completionHandler(.failure(error))
             } else if let version = $0 {
                 completionHandler(.success(version))
             } else {
-                completionHandler(.error(CocoaError(.fileReadUnknown)))
+                completionHandler(.failure(CocoaError(.fileReadUnknown)))
             }
         }
     }

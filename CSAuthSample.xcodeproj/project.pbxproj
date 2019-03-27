@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		281ACA8E20E93EFE0006B59B /* Common.swift in Sources */ = {isa = PBXBuildFile; fileRef = 281ACA8C20E93D640006B59B /* Common.swift */; };
 		281ACABD20E962740006B59B /* CSASHelperConnection.m in Sources */ = {isa = PBXBuildFile; fileRef = 281ACABA20E960A50006B59B /* CSASHelperConnection.m */; };
 		281ACABE20E9672B0006B59B /* CSASHelperConnection.h in Headers */ = {isa = PBXBuildFile; fileRef = 281ACAB920E960A50006B59B /* CSASHelperConnection.h */; };
 		281ACACF20E967D70006B59B /* CSASHelperConnection.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 281ACAB920E960A50006B59B /* CSASHelperConnection.h */; };
@@ -51,7 +50,6 @@
 /* Begin PBXFileReference section */
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
-		281ACA8C20E93D640006B59B /* Common.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Common.swift; sourceTree = "<group>"; };
 		281ACAB920E960A50006B59B /* CSASHelperConnection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSASHelperConnection.h; sourceTree = "<group>"; };
 		281ACABA20E960A50006B59B /* CSASHelperConnection.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CSASHelperConnection.m; sourceTree = "<group>"; };
 		2835DB5220E13CFB0006B59B /* HelperClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperClient.swift; sourceTree = "<group>"; };
@@ -140,7 +138,6 @@
 				2835DB9020E13DF60006B59B /* CSASHelperTool.m */,
 				281ACAB920E960A50006B59B /* CSASHelperConnection.h */,
 				281ACABA20E960A50006B59B /* CSASHelperConnection.m */,
-				281ACA8C20E93D640006B59B /* Common.swift */,
 				2835DB9320E13E350006B59B /* CSASCommon.h */,
 				2835DB9420E13E350006B59B /* CSASCommon.m */,
 				2835DBC420E165A70006B59B /* module.modulemap */,
@@ -261,7 +258,6 @@
 			files = (
 				2835DB9720E13E380006B59B /* CSASCommon.m in Sources */,
 				287DBE80214AF5370006B59B /* SandboxWorkaround.swift in Sources */,
-				281ACA8E20E93EFE0006B59B /* Common.swift in Sources */,
 				2835DB8F20E13DDA0006B59B /* HelperClient.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
