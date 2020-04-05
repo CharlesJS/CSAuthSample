@@ -1,6 +1,6 @@
 //
 //  SandboxWorkaround.swift
-//  App Library (C Helper)
+//  App Library
 //
 //  Created by Charles Srstka on 9/13/18.
 //

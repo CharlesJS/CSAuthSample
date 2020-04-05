@@ -1,4 +1,5 @@
-CSAuthSample App.xcodeproj/project.xcworkspace/
-CSAuthSample.xcodeproj/project.xcworkspace/
-CSAuthSample.xcodeproj/xcuserdata/
+xcuserdata
 .DS_Store
+.build
+swiftpm
+

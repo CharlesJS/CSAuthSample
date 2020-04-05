@@ -1,4 +1,0 @@
-module CSASHelperToolInternal {
-    header "CSASHelperToolInternal.h"
-    export *
-}

@@ -1,6 +1,6 @@
 //
 //  CSASHelperTool.m
-//  ObjC Helper Library
+//  Helper Library
 //
 //  Based on HelperTool.m from EvenBetterAuthorizationSample,
 //  Copyright © 2013 Apple Computer.
@@ -10,9 +10,9 @@
 
 @import Foundation;
 @import CSASHelperTool;
-@import CSASHelperToolInternal;
 @import Darwin.POSIX.syslog;
 @import ObjectiveC.runtime;
+#import "CSASHelperToolInternal.h"
 
 NS_ASSUME_NONNULL_BEGIN
 

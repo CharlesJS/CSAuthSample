@@ -1,6 +1,6 @@
 //
 //  CSASCommon.m
-//  ObjC Helper Library
+//  Helper Library
 //
 //  Based on Common.m from EvenBetterAuthorizationSample,
 //  Copyright © 2013 Apple Computer.
@@ -9,8 +9,8 @@
 //
 
 @import Foundation;
-@import CSASCommon;
 @import Darwin.POSIX.syslog;
+#import "CSASCommon.h"
 
 NS_ASSUME_NONNULL_BEGIN
 

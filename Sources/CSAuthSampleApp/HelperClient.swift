@@ -1,13 +1,13 @@
 //
 //  HelperClient.swift
-//  App Library (ObjC Helper)
+//  App Library
 //
 //  Created by Charles Srstka on 6/25/18.
 //
 
 import Foundation
 import ServiceManagement
-import CSASCommon
+import CSAuthSampleCommon
 
 public struct HelperClient {
     private let authRef: AuthorizationRef

@@ -1,6 +1,6 @@
 //
 //  CSASCommon.h
-//  ObjC Helper Library
+//  Helper Library
 //
 //  Created by Charles Srstka on 6/25/18.
 //

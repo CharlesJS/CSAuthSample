@@ -1,6 +1,6 @@
 //
 //  CSASHelperConnection.h
-//  ObjC Helper Tool
+//  Helper Tool
 //
 //  Created by Charles Srstka on 7/1/18.
 //

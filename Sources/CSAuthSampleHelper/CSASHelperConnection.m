@@ -1,13 +1,13 @@
 //
 //  CSASHelperConnection.m
-//  ObjC Helper Tool
+//  Helper Tool
 //
 //  Created by Charles Srstka on 7/1/18.
 //
 
 @import Foundation;
 @import CSASHelperTool;
-@import CSASHelperToolInternal;
+#import "CSASHelperToolInternal.h"
 
 @interface CSASHelperConnection ()
 

@@ -17,7 +17,6 @@
 		2835DB9720E13E380006B59B /* CSASCommon.m in Sources */ = {isa = PBXBuildFile; fileRef = 2835DB9420E13E350006B59B /* CSASCommon.m */; };
 		2835DBC920E169C00006B59B /* CSASHelperTool.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2835DB9220E13E250006B59B /* CSASHelperTool.h */; };
 		2835DBCA20E169C00006B59B /* CSASCommon.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2835DB9320E13E350006B59B /* CSASCommon.h */; };
-		2835DBCB20E169C00006B59B /* module.modulemap in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2835DBC420E165A70006B59B /* module.modulemap */; };
 		287DBE80214AF5370006B59B /* SandboxWorkaround.swift in Sources */ = {isa = PBXBuildFile; fileRef = 287DBE7E214AF0CE0006B59B /* SandboxWorkaround.swift */; };
 /* End PBXBuildFile section */
 
@@ -41,7 +40,6 @@
 				281ACACF20E967D70006B59B /* CSASHelperConnection.h in CopyFiles */,
 				2835DBC920E169C00006B59B /* CSASHelperTool.h in CopyFiles */,
 				2835DBCA20E169C00006B59B /* CSASCommon.h in CopyFiles */,
-				2835DBCB20E169C00006B59B /* module.modulemap in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -50,6 +48,8 @@
 /* Begin PBXFileReference section */
 		1058C7A1FEA54F0111CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		13E42FB307B3F0F600E4EEF1 /* CoreData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreData.framework; path = /System/Library/Frameworks/CoreData.framework; sourceTree = "<absolute>"; };
+		2805E9EF243A48D8008BD2DC /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
+		2805E9F1243A4F11008BD2DC /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
 		281ACAB920E960A50006B59B /* CSASHelperConnection.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSASHelperConnection.h; sourceTree = "<group>"; };
 		281ACABA20E960A50006B59B /* CSASHelperConnection.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = CSASHelperConnection.m; sourceTree = "<group>"; };
 		2835DB5220E13CFB0006B59B /* HelperClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperClient.swift; sourceTree = "<group>"; };
@@ -62,7 +62,6 @@
 		2835DBC420E165A70006B59B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		287DBE7E214AF0CE0006B59B /* SandboxWorkaround.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SandboxWorkaround.swift; sourceTree = "<group>"; };
 		289E508420F50B6F0006B59B /* CSASHelperToolInternal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSASHelperToolInternal.h; sourceTree = "<group>"; };
-		289E508520F50B730006B59B /* module.modulemap */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.module-map"; path = module.modulemap; sourceTree = "<group>"; };
 		28A6F66B16918ECD006F0A93 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = ../../../../System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<group>"; };
 		28C7733F214DB4CE0006B59B /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
@@ -119,29 +118,70 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		289E508320F50B620006B59B /* Internal */ = {
+		2805E9EB243A4829008BD2DC /* Sources */ = {
 			isa = PBXGroup;
 			children = (
-				289E508420F50B6F0006B59B /* CSASHelperToolInternal.h */,
-				289E508520F50B730006B59B /* module.modulemap */,
+				2805E9EC243A4831008BD2DC /* CSAuthSampleApp */,
+				2805E9ED243A483D008BD2DC /* CSAuthSampleHelper */,
+				2805E9EE243A4852008BD2DC /* CSAuthSampleCommon */,
 			);
-			path = Internal;
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		2805E9EC243A4831008BD2DC /* CSAuthSampleApp */ = {
+			isa = PBXGroup;
+			children = (
+				2835DB5220E13CFB0006B59B /* HelperClient.swift */,
+				287DBE7E214AF0CE0006B59B /* SandboxWorkaround.swift */,
+			);
+			path = CSAuthSampleApp;
+			sourceTree = "<group>";
+		};
+		2805E9ED243A483D008BD2DC /* CSAuthSampleHelper */ = {
+			isa = PBXGroup;
+			children = (
+				2805E9F2243A5061008BD2DC /* include */,
+				2835DB9020E13DF60006B59B /* CSASHelperTool.m */,
+				289E508420F50B6F0006B59B /* CSASHelperToolInternal.h */,
+				281ACABA20E960A50006B59B /* CSASHelperConnection.m */,
+			);
+			path = CSAuthSampleHelper;
+			sourceTree = "<group>";
+		};
+		2805E9EE243A4852008BD2DC /* CSAuthSampleCommon */ = {
+			isa = PBXGroup;
+			children = (
+				2805E9F3243A5085008BD2DC /* include */,
+				2835DB9420E13E350006B59B /* CSASCommon.m */,
+			);
+			path = CSAuthSampleCommon;
+			sourceTree = "<group>";
+		};
+		2805E9F2243A5061008BD2DC /* include */ = {
+			isa = PBXGroup;
+			children = (
+				2835DBC420E165A70006B59B /* module.modulemap */,
+				2835DB9220E13E250006B59B /* CSASHelperTool.h */,
+				281ACAB920E960A50006B59B /* CSASHelperConnection.h */,
+			);
+			path = include;
+			sourceTree = "<group>";
+		};
+		2805E9F3243A5085008BD2DC /* include */ = {
+			isa = PBXGroup;
+			children = (
+				2805E9EF243A48D8008BD2DC /* module.modulemap */,
+				2835DB9320E13E350006B59B /* CSASCommon.h */,
+			);
+			path = include;
 			sourceTree = "<group>";
 		};
 		29B97314FDCFA39411CA2CEA /* SMJobBless */ = {
 			isa = PBXGroup;
 			children = (
 				28C7733F214DB4CE0006B59B /* README.md */,
-				2835DB5220E13CFB0006B59B /* HelperClient.swift */,
-				287DBE7E214AF0CE0006B59B /* SandboxWorkaround.swift */,
-				2835DB9220E13E250006B59B /* CSASHelperTool.h */,
-				2835DB9020E13DF60006B59B /* CSASHelperTool.m */,
-				281ACAB920E960A50006B59B /* CSASHelperConnection.h */,
-				281ACABA20E960A50006B59B /* CSASHelperConnection.m */,
-				2835DB9320E13E350006B59B /* CSASCommon.h */,
-				2835DB9420E13E350006B59B /* CSASCommon.m */,
-				2835DBC420E165A70006B59B /* module.modulemap */,
-				289E508320F50B620006B59B /* Internal */,
+				2805E9F1243A4F11008BD2DC /* Package.swift */,
+				2805E9EB243A4829008BD2DC /* Sources */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
 			);
@@ -311,11 +351,13 @@
 				);
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				HEADER_SEARCH_PATHS = $SRCROOT/Sources/CSAuthSampleCommon/include;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				PRODUCT_MODULE_NAME = CSAuthSampleAppLib;
+				PRODUCT_MODULE_NAME = CSAuthSampleApp;
 				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_INCLUDE_PATHS = $SRCROOT/Sources/Common;
 				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = (
 					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
@@ -349,11 +391,13 @@
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				HEADER_SEARCH_PATHS = $SRCROOT/Sources/CSAuthSampleCommon/include;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_MODULE_NAME = CSAuthSampleAppLib;
+				PRODUCT_MODULE_NAME = CSAuthSampleApp;
 				PRODUCT_NAME = CSAuthSampleApp;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
+				SWIFT_INCLUDE_PATHS = $SRCROOT/Sources/Common;
 				SWIFT_VERSION = 5.0;
 				USER_HEADER_SEARCH_PATHS = (
 					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
@@ -392,12 +436,12 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = (
-					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
-					$SRCROOT/Internal,
+					$SRCROOT/Sources/CSAuthSampleCommon/include,
+					$SRCROOT/Sources/CSAuthSampleHelper/include,
 				);
-				MODULEMAP_FILE = $SRCROOT/module.modulemap;
+				MODULEMAP_FILE = $SRCROOT/Sources/CSAuthSampleHelper/include/module.modulemap;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				PRODUCT_MODULE_NAME = CSAuthSampleHelperLib;
+				PRODUCT_MODULE_NAME = CSAuthSampleHelper;
 				PRODUCT_NAME = CSAuthSampleHelper;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -430,12 +474,12 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				HEADER_SEARCH_PATHS = (
-					$TARGET_BUILD_DIR/include/CSAuthSampleHelper,
-					$SRCROOT/Internal,
+					$SRCROOT/Sources/CSAuthSampleCommon/include,
+					$SRCROOT/Sources/CSAuthSampleHelper/include,
 				);
-				MODULEMAP_FILE = $SRCROOT/module.modulemap;
+				MODULEMAP_FILE = $SRCROOT/Sources/CSAuthSampleHelper/include/module.modulemap;
 				MTL_ENABLE_DEBUG_INFO = NO;
-				PRODUCT_MODULE_NAME = CSAuthSampleHelperLib;
+				PRODUCT_MODULE_NAME = CSAuthSampleHelper;
 				PRODUCT_NAME = CSAuthSampleHelper;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
