@@ -63,36 +63,13 @@ public struct HelperClient {
     }
     
     public func uninstallHelperTool(helperID: String, completionHandler: @escaping (Error?) -> ()) {
-        let sema = DispatchSemaphore(value: 1)
-        var alreadyReturned = false
-        
         do {
             let authData = try self.authorizationData()
             
-            let errorHandler: (Error) -> () = {
-                sema.wait()
-                defer { sema.signal() }
-                
-                if alreadyReturned {
-                    return
-                }
-                
-                alreadyReturned = true
-                completionHandler($0)
-            }
+            let errorHandler: (Error) -> () = { completionHandler($0) }
             
             let connectionHandler: (BuiltInCommands) -> () = { proxy in
-                proxy.uninstallHelperTool(authorizationData: authData) {
-                    sema.wait()
-                    defer { sema.signal() }
-                    
-                    if alreadyReturned {
-                        return
-                    }
-                    
-                    alreadyReturned = true
-                    completionHandler($0)
-                }
+                proxy.uninstallHelperTool(authorizationData: authData) { completionHandler($0) }
             }
             
             self.connectToHelperTool(helperID: helperID,
@@ -283,21 +260,7 @@ public struct HelperClient {
     }
     
     private func checkHelperVersion(connection: NSXPCConnection, completionHandler: @escaping (Result<String, Error>) -> ()) {
-        let sema = DispatchSemaphore(value: 1)
-        var alreadyReturned = false
-        
-        let errorHandler: (Error) -> () = { error in
-            print("get error")
-            sema.wait()
-            defer { sema.signal() }
-            
-            if alreadyReturned {
-                return
-            }
-            
-            alreadyReturned = true
-            completionHandler(.failure(error))
-        }
+        let errorHandler: (Error) -> () = { completionHandler(.failure($0)) }
         
         guard let proxy = connection.remoteObjectProxyWithErrorHandler(errorHandler) as? BuiltInCommands else {
             completionHandler(.failure(CocoaError(.fileReadUnknown)))
@@ -305,15 +268,6 @@ public struct HelperClient {
         }
         
         proxy.getVersion() {
-            sema.wait()
-            defer { sema.signal() }
-            
-            if alreadyReturned {
-                return
-            }
-            
-            alreadyReturned = true
-            
             if let error = $1 {
                 completionHandler(.failure(error))
             } else if let version = $0 {
