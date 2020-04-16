@@ -9,10 +9,11 @@
 //
 
 @import Foundation;
-@import CSASHelperTool;
 @import Darwin.POSIX.syslog;
 @import ObjectiveC.runtime;
+#import "CSASHelperTool.h"
 #import "CSASHelperToolInternal.h"
+#import "CSASHelperConnection.h"
 
 NS_ASSUME_NONNULL_BEGIN
 

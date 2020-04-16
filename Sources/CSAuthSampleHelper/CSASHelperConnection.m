@@ -6,7 +6,7 @@
 //
 
 @import Foundation;
-@import CSASHelperTool;
+#import "CSASHelperConnection.h"
 #import "CSASHelperToolInternal.h"
 
 @interface CSASHelperConnection ()
