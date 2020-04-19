@@ -1,0 +1,9 @@
+/* 
+  Prompts.strings
+  CSAuthSample Example App
+
+  Created by Charles Srstka on 4/5/20.
+  Copyright © 2020 Charles Srstka. All rights reserved.
+*/
+
+"SayHello" = "CSAuthSample Example App would like to say hello.";
