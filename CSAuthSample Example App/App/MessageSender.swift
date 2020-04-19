@@ -11,42 +11,42 @@ import CSAuthSampleApp
 class MessageSender {
     static let shared = MessageSender()
 
-    private var _xpcConnection: NSXPCConnection? = nil
+    private var _xpcConnection: NSXPCConnection?
     private var sema = DispatchSemaphore(value: 1)
-    
+
     private var xpcConnection: NSXPCConnection {
         self.sema.wait()
         defer { self.sema.signal() }
-        
+
         if let connection = self._xpcConnection {
             return connection
         }
-        
+
         let connection = NSXPCConnection(serviceName: Identifiers.xpcServiceID)
-        
+
         connection.remoteObjectInterface = NSXPCInterface(with: XPCServiceProtocol.self)
-            
+
         connection.invalidationHandler = { [weak connection] in
             self.sema.wait()
             defer { self.sema.signal() }
-            
+
             connection?.invalidationHandler = nil
             self._xpcConnection = nil
         }
-            
+
         connection.resume()
-            
+
         self._xpcConnection = connection
         return connection
     }
-    
-    func sayHello(reply: @escaping (Result<String, Error>) -> ()) {
+
+    func sayHello(reply: @escaping (Result<String, Error>) -> Void) {
         let proxy = self.getProxy { reply(.failure($0)) }
         let sandboxWorkaround = SandboxWorkaround()
-        
+
         proxy.sayHello(message: "Hello there, helper tool!") {
             sandboxWorkaround.stop()
-            
+
             if let replyMessage = $0 {
                 reply(.success(replyMessage))
             } else {
@@ -54,8 +54,9 @@ class MessageSender {
             }
         }
     }
-    
-    func getProxy(errorHandler: @escaping (Error) -> ()) -> XPCServiceProtocol {
+
+    func getProxy(errorHandler: @escaping (Error) -> Void) -> XPCServiceProtocol {
+        // swiftlint:disable:next force_cast
         return self.xpcConnection.remoteObjectProxyWithErrorHandler(errorHandler) as! XPCServiceProtocol
     }
 }

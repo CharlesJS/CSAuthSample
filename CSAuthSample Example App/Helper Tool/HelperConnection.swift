@@ -10,17 +10,17 @@ import Foundation
 import CSAuthSampleHelper
 
 class HelperConnection: CSAuthSampleHelper.HelperConnection, HelperToolProtocol {
-    func sayHello(authorizationData: Data, message: String, reply: @escaping (String?, Error?) -> ()) {
+    func sayHello(authorizationData: Data, message: String, reply: @escaping (String?, Error?) -> Void) {
         if let error = self.checkAuthorization(authorizationData) {
             reply(nil, error)
             return
         }
-        
+
         let replyMessage = """
         Received message from app: “\(message)”
         Sending reply: “Hello app! My UID is \(getuid()) and my GID is \(getgid())!
         """
-        
+
         reply(replyMessage, nil)
     }
 }

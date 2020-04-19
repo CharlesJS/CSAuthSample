@@ -5,6 +5,8 @@
 //  Created by Charles Srstka on 4/12/20.
 //
 
+// swiftlint:disable force_try
+
 import Foundation
 
 let env = ProcessInfo.processInfo.environment
@@ -42,7 +44,7 @@ func getRequirement() -> String {
     codesign.arguments = ["-s", env["CODE_SIGN_IDENTITY"]!, "-i", "", tempFileURL.path]
     try! codesign.run()
     codesign.waitUntilExit()
-    
+
     var code: SecStaticCode?
     assert(SecStaticCodeCreateWithPath(tempFileURL as CFURL, [], &code) == errSecSuccess)
 
@@ -53,9 +55,9 @@ func getRequirement() -> String {
     assert(SecRequirementCopyString(requirement!, [], &cfRequirementString) == errSecSuccess)
 
     var requirementString = cfRequirementString! as String
-    
+
     let identifierRange = requirementString.range(of: "identifier \"\(tempFileName)\" and ")!
     requirementString.replaceSubrange(identifierRange, with: "")
-    
+
     return requirementString
 }

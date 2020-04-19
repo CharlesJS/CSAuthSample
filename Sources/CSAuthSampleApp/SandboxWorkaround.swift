@@ -28,28 +28,28 @@ public class SandboxWorkaround {
     public init() {
         self.queue.async(execute: self.activateIfReady)
     }
-    
+
     public func stop() {
         self.doneSemaphore.wait()
         defer { self.doneSemaphore.signal() }
-        
+
         self.done = true
     }
-    
+
     private let queue = DispatchQueue(label: "com.charlessoft.CSAuthSample.SandboxWorkaround.queue")
     private let doneSemaphore = DispatchSemaphore(value: 1)
     private var done: Bool = false
-    
+
     private func activateIfReady() {
         let agentID = "com.apple.SecurityAgent"
-        
+
         self.doneSemaphore.wait()
         defer { self.doneSemaphore.signal() }
-        
+
         if self.done {
             return
         }
-        
+
         if let securityAgent = NSRunningApplication.runningApplications(withBundleIdentifier: agentID).last {
             securityAgent.activate(options: [])
         } else {

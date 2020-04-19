@@ -263,6 +263,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2805EA46243A55F5008BD2DC /* Build configuration list for PBXNativeTarget "Example App" */;
 			buildPhases = (
+				28E08606244CE8A8008BD2DC /* ShellScript */,
 				2805EA2F243A55F4008BD2DC /* Sources */,
 				2805EA30243A55F4008BD2DC /* Frameworks */,
 				2805EA31243A55F4008BD2DC /* Resources */,
@@ -308,6 +309,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2805EA9A243A73FB008BD2DC /* Build configuration list for PBXNativeTarget "Example XPC Service" */;
 			buildPhases = (
+				28E08607244CE8C2008BD2DC /* ShellScript */,
 				2805EA8A243A73FB008BD2DC /* Sources */,
 				2805EA8B243A73FB008BD2DC /* Frameworks */,
 				2805EA8C243A73FB008BD2DC /* Resources */,
@@ -407,7 +409,41 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "swift \"$SRCROOT/Helper Tool/Build Scripts/SetupHelperPlists.swift\"\n";
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint autocorrect\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n\nswift \"$SRCROOT/Helper Tool/Build Scripts/SetupHelperPlists.swift\"\n";
+		};
+		28E08606244CE8A8008BD2DC /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint autocorrect\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
+		};
+		28E08607244CE8C2008BD2DC /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint autocorrect\n  swiftlint\nelse\n  echo \"warning: SwiftLint not installed, download from https://github.com/realm/SwiftLint\"\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

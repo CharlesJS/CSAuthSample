@@ -1,4 +1,4 @@
-CURRENT_PROJECT_VERSION = 80
+CURRENT_PROJECT_VERSION = 90
 APP_BUNDLE_ID = com.charlessoft.CSAuthSample-Example
 XPC_SERVICE_ID = com.charlessoft.CSAuthSample-Example.XPCService
 HELPER_ID = com.charlessoft.CSAuthSample-Example.helper

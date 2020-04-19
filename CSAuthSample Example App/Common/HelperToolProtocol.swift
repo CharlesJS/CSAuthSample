@@ -9,5 +9,5 @@ import Foundation
 import CSAuthSampleCommon
 
 @objc protocol HelperToolProtocol: BuiltInCommands {
-    func sayHello(authorizationData: Data, message: String, reply: @escaping (String?, Error?) -> ())
+    func sayHello(authorizationData: Data, message: String, reply: @escaping (String?, Error?) -> Void)
 }

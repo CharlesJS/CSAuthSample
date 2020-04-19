@@ -11,11 +11,11 @@ import CSAuthSampleCommon
 
 let exampleCommandSet: CommandSet = {
     let bundle = Bundle.main
-    
+
     let sayHelloRightName = "com.charlessoft.CSAuthSample-Example.Say-Hello"
     let sayHelloPrompt = bundle.localizedString(forKey: "SayHello", value: nil, table: "Prompts")
     let sayHelloSelector = #selector(HelperToolProtocol.sayHello(authorizationData:message:reply:))
-    
+
     let rights = [
         AuthorizationRight(
             selector: sayHelloSelector,
@@ -24,6 +24,6 @@ let exampleCommandSet: CommandSet = {
             prompt: sayHelloPrompt
         )
     ]
-    
+
     return CommandSet(authorizationRights: rights)
 }()

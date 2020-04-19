@@ -8,5 +8,5 @@
 import Foundation
 
 @objc protocol XPCServiceProtocol {
-    func sayHello(message: String, reply: @escaping (String?, Error?) -> ())
+    func sayHello(message: String, reply: @escaping (String?, Error?) -> Void)
 }
