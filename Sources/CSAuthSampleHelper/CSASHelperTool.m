@@ -14,6 +14,7 @@
 #import "CSASHelperTool.h"
 #import "CSASHelperToolInternal.h"
 #import "CSASHelperConnection.h"
+#import "CSASHelperConnectionWrapper.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -23,6 +24,7 @@ NS_ASSUME_NONNULL_BEGIN
 @property (nonatomic, readonly) NSArray<NSString *> *requirements;
 @property (nonatomic, readonly) Class connectionClass;
 @property (nonatomic, readonly) NSXPCInterface *interface;
+@property (nonatomic, strong)   CSASHelperConnectionWrapper *connectionWrapper;
 
 @property (nonatomic) NSUInteger connectionCount;
 
@@ -132,8 +134,13 @@ NS_ASSUME_NONNULL_BEGIN
         return NO;
     }
     
+    self->_connectionWrapper = [[CSASHelperConnectionWrapper alloc] initWithConnectionClass:self.connectionClass
+                                                                              xpcConnection:conn
+                                                                                 helperTool:self
+                                                                                 commandSet:self.commandSet];
+    
     conn.exportedInterface = self.interface;
-    conn.exportedObject = [(CSASHelperConnection *)[self.connectionClass alloc] initWithConnection:conn helperTool:self commandSet:self.commandSet];
+    conn.exportedObject = self->_connectionWrapper;
     
     // Keep track of how many connections we have open. If the number reaches zero, exit the process.
     // This will prevent the helper tool from sticking around long after we're done with it.

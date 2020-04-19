@@ -18,6 +18,8 @@
 		2835DBC920E169C00006B59B /* CSASHelperTool.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2835DB9220E13E250006B59B /* CSASHelperTool.h */; };
 		2835DBCA20E169C00006B59B /* CSASCommon.h in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2835DB9320E13E350006B59B /* CSASCommon.h */; };
 		287DBE80214AF5370006B59B /* SandboxWorkaround.swift in Sources */ = {isa = PBXBuildFile; fileRef = 287DBE7E214AF0CE0006B59B /* SandboxWorkaround.swift */; };
+		28E085F6244CC842008BD2DC /* CSASHelperConnectionWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 28E085F4244CC842008BD2DC /* CSASHelperConnectionWrapper.m */; };
+		28E085F7244CC842008BD2DC /* CSASHelperConnectionWrapper.h in Headers */ = {isa = PBXBuildFile; fileRef = 28E085F5244CC842008BD2DC /* CSASHelperConnectionWrapper.h */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +66,9 @@
 		289E508420F50B6F0006B59B /* CSASHelperToolInternal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSASHelperToolInternal.h; sourceTree = "<group>"; };
 		28A6F66B16918ECD006F0A93 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = ../../../../System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<group>"; };
 		28C7733F214DB4CE0006B59B /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		28E085F4244CC842008BD2DC /* CSASHelperConnectionWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSASHelperConnectionWrapper.m; sourceTree = "<group>"; };
+		28E085F5244CC842008BD2DC /* CSASHelperConnectionWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSASHelperConnectionWrapper.h; sourceTree = "<group>"; };
+		28E085F8244CD5EB008BD2DC /* CSASHelperConnectionInternal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSASHelperConnectionInternal.h; sourceTree = "<group>"; };
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		4BE4906310445F2F006BE471 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
@@ -141,9 +146,12 @@
 			isa = PBXGroup;
 			children = (
 				2805E9F2243A5061008BD2DC /* include */,
-				2835DB9020E13DF60006B59B /* CSASHelperTool.m */,
 				289E508420F50B6F0006B59B /* CSASHelperToolInternal.h */,
+				2835DB9020E13DF60006B59B /* CSASHelperTool.m */,
+				28E085F8244CD5EB008BD2DC /* CSASHelperConnectionInternal.h */,
 				281ACABA20E960A50006B59B /* CSASHelperConnection.m */,
+				28E085F5244CC842008BD2DC /* CSASHelperConnectionWrapper.h */,
+				28E085F4244CC842008BD2DC /* CSASHelperConnectionWrapper.m */,
 			);
 			path = CSAuthSampleHelper;
 			sourceTree = "<group>";
@@ -212,6 +220,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				281ACABE20E9672B0006B59B /* CSASHelperConnection.h in Headers */,
+				28E085F7244CC842008BD2DC /* CSASHelperConnectionWrapper.h in Headers */,
 				2835DB9520E13E350006B59B /* CSASCommon.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -308,6 +317,7 @@
 				281ACABD20E962740006B59B /* CSASHelperConnection.m in Sources */,
 				2835DB9620E13E350006B59B /* CSASCommon.m in Sources */,
 				2835DB9120E13DF60006B59B /* CSASHelperTool.m in Sources */,
+				28E085F6244CC842008BD2DC /* CSASHelperConnectionWrapper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

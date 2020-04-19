@@ -6,8 +6,8 @@
 //
 
 @import Foundation;
+@import CSAuthSampleCommon;
 #import "CSASHelperTool.h"
-#import "CSASCommon.h"
 
 NS_ASSUME_NONNULL_BEGIN
 
@@ -20,11 +20,10 @@ NS_SWIFT_NAME(HelperConnection) @interface CSASHelperConnection : NSObject <CSAS
                         helperTool:(CSASHelperTool *)helperTool
                         commandSet:(CSASCommandSet *)commandSet;
 
-// Make sure to call this method at the beginning of every command.
-// For the 'command' parameter, pass _cmd.
-- (BOOL)checkAuthorization:(NSData *)authData
-                forCommand:(SEL)command
-                     error:(__autoreleasing NSError * _Nullable *)error;
+// This method must be called at the beginning of every command, before executing any other code.
+// Returns nil on successful authorization, and an `NSError` otherwise.
+
+- (nullable NSError *)checkAuthorization:(NSData *)authData;
 
 @end
 

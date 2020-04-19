@@ -7,6 +7,7 @@
 
 @import Foundation;
 #import "CSASHelperConnection.h"
+#import "CSASHelperConnectionInternal.h"
 #import "CSASHelperToolInternal.h"
 
 @interface CSASHelperConnection ()
@@ -14,6 +15,8 @@
 @property (nonatomic, readonly, weak) CSASHelperTool *helperTool;
 
 @end
+
+static NSString * const currentCommandKey = @"com.charlessoft.CSAuthSample.currentCommand";
 
 @implementation CSASHelperConnection
 
@@ -32,11 +35,20 @@
     return self;
 }
 
-- (BOOL)checkAuthorization:(NSData *)authData forCommand:(SEL)command error:(NSError *__autoreleasing  _Nullable *)error {
+- (SEL)currentCommand {
+    NSString *cmdName = [NSThread currentThread].threadDictionary[currentCommandKey];
+    
+    return (cmdName == nil) ? nil : NSSelectorFromString(cmdName);
+}
+
+- (void)setCurrentCommand:(SEL)currentCommand {
+    [NSThread currentThread].threadDictionary[currentCommandKey] = NSStringFromSelector(currentCommand);
+}
+
+- (nullable NSError *)checkAuthorization:(NSData *)authData {
     // First check that authData looks reasonable.
     if ((authData == nil) || (authData.length != sizeof(AuthorizationExternalForm))) {
-        *error = [[NSError alloc] initWithDomain:NSPOSIXErrorDomain code:EINVAL userInfo:nil];
-        return NO;
+        return [[NSError alloc] initWithDomain:NSPOSIXErrorDomain code:EINVAL userInfo:nil];
     }
     
     // Create an authorization ref from that the external form data contained within.
@@ -44,13 +56,12 @@
     OSStatus err = AuthorizationCreateFromExternalForm(authData.bytes, &authRef);
     
     if (err != errAuthorizationSuccess) {
-        *error = CSASConvertOSStatus(err);
-        return NO;
+        return CSASConvertOSStatus(err);
     }
     
     @try {
         // Call our authorization method.
-        return [self _checkAuthorization:authRef forCommand:command error:error];
+        return [self _checkAuthorization:authRef forCommand:self.currentCommand];
     }
     @finally {
         OSStatus junk = AuthorizationFree(authRef, 0);
@@ -58,12 +69,11 @@
     }
 }
 
-- (BOOL)_checkAuthorization:(AuthorizationRef)auth forCommand:(SEL)command error:(__autoreleasing NSError * _Nullable *)error {
+- (nullable NSError *)_checkAuthorization:(AuthorizationRef)auth forCommand:(SEL)command {
     CSASAuthorizationRight *authRight = [self.commandSet authorizationRightForCommand:command];
     
     if (authRight == nil) {
-        *error = [[NSError alloc] initWithDomain:NSPOSIXErrorDomain code:EINVAL userInfo:nil];
-        return NO;
+        return [[NSError alloc] initWithDomain:NSPOSIXErrorDomain code:EINVAL userInfo:nil];
     }
     
     // Authorize the right associated with the command.
@@ -78,18 +88,17 @@
     OSStatus err = AuthorizationCopyRights(auth, &rights, NULL, flags, NULL);
     
     if (err != errAuthorizationSuccess) {
-        *error = CSASConvertOSStatus(err);
-        return NO;
+        return CSASConvertOSStatus(err);
     }
     
-    return YES;
+    return nil;
 }
 
 #pragma mark * CSASBuiltInCommands
 
 - (void)getEndpointWithAuthorizationData:(NSData *)authData endpoint:(void (^)(NSXPCListenerEndpoint * _Nullable, NSError * _Nullable))reply {
-    NSError *error = nil;
-    if (![self checkAuthorization:authData forCommand:_cmd error:&error]) {
+    NSError *error = [self checkAuthorization:authData];
+    if (error != nil) {
         reply(nil, error);
         return;
     }
@@ -123,21 +132,19 @@
     
     NSURL *serviceURL = [[daemonsURL URLByAppendingPathComponent:self.helperTool.helperID] URLByAppendingPathExtension:@"plist"];
     
-    NSError *error = nil;
+    NSError *error = [self checkAuthorization:authData];
     
-    if (![self checkAuthorization:authData forCommand:_cmd error:&error]) {
+    if (error != nil) {
         reply(error);
         return;
     }
         
-    if ([helperURL checkResourceIsReachableAndReturnError:NULL] &&
-        ![fm removeItemAtURL:helperURL error:&error]) {
+    if ([helperURL checkResourceIsReachableAndReturnError:NULL] && ![fm removeItemAtURL:helperURL error:&error]) {
         reply(error);
         return;
     }
     
-    if ([serviceURL checkResourceIsReachableAndReturnError:NULL] &&
-        ![fm removeItemAtURL:serviceURL error:&error]) {
+    if ([serviceURL checkResourceIsReachableAndReturnError:NULL] && ![fm removeItemAtURL:serviceURL error:&error]) {
         reply(error);
         return;
     }
