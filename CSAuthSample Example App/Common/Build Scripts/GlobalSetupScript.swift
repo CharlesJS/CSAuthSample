@@ -29,7 +29,7 @@ CS_REQUIREMENT=\(getRequirement())
 try! newConfig.write(to: configURL, atomically: true, encoding: .utf8)
 
 func getRequirement() -> String {
-    // TODO: Is there any way to generate the designated requirement string without invoking the codesign tool?
+    // Is there any way to generate the designated requirement string without invoking the codesign tool?
     // This is a bit of a kludge, but it's the only way I've been find to do this so far other than hard-coding the
     // format that `codesign` uses
 
