@@ -18,7 +18,7 @@ class HelperConnection: CSAuthSampleHelper.HelperConnection, HelperToolProtocol 
 
         let replyMessage = """
         Received message from app: “\(message)”
-        Sending reply: “Hello app! My UID is \(getuid()) and my GID is \(getgid())!
+        Sending reply to app: “Hello app! My UID is \(getuid()) and my GID is \(getgid())!
         """
 
         reply(replyMessage, nil)

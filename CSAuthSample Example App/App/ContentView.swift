@@ -18,9 +18,9 @@ struct ContentView: View {
                 MessageSender.shared.sayHello {
                     switch $0 {
                     case let .success(reply):
-                        self.response = "Received reply: \(reply)"
+                        self.response = "Received reply from helper:\n\n\(reply)"
                     case let .failure(error):
-                        self.response = "Received error: \(error.localizedDescription)"
+                        self.response = "Received error from helper:\n\n\(error.localizedDescription)"
                     }
                 }
             }) {
