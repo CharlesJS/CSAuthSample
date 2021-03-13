@@ -13,7 +13,7 @@ let env = ProcessInfo.processInfo.environment
 let versionVarName = "CURRENT_PROJECT_VERSION"
 
 let srcURL = URL(fileURLWithPath: env["SRCROOT"]!)
-let tempDir = URL(fileURLWithPath: env["TEMP_DIR"]!)
+let derivedFileDir = URL(fileURLWithPath: env["DERIVED_FILE_DIR"]!)
 let configURL = srcURL.appendingPathComponent("Common/Config/CSAuthSample-Example.xcconfig")
 
 let version = Int(env[versionVarName]!)!
@@ -34,7 +34,7 @@ func getRequirement() -> String {
     // format that `codesign` uses
 
     let tempFileName = UUID().uuidString
-    let tempFileURL = tempDir.appendingPathComponent(tempFileName)
+    let tempFileURL = `derivedFileDir`.appendingPathComponent(tempFileName)
 
     try! Data().write(to: tempFileURL)
     defer { try! FileManager.default.removeItem(at: tempFileURL) }

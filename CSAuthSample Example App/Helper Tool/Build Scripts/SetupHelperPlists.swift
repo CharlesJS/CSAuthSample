@@ -15,13 +15,13 @@ let helperID = env["HELPER_ID"]!
 let xpcServiceID = env["XPC_SERVICE_ID"]!
 
 let srcRoot = URL(fileURLWithPath: env["SRCROOT"]!)
-let tempDir = URL(fileURLWithPath: env["TEMP_DIR"]!)
+let derivedFileDir = URL(fileURLWithPath: env["DERIVED_FILE_DIR"]!)
 
 let infoSrcURL = srcRoot.appendingPathComponent("Helper Tool/Info.plist")
 let launchdSrcURL = srcRoot.appendingPathComponent("Helper Tool/Launchd.plist")
 
-let infoURL = tempDir.appendingPathComponent("Info.plist")
-let launchdURL = tempDir.appendingPathComponent("Launchd.plist")
+let infoURL = derivedFileDir.appendingPathComponent("Info.plist")
+let launchdURL = derivedFileDir.appendingPathComponent("Launchd.plist")
 
 var info = NSDictionary(contentsOf: infoSrcURL) as! [String: Any]
 var launchd = NSDictionary(contentsOf: launchdSrcURL) as! [String: Any]
