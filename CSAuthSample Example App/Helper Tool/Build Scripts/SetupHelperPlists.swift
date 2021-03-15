@@ -5,8 +5,6 @@
 //  Created by Charles Srstka on 4/16/20.
 //
 
-// swiftlint:disable force_cast
-
 import Foundation
 
 let env = ProcessInfo.processInfo.environment

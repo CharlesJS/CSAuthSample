@@ -56,7 +56,6 @@ class MessageSender {
     }
 
     func getProxy(errorHandler: @escaping (Error) -> Void) -> XPCServiceProtocol {
-        // swiftlint:disable:next force_cast
         return self.xpcConnection.remoteObjectProxyWithErrorHandler(errorHandler) as! XPCServiceProtocol
     }
 }

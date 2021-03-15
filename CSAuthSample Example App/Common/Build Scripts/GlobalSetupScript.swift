@@ -5,8 +5,6 @@
 //  Created by Charles Srstka on 4/12/20.
 //
 
-// swiftlint:disable force_try
-
 import Foundation
 
 let env = ProcessInfo.processInfo.environment

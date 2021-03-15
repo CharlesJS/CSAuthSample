@@ -5,8 +5,6 @@
 //  Created by Charles Srstka on 4/5/20.
 //
 
-// swiftlint:disable multiple_closures_with_trailing_closure
-
 import SwiftUI
 
 struct ContentView: View {

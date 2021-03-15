@@ -12,7 +12,6 @@ import Foundation
 // It is 'exported' by the service to make it available to the process hosting the service over an NSXPCConnection.
 class XPCService: NSObject, XPCServiceProtocol {
     private static let bundle = Bundle(for: XPCService.self)
-    // swiftlint:disable:next force_cast
     private static let bundleVersion = XPCService.bundle.infoDictionary![kCFBundleVersionKey as String] as! String
 
     func sayHello(message: String, reply: @escaping (String?, Error?) -> Void) {
