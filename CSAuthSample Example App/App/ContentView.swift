@@ -14,16 +14,16 @@ struct ContentView: View {
 
     var body: some View {
         VStack {
-            Button(action: {
+            Button {
                 MessageSender.shared.sayHello {
                     switch $0 {
-                    case let .success(reply):
+                    case .success(let reply):
                         self.response = "Received reply from helper:\n\n\(reply)"
-                    case let .failure(error):
+                    case .failure(let error):
                         self.response = "Received error from helper:\n\n\(error.localizedDescription)"
                     }
                 }
-            }) {
+            } label: {
                 Text("Say Hello")
             }.padding()
             Text("Response:")

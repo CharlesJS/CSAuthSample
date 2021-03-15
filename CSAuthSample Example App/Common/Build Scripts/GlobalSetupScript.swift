@@ -19,12 +19,12 @@ let configURL = srcURL.appendingPathComponent("Common/Config/CSAuthSample-Exampl
 let version = Int(env[versionVarName]!)!
 
 let newConfig = """
-\(versionVarName) = \(version + 1)
-APP_BUNDLE_ID = \(Identifiers.appID)
-XPC_SERVICE_ID = \(Identifiers.xpcServiceID)
-HELPER_ID = \(Identifiers.helperID)
-CS_REQUIREMENT=\(getRequirement())
-"""
+    \(versionVarName) = \(version + 1)
+    APP_BUNDLE_ID = \(Identifiers.appID)
+    XPC_SERVICE_ID = \(Identifiers.xpcServiceID)
+    HELPER_ID = \(Identifiers.helperID)
+    CS_REQUIREMENT=\(getRequirement())
+    """
 
 try! newConfig.write(to: configURL, atomically: true, encoding: .utf8)
 

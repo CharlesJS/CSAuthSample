@@ -5,8 +5,8 @@
 //  Created by Charles Srstka on 4/5/20.
 //
 
-import Foundation
 import CSAuthSampleHelper
+import Foundation
 
 let helperTool = HelperTool(
     helperID: Identifiers.helperID,

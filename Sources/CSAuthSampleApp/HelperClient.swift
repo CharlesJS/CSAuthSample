@@ -5,14 +5,27 @@
 //  Created by Charles Srstka on 6/25/18.
 //
 
+import CSAuthSampleCommon
 import Foundation
 import ServiceManagement
-import CSAuthSampleCommon
 
+/// The primary class used by your application to communicate with your helper tool.
+///
+/// To use, create an instance and use `connectToHelperTool` to send messages to the helper tool.
 public struct HelperClient {
     private let authRef: AuthorizationRef
 
-    public init(authData: Data? = nil, commandSet: CommandSet, bundle: Bundle? = nil, tableName: String? = nil) throws {
+    /// Create a `HelperClient` object.
+    ///
+    /// - Parameters:
+    ///   - authData: Authorization data, in the format of an `AuthorizationExternalForm`. If not provided, a new `AuthorizationRef` will be created.
+    ///   - commandSet: A `CommandSet` object describing the messages the helper accepts, and their required authorization levels.
+    ///   - bundle: A bundle containing a strings table containing localized messages to present to the user. Optional.
+    ///   - tableName: The name of a strings table containing localized messages to present to the user. Optional.
+    /// - Throws: Any errors that occur in the process of creating the `HelperClient`'s internal `AuthorizationRef`.
+    public init(
+        authData: Data? = nil, commandSet: CommandSet, bundle: Bundle? = nil, tableName: String? = nil
+    ) throws {
         if let data = authData {
             self.authRef = try data.withUnsafeBytes {
                 guard let extForm = $0.bindMemory(to: AuthorizationExternalForm.self).baseAddress else {
@@ -36,6 +49,12 @@ public struct HelperClient {
         commandSet.setupAuthorizationRights(self.authRef, bundle: bundle, tableName: tableName)
     }
 
+    /// Generate authorization data.
+    ///
+    /// It is generally recommended to send this to the helper tool, in order to establish the identity of the sender and prevent message spoofing.
+    ///
+    /// - Throws: Any error that occurs while generating the authorization data.
+    /// - Returns: A `Data` object containing the authorization data, in the format used by `AuthorizationExternalForm`.
     public func authorizationData() throws -> Data {
         var authData = Data(count: MemoryLayout<AuthorizationExternalForm>.size)
 
@@ -54,6 +73,11 @@ public struct HelperClient {
         return authData
     }
 
+    /// Install the helper tool.
+    ///
+    /// - Parameters:
+    ///   - helperID: The bundle identifier of your helper tool, which should generally be distinct from your main application's bundle identifier.
+    ///   - completionHandler: Reports on the success or failure of the installation.
     public func installHelperTool(helperID: String, completionHandler: @escaping (Error?) -> Void) {
         do {
             try self.requestPrivileges([kSMRightBlessPrivilegedHelper], allowUserInteraction: true)
@@ -67,6 +91,11 @@ public struct HelperClient {
         }
     }
 
+    /// Uninstall the helper tool.
+    ///
+    /// - Parameters:
+    ///   - helperID: The bundle identifier of your helper tool, which should generally be distinct from your main application's bundle identifier.
+    ///   - completionHandler: Reports on the success or failure of the uninstallation.
     public func uninstallHelperTool(helperID: String, completionHandler: @escaping (Error?) -> Void) {
         do {
             let authData = try self.authorizationData()
@@ -77,21 +106,33 @@ public struct HelperClient {
                 proxy.uninstallHelperTool(authorizationData: authData) { completionHandler($0) }
             }
 
-            self.connectToHelperTool(helperID: helperID,
-                                     protocol: BuiltInCommands.self,
-                                     installIfNecessary: false,
-                                     errorHandler: errorHandler,
-                                     connectionHandler: connectionHandler)
+            self.connectToHelperTool(
+                helperID: helperID,
+                protocol: BuiltInCommands.self,
+                installIfNecessary: false,
+                errorHandler: errorHandler,
+                connectionHandler: connectionHandler)
         } catch {
             completionHandler(error)
         }
     }
 
-    public func requestHelperVersion(helperID: String, completionHandler: @escaping (Result<String, Error>) -> Void) {
+    /// Get the version of the helper tool.
+    ///
+    /// This is helpful for making sure that the application and helper tool are in sync with each other.
+    /// If the helper's version does not match the app's version, it is generally a sign that the helper needs to be upgraded.
+    ///
+    /// - Parameters:
+    ///   - helperID: The bundle identifier of your helper tool, which should generally be distinct from your main application's bundle identifier.
+    ///   - completionHandler: If successful, returns the version of the helper tool.
+    public func requestHelperVersion(
+        helperID: String, completionHandler: @escaping (Result<String, Error>) -> Void
+    ) {
         let conn: NSXPCConnection
 
         do {
-            conn = try self._openConnection(helperID: helperID, interface: nil, protocol: BuiltInCommands.self)
+            conn = try self._openConnection(
+                helperID: helperID, interface: nil, protocol: BuiltInCommands.self)
         } catch {
             completionHandler(.failure(error))
             return
@@ -100,13 +141,25 @@ public struct HelperClient {
         self.checkHelperVersion(connection: conn, completionHandler: completionHandler)
     }
 
-    public func connectToHelperTool<P: BuiltInCommands>(helperID: String,
-                                                        protocol proto: P.Type,
-                                                        interface: NSXPCInterface? = nil,
-                                                        expectedVersion: String? = nil,
-                                                        installIfNecessary: Bool = true,
-                                                        errorHandler: @escaping (Error) -> Void,
-                                                        connectionHandler: @escaping (P) -> Void) {
+    /// Send a message to the helper tool, and receive a notification on getting its reply.
+    ///
+    /// - Parameters:
+    ///   - helperID: The bundle identifier of your helper tool, which should generally be distinct from your main application's bundle identifier.
+    ///   - proto: A protocol describing the messages the helper tool accepts. Must conform to `BuiltInCommands`.
+    ///   - interface: An optional `NSXPCInterface` describing the helper's interface. If not provided, this will be generated from the `protocol`.
+    ///   - expectedVersion: The expected version of the helper. Optional.
+    ///   - installIfNecessary: Ignored unless `expectedVersion` is provided. If true, the helper tool will be installed if it is not present, or if its version does not match the expected version.
+    ///   - errorHandler: A closure which will be invoked in the event of an error occurring while communicating wth the helper tool.
+    ///   - connectionHandler: A closure which will be invoked upon establishing a successful connection to the helper tool.
+    public func connectToHelperTool<P: BuiltInCommands>(
+        helperID: String,
+        protocol proto: P.Type,
+        interface: NSXPCInterface? = nil,
+        expectedVersion: String? = nil,
+        installIfNecessary: Bool = true,
+        errorHandler: @escaping (Error) -> Void,
+        connectionHandler: @escaping (P) -> Void
+    ) {
         let conn: NSXPCConnection
 
         do {
@@ -119,46 +172,64 @@ public struct HelperClient {
         if let expectedVersion = expectedVersion {
             self.checkHelperVersion(connection: conn) {
                 switch $0 {
-                case let .success(version) where version == expectedVersion:
-                    self._connectToHelperTool(connection: conn,
-                                              protocol: proto,
-                                              interface: interface,
-                                              errorHandler: errorHandler,
-                                              connectionHandler: connectionHandler)
+                case .success(let version) where version == expectedVersion:
+                    self._connectToHelperTool(
+                        connection: conn,
+                        protocol: proto,
+                        interface: interface,
+                        errorHandler: errorHandler,
+                        connectionHandler: connectionHandler)
                 case .failure where installIfNecessary, .success where installIfNecessary:
-                    self._installAndConnect(helperID: helperID,
-                                            protocol: proto,
-                                            interface: interface,
-                                            errorHandler: errorHandler,
-                                            connectionHandler: connectionHandler)
-                case let .failure(error) where !installIfNecessary:
+                    self._installAndConnect(
+                        helperID: helperID,
+                        protocol: proto,
+                        interface: interface,
+                        errorHandler: errorHandler,
+                        connectionHandler: connectionHandler)
+                case .failure(let error) where !installIfNecessary:
                     errorHandler(error)
                 default:
                     errorHandler(CocoaError(.fileReadUnknown))
                 }
             }
         } else {
-            self._connectToHelperTool(connection: conn,
-                                      protocol: proto,
-                                      interface: interface,
-                                      errorHandler: errorHandler,
-                                      connectionHandler: connectionHandler)
+            self._connectToHelperTool(
+                connection: conn,
+                protocol: proto,
+                interface: interface,
+                errorHandler: errorHandler,
+                connectionHandler: connectionHandler
+            )
         }
     }
 
-    public func connectViaEndpoint<P: BuiltInCommands>(_ endpoint: NSXPCListenerEndpoint,
-                                                       protocol proto: P.Type,
-                                                       interface: NSXPCInterface? = nil,
-                                                       errorHandler: @escaping (Error) -> Void) throws -> P {
+    /// Establish a connection via an `NSXPCListenerEndpoint` passed by the helper tool.
+    ///
+    /// This can sometimes be useful if more advanced communication between the app and the helper tool is needed.
+    /// - Parameters:
+    ///   - endpoint: The `NSXPCListenerEndpoint` from which to establish a connection.
+    ///   - proto: A protocol describing the messages the helper tool accepts. Must conform to `BuiltInCommands`.
+    ///   - interface: An optional `NSXPCInterface` describing the helper's interface. If not provided, this will be generated from the `protocol`.
+    ///   - errorHandler: A closure which will be invoked in the event of an error occurring while communicating wth the helper tool.
+    /// - Throws: Any errors that occur in the process of establishing communication with the helper tool.
+    /// - Returns: An proxy object, conforming to `proto`, which can be used to send messages to the helper tool.
+    public func connectViaEndpoint<P: BuiltInCommands>(
+        _ endpoint: NSXPCListenerEndpoint,
+        protocol proto: P.Type,
+        interface: NSXPCInterface? = nil,
+        errorHandler: @escaping (Error) -> Void
+    ) throws -> P {
         let conn = NSXPCConnection(listenerEndpoint: endpoint)
 
         return try self.getProxy(conn, protocol: proto, interface: interface, errorHandler: errorHandler)
     }
 
-    private func getProxy<P: BuiltInCommands>(_ conn: NSXPCConnection,
-                                              protocol proto: P.Type,
-                                              interface: NSXPCInterface?,
-                                              errorHandler: @escaping (Error) -> Void) throws -> P {
+    private func getProxy<P: BuiltInCommands>(
+        _ conn: NSXPCConnection,
+        protocol proto: P.Type,
+        interface: NSXPCInterface?,
+        errorHandler: @escaping (Error) -> Void
+    ) throws -> P {
         let proxy = conn.remoteObjectProxyWithErrorHandler(errorHandler)
 
         return try proxy as? P ?? { throw CocoaError(.fileReadUnknown) }()
@@ -198,7 +269,7 @@ public struct HelperClient {
             flags.insert(.interactionAllowed)
         }
 
-        /* Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper). */
+        // Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper).
         let status = AuthorizationCopyRights(authRef, &rights, nil, flags, nil)
 
         if status != errAuthorizationSuccess {
@@ -215,30 +286,36 @@ public struct HelperClient {
         }
     }
 
-    private func _installAndConnect<P: BuiltInCommands>(helperID: String,
-                                                        protocol proto: P.Type,
-                                                        interface: NSXPCInterface?,
-                                                        errorHandler: @escaping (Error) -> Void,
-                                                        connectionHandler: @escaping (P) -> Void) {
+    private func _installAndConnect<P: BuiltInCommands>(
+        helperID: String,
+        protocol proto: P.Type,
+        interface: NSXPCInterface?,
+        errorHandler: @escaping (Error) -> Void,
+        connectionHandler: @escaping (P) -> Void
+    ) {
         self.installHelperTool(helperID: helperID) {
             if let error = $0 {
                 errorHandler(error)
                 return
             }
 
-            self.connectToHelperTool(helperID: helperID,
-                                     protocol: proto,
-                                     interface: interface,
-                                     expectedVersion: nil,
-                                     installIfNecessary: false,
-                                     errorHandler: errorHandler,
-                                     connectionHandler: connectionHandler)
+            self.connectToHelperTool(
+                helperID: helperID,
+                protocol: proto,
+                interface: interface,
+                expectedVersion: nil,
+                installIfNecessary: false,
+                errorHandler: errorHandler,
+                connectionHandler: connectionHandler
+            )
         }
     }
 
-    private func _openConnection<P: BuiltInCommands>(helperID: String,
-                                                     interface: NSXPCInterface?,
-                                                     protocol proto: P.Type) throws -> NSXPCConnection {
+    private func _openConnection<P: BuiltInCommands>(
+        helperID: String,
+        interface: NSXPCInterface?,
+        protocol proto: P.Type
+    ) throws -> NSXPCConnection {
         guard let objcProto = proto as Any as AnyObject as? Protocol else {
             throw CocoaError(.fileReadUnknown)
         }
@@ -251,11 +328,13 @@ public struct HelperClient {
         return conn
     }
 
-    private func _connectToHelperTool<P: BuiltInCommands>(connection conn: NSXPCConnection,
-                                                          protocol proto: P.Type,
-                                                          interface: NSXPCInterface?,
-                                                          errorHandler: @escaping (Error) -> Void,
-                                                          connectionHandler: @escaping (P) -> Void) {
+    private func _connectToHelperTool<P: BuiltInCommands>(
+        connection conn: NSXPCConnection,
+        protocol proto: P.Type,
+        interface: NSXPCInterface?,
+        errorHandler: @escaping (Error) -> Void,
+        connectionHandler: @escaping (P) -> Void
+    ) {
         do {
             let proxy = try self.getProxy(conn, protocol: proto, interface: interface, errorHandler: errorHandler)
             connectionHandler(proxy)

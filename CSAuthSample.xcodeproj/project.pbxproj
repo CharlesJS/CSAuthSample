@@ -69,6 +69,7 @@
 		28E085F4244CC842008BD2DC /* CSASHelperConnectionWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = CSASHelperConnectionWrapper.m; sourceTree = "<group>"; };
 		28E085F5244CC842008BD2DC /* CSASHelperConnectionWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CSASHelperConnectionWrapper.h; sourceTree = "<group>"; };
 		28E085F8244CD5EB008BD2DC /* CSASHelperConnectionInternal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CSASHelperConnectionInternal.h; sourceTree = "<group>"; };
+		28F16E4C25FEEB1C00370D24 /* .swift-format */ = {isa = PBXFileReference; lastKnownFileType = text; path = ".swift-format"; sourceTree = "<group>"; };
 		29B97324FDCFA39411CA2CEA /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		4BE4906310445F2F006BE471 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
@@ -189,6 +190,7 @@
 			children = (
 				28C7733F214DB4CE0006B59B /* README.md */,
 				2805E9F1243A4F11008BD2DC /* Package.swift */,
+				28F16E4C25FEEB1C00370D24 /* .swift-format */,
 				2805E9EB243A4829008BD2DC /* Sources */,
 				29B97323FDCFA39411CA2CEA /* Frameworks */,
 				19C28FACFE9D520D11CA2CBB /* Products */,
@@ -232,7 +234,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2835DB5E20E13D720006B59B /* Build configuration list for PBXNativeTarget "App Library" */;
 			buildPhases = (
-				28E08608244CE9FF008BD2DC /* ShellScript */,
+				28F16E7925FEF90A00370D24 /* ShellScript */,
 				2835DB5420E13D720006B59B /* Headers */,
 				2835DB5520E13D720006B59B /* Sources */,
 				2835DB5620E13D720006B59B /* Frameworks */,
@@ -251,6 +253,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2835DB8C20E13DD30006B59B /* Build configuration list for PBXNativeTarget "Helper Library" */;
 			buildPhases = (
+				28F16E7A25FEF91B00370D24 /* ShellScript */,
 				2835DB8220E13DD30006B59B /* Headers */,
 				2835DBC820E169AC0006B59B /* CopyFiles */,
 				2835DB8320E13DD30006B59B /* Sources */,
@@ -291,6 +294,8 @@
 				Base,
 			);
 			mainGroup = 29B97314FDCFA39411CA2CEA /* SMJobBless */;
+			packageReferences = (
+			);
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -301,7 +306,7 @@
 /* End PBXProject section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		28E08608244CE9FF008BD2DC /* ShellScript */ = {
+		28F16E7925FEF90A00370D24 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -316,7 +321,24 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if which swiftlint >/dev/null; then\n  swiftlint autocorrect\n  swiftlint\nfi\n";
+			shellScript = "if which swift-format >/dev/null; then\n  swift-format format -ir .\n  swift-format lint -r .\nelif which mint >/dev/null; then\n  mint run apple/swift-format format -ir .\n  mint run apple/swift-format lint -r .\nfi\n";
+		};
+		28F16E7A25FEF91B00370D24 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if which swift-format >/dev/null; then\n  swift-format format -ir .\n  swift-format lint -r .\nelif which mint >/dev/null; then\n  mint run apple/swift-format format -ir .\n  mint run apple/swift-format lint -r .\nfi\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

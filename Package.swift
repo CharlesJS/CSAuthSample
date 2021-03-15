@@ -20,7 +20,7 @@ let package = Package(
         .library(
             name: "CSAuthSampleCommon",
             targets: ["CSAuthSampleCommon"]
-        )
+        ),
     ],
     dependencies: [],
     targets: [
@@ -35,6 +35,6 @@ let package = Package(
         .target(
             name: "CSAuthSampleCommon",
             dependencies: []
-        )
+        ),
     ]
 )

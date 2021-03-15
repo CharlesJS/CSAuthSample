@@ -6,8 +6,8 @@
 //  Copyright © 2020 Charles Srstka. All rights reserved.
 //
 
-import Foundation
 import CSAuthSampleCommon
+import Foundation
 
 let exampleCommandSet: CommandSet = {
     let bundle = Bundle.main

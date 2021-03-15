@@ -6,20 +6,20 @@
 //  Copyright © 2020 Charles Srstka. All rights reserved.
 //
 
-import Foundation
 import CSAuthSampleHelper
+import Foundation
 
 class HelperConnection: CSAuthSampleHelper.HelperConnection, HelperToolProtocol {
-    func sayHello(authorizationData: Data, message: String, reply: @escaping (String?, Error?) -> Void) {
+    func sayHello(authorizationData: Data, message: String, reply: @escaping (String?, Error?) -> ()) {
         if let error = self.checkAuthorization(authorizationData) {
             reply(nil, error)
             return
         }
 
         let replyMessage = """
-        Received message from app: “\(message)”
-        Sending reply to app: “Hello app! My UID is \(getuid()) and my GID is \(getgid())!
-        """
+            Received message from app: “\(message)”
+            Sending reply to app: “Hello app! My UID is \(getuid()) and my GID is \(getgid())!
+            """
 
         reply(replyMessage, nil)
     }

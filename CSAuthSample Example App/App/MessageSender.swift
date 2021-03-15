@@ -5,8 +5,8 @@
 //  Created by Charles Srstka on 4/5/20.
 //
 
-import Foundation
 import CSAuthSampleApp
+import Foundation
 
 class MessageSender {
     static let shared = MessageSender()
