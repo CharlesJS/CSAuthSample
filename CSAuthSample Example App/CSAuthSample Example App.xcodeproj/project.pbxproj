@@ -32,7 +32,7 @@
 		28E08601244CE41E008BD2DC /* CSAuthSampleCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 28E08600244CE41E008BD2DC /* CSAuthSampleCommon */; };
 		28E08603244CE429008BD2DC /* CSAuthSampleApp in Frameworks */ = {isa = PBXBuildFile; productRef = 28E08602244CE429008BD2DC /* CSAuthSampleApp */; };
 		28E08605244CE42F008BD2DC /* CSAuthSampleCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 28E08604244CE42F008BD2DC /* CSAuthSampleCommon */; };
-		28F83F082447FEB0008BD2DC /* com.charlessoft.CSAuthSample-Example.helper in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		28F83F082447FEB0008BD2DC /* Example Helper Tool in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2805EA4D243A563B008BD2DC /* Example Helper Tool */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		28F83F2A244808B1008BD2DC /* HelperConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28F83F29244808B1008BD2DC /* HelperConnection.swift */; };
 /* End PBXBuildFile section */
 
@@ -87,7 +87,7 @@
 			dstPath = Contents/Library/LaunchServices;
 			dstSubfolderSpec = 1;
 			files = (
-				28F83F082447FEB0008BD2DC /* com.charlessoft.CSAuthSample-Example.helper in CopyFiles */,
+				28F83F082447FEB0008BD2DC /* Example Helper Tool in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,7 +100,7 @@
 		2805EA40243A55F5008BD2DC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		2805EA42243A55F5008BD2DC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2805EA43243A55F5008BD2DC /* CSAuthSample_Example_App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CSAuthSample_Example_App.entitlements; sourceTree = "<group>"; };
-		2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "com.charlessoft.CSAuthSample-Example.helper"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2805EA4D243A563B008BD2DC /* Example Helper Tool */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "Example Helper Tool"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2805EA4F243A563B008BD2DC /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		2805EA8E243A73FB008BD2DC /* Example XPC Service.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = "Example XPC Service.xpc"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2805EA90243A73FB008BD2DC /* XPCServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCServiceProtocol.swift; sourceTree = "<group>"; };
@@ -168,7 +168,7 @@
 			isa = PBXGroup;
 			children = (
 				2805EA33243A55F4008BD2DC /* Example App.app */,
-				2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */,
+				2805EA4D243A563B008BD2DC /* Example Helper Tool */,
 				2805EA8E243A73FB008BD2DC /* Example XPC Service.xpc */,
 			);
 			name = Products;
@@ -302,7 +302,7 @@
 				28E08604244CE42F008BD2DC /* CSAuthSampleCommon */,
 			);
 			productName = "CSAuthSample Example Helper Tool";
-			productReference = 2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */;
+			productReference = 2805EA4D243A563B008BD2DC /* Example Helper Tool */;
 			productType = "com.apple.product-type.tool";
 		};
 		2805EA8D243A73FB008BD2DC /* Example XPC Service */ = {
@@ -715,11 +715,11 @@
 					"-sectcreate",
 					__TEXT,
 					__info_plist,
-					"\"$(TEMP_DIR).Info.plist\"",
+					"\"$(DERIVED_FILE_DIR)/Info.plist\"",
 					"-sectcreate",
 					__TEXT,
 					__launchd_plist,
-					"\"$(TEMP_DIR)/Launchd.plist\"",
+					"\"$(DERIVED_FILE_DIR)/Launchd.plist\"",
 				);
 				PRODUCT_NAME = "$(HELPER_ID)";
 			};
