@@ -9,11 +9,16 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var response = ""
+    @State private var messageSendInProgress = false
 
     var body: some View {
         VStack {
             Button {
+                self.messageSendInProgress = true
+
                 MessageSender.shared.sayHello {
+                    self.messageSendInProgress = false
+
                     switch $0 {
                     case .success(let reply):
                         self.response = "Received reply from helper:\n\n\(reply)"
@@ -23,7 +28,7 @@ struct ContentView: View {
                 }
             } label: {
                 Text("Say Hello")
-            }.padding()
+            }.padding().disabled(self.messageSendInProgress)
             Text("Response:")
             Text($response.wrappedValue)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
