@@ -110,7 +110,7 @@ static NSString * const currentCommandKey = @"com.charlessoft.CSAuthSample.curre
     NSString *vers = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleVersion"];
     
     if (vers != nil) {
-        reply(vers, nil);
+        reply([[NSString alloc] initWithFormat:@"%@", vers], nil);
     } else {
         reply(nil, [[NSError alloc] initWithDomain:NSCocoaErrorDomain code:NSFileReadUnknownError userInfo:nil]);
     }
