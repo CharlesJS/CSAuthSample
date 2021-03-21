@@ -25,7 +25,7 @@ var info = NSDictionary(contentsOf: infoSrcURL) as! [String: Any]
 var launchd = NSDictionary(contentsOf: launchdSrcURL) as! [String: Any]
 
 info[kCFBundleVersionKey as String] = env["CURRENT_PROJECT_VERSION"]!
-info[kCFBundleIdentifierKey as String] = helperID
+info[kCFBundleIdentifierKey as String] = "\(helperID)"
 info["SMAuthorizedClients"] = ["identifier \"\(xpcServiceID)\" and \(env["CS_REQUIREMENT"]!)"]
 
 launchd["Label"] = helperID
