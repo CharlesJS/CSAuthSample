@@ -15,6 +15,6 @@ Either Objective-C or Swift can be used to write the helper tool.
 If you wish to use Swift for the full stack, a Swift package is available.
 For your convenience, there is an example app project included that will show you how to write a Swift-based helper app and corresponding client app.
 
-CSAuthSample is free to use for any purpose, but I would appreciate it if you left an attribution in the documentation.
+CSAuthSample is free to use under the terms of the MIT license.
 
 Enjoy!
