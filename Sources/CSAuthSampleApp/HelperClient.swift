@@ -103,7 +103,11 @@ public struct HelperClient {
             let errorHandler: (Error) -> Void = { completionHandler($0) }
 
             let connectionHandler: (BuiltInCommands) -> Void = { proxy in
-                proxy.uninstallHelperTool(authorizationData: authData) { completionHandler($0) }
+                proxy.uninstallHelperTool(authorizationData: authData) { uninstallResult in
+                    self.unblessHelperTool(helperID: helperID) {
+                        completionHandler(uninstallResult ?? $0)
+                    }
+                }
             }
 
             self.connectToHelperTool(
@@ -111,7 +115,8 @@ public struct HelperClient {
                 protocol: BuiltInCommands.self,
                 installIfNecessary: false,
                 errorHandler: errorHandler,
-                connectionHandler: connectionHandler)
+                connectionHandler: connectionHandler
+            )
         } catch {
             completionHandler(error)
         }
@@ -280,6 +285,16 @@ public struct HelperClient {
     private func blessHelperTool(helperID: String, completionHandler: @escaping (Error?) -> Void) {
         var smError: Unmanaged<CFError>?
         if !SMJobBless(kSMDomainSystemLaunchd, helperID as CFString, self.authRef, &smError) {
+            completionHandler(smError.map { ConvertCFError($0.takeRetainedValue()) } ?? CocoaError(.fileWriteUnknown))
+        } else {
+            completionHandler(nil)
+        }
+    }
+    
+    private func unblessHelperTool(helperID: String, completionHandler: @escaping (Error?) -> Void) {
+        var smError: Unmanaged<CFError>? = nil
+        // deprecated, but there is still not a decent replacement, so 🤷
+        if !SMJobRemove(kSMDomainSystemLaunchd, helperID as CFString, self.authRef, true, &smError) {
             completionHandler(smError.map { ConvertCFError($0.takeRetainedValue()) } ?? CocoaError(.fileWriteUnknown))
         } else {
             completionHandler(nil)
