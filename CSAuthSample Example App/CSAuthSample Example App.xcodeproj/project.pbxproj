@@ -100,7 +100,7 @@
 		2805EA40243A55F5008BD2DC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		2805EA42243A55F5008BD2DC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2805EA43243A55F5008BD2DC /* CSAuthSample_Example_App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CSAuthSample_Example_App.entitlements; sourceTree = "<group>"; };
-		2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "com.charlessoft.CSAuthSample-Example.helper"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = "com.charlessoft.CSAuthSample-Example.helper"; path = "Example Helper Tool"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2805EA4F243A563B008BD2DC /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		2805EA8E243A73FB008BD2DC /* Example XPC Service.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = "Example XPC Service.xpc"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2805EA90243A73FB008BD2DC /* XPCServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCServiceProtocol.swift; sourceTree = "<group>"; };
@@ -263,7 +263,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2805EA46243A55F5008BD2DC /* Build configuration list for PBXNativeTarget "Example App" */;
 			buildPhases = (
-				28E08606244CE8A8008BD2DC /* ShellScript */,
 				2805EA2F243A55F4008BD2DC /* Sources */,
 				2805EA30243A55F4008BD2DC /* Frameworks */,
 				2805EA31243A55F4008BD2DC /* Resources */,
@@ -309,7 +308,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2805EA9A243A73FB008BD2DC /* Build configuration list for PBXNativeTarget "Example XPC Service" */;
 			buildPhases = (
-				28E08607244CE8C2008BD2DC /* ShellScript */,
 				2805EA8A243A73FB008BD2DC /* Sources */,
 				2805EA8B243A73FB008BD2DC /* Frameworks */,
 				2805EA8C243A73FB008BD2DC /* Resources */,
@@ -411,41 +409,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "if which swift-format >/dev/null; then\n  swift-format format -ir .\n  swift-format lint -r .\nelif which mint >/dev/null; then\n  mint run apple/swift-format format -ir .\n  mint run apple/swift-format lint -r .\nfi\n\nswift \"$SRCROOT/Helper Tool/Build Scripts/SetupHelperPlists.swift\"\n";
-		};
-		28E08606244CE8A8008BD2DC /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if which swift-format >/dev/null; then\n  swift-format format -ir .\n  swift-format lint -r .\nelif which mint >/dev/null; then\n  mint run apple/swift-format format -ir .\n  mint run apple/swift-format lint -r .\nfi\n";
-		};
-		28E08607244CE8C2008BD2DC /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if which swift-format >/dev/null; then\n  swift-format format -ir .\n  swift-format lint -r .\nelif which mint >/dev/null; then\n  mint run apple/swift-format format -ir .\n  mint run apple/swift-format lint -r .\nfi\n";
+			shellScript = "swift \"$SRCROOT/Helper Tool/Build Scripts/SetupHelperPlists.swift\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

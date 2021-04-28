@@ -234,7 +234,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2835DB5E20E13D720006B59B /* Build configuration list for PBXNativeTarget "App Library" */;
 			buildPhases = (
-				28F16E7925FEF90A00370D24 /* ShellScript */,
 				2835DB5420E13D720006B59B /* Headers */,
 				2835DB5520E13D720006B59B /* Sources */,
 				2835DB5620E13D720006B59B /* Frameworks */,
@@ -253,7 +252,6 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 2835DB8C20E13DD30006B59B /* Build configuration list for PBXNativeTarget "Helper Library" */;
 			buildPhases = (
-				28F16E7A25FEF91B00370D24 /* ShellScript */,
 				2835DB8220E13DD30006B59B /* Headers */,
 				2835DBC820E169AC0006B59B /* CopyFiles */,
 				2835DB8320E13DD30006B59B /* Sources */,
@@ -304,43 +302,6 @@
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXShellScriptBuildPhase section */
-		28F16E7925FEF90A00370D24 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if which swift-format >/dev/null; then\n  swift-format format -ir .\n  swift-format lint -r .\nelif which mint >/dev/null; then\n  mint run apple/swift-format format -ir .\n  mint run apple/swift-format lint -r .\nfi\n";
-		};
-		28F16E7A25FEF91B00370D24 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "if which swift-format >/dev/null; then\n  swift-format format -ir .\n  swift-format lint -r .\nelif which mint >/dev/null; then\n  mint run apple/swift-format format -ir .\n  mint run apple/swift-format lint -r .\nfi\n";
-		};
-/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		2835DB5520E13D720006B59B /* Sources */ = {
