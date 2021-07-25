@@ -22,7 +22,7 @@ class MessageSender {
             return connection
         }
 
-        let connection = NSXPCConnection(serviceName: Identifiers.xpcServiceID)
+        let connection = NSXPCConnection(serviceName: "com.charlessoft.CSAuthSample-Example.xpc")
 
         connection.remoteObjectInterface = NSXPCInterface(with: XPCServiceProtocol.self)
 

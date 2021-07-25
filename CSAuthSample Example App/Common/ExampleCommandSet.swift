@@ -1,29 +1,27 @@
 //
 //  ExampleCommandSet.swift
-//  Example App
+//  CSAuthSample Example App
 //
 //  Created by Charles Srstka on 4/5/20.
-//  Copyright © 2020-2021 Charles Srstka. All rights reserved.
 //
 
 import CSAuthSampleCommon
 import Foundation
 
-let exampleCommandSet: CommandSet = {
-    let bundle = Bundle.main
+enum ExampleCommands: String, Command, CaseIterable {
+    case sayHello = "com.charlessoft.CSAuthSample-Example.Commands.SayHello"
 
-    let sayHelloRightName = "com.charlessoft.CSAuthSample-Example.Say-Hello"
-    let sayHelloPrompt = bundle.localizedString(forKey: "SayHello", value: nil, table: "Prompts")
-    let sayHelloSelector = #selector(HelperToolProtocol.sayHello(authorizationData:message:reply:))
+    var rule: String {
+        switch self {
+        case .sayHello:
+            return kAuthorizationRuleAuthenticateAsAdmin
+        }
+    }
 
-    let rights = [
-        AuthorizationRight(
-            selector: sayHelloSelector,
-            name: sayHelloRightName,
-            rule: kAuthorizationRuleAuthenticateAsAdmin,
-            prompt: sayHelloPrompt
-        )
-    ]
-
-    return CommandSet(authorizationRights: rights)
-}()
+    var prompt: String? {
+        switch self {
+        case .sayHello:
+            return Bundle.main.localizedString(forKey: "SayHello", value: nil, table: "Prompts")
+        }
+    }
+}

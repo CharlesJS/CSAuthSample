@@ -6,14 +6,5 @@
 //
 
 import CSAuthSampleHelper
-import Foundation
 
-let helperTool = HelperTool(
-    helperID: Identifiers.helperID,
-    commandSet: exampleCommandSet,
-    senderRequirements: nil,
-    connectionClass: HelperConnection.self,
-    interface: NSXPCInterface(with: HelperToolProtocol.self)
-)
-
-helperTool.run()
+ExampleHelperTool(commandType: ExampleCommands.self).run()

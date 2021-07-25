@@ -14,6 +14,7 @@ struct ContentView: View {
     var body: some View {
         VStack {
             Button {
+                NSLog("get here?")
                 self.messageSendInProgress = true
 
                 MessageSender.shared.sayHello {

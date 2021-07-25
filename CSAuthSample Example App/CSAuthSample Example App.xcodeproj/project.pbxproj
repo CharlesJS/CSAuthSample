@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 52;
+	objectVersion = 55;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -15,25 +15,20 @@
 		2805EA99243A73FB008BD2DC /* Example XPC Service.xpc in Embed XPC Services */ = {isa = PBXBuildFile; fileRef = 2805EA8E243A73FB008BD2DC /* Example XPC Service.xpc */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		2805EAC1243A7577008BD2DC /* XPCServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EA90243A73FB008BD2DC /* XPCServiceProtocol.swift */; };
 		2805EAC2243A757B008BD2DC /* XPCServiceProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EA90243A73FB008BD2DC /* XPCServiceProtocol.swift */; };
-		2805EAD5243A7B9A008BD2DC /* HelperToolProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAD4243A7B9A008BD2DC /* HelperToolProtocol.swift */; };
-		2805EAD6243A7B9A008BD2DC /* HelperToolProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAD4243A7B9A008BD2DC /* HelperToolProtocol.swift */; };
+		2805EAD5243A7B9A008BD2DC /* ExampleCommandSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAD4243A7B9A008BD2DC /* ExampleCommandSet.swift */; };
+		2805EAD6243A7B9A008BD2DC /* ExampleCommandSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAD4243A7B9A008BD2DC /* ExampleCommandSet.swift */; };
 		2805EADF243A81BF008BD2DC /* Prompts.strings in Resources */ = {isa = PBXBuildFile; fileRef = 2805EAE1243A81BF008BD2DC /* Prompts.strings */; };
 		2805EAE2243A862A008BD2DC /* XPCService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAD9243A7EAD008BD2DC /* XPCService.swift */; };
-		2805EAE3243A8635008BD2DC /* ExampleCommandSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EADB243A7FC2008BD2DC /* ExampleCommandSet.swift */; };
-		2805EAE4243A8636008BD2DC /* ExampleCommandSet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EADB243A7FC2008BD2DC /* ExampleCommandSet.swift */; };
 		2805EAF6243ADC5B008BD2DC /* ServiceDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAF5243ADC5B008BD2DC /* ServiceDelegate.swift */; };
 		2805EAF8243AEB00008BD2DC /* MessageSender.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAF7243AEB00008BD2DC /* MessageSender.swift */; };
-		2805EAFA243AEBD4008BD2DC /* Identifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAF9243AEBD4008BD2DC /* Identifiers.swift */; };
-		2805EAFB243AEBD4008BD2DC /* Identifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAF9243AEBD4008BD2DC /* Identifiers.swift */; };
-		2805EAFC243AEBD4008BD2DC /* Identifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2805EAF9243AEBD4008BD2DC /* Identifiers.swift */; };
 		2821463F2443EC4D008BD2DC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2821463E2443EC4D008BD2DC /* Assets.xcassets */; };
 		28E085FD244CE41E008BD2DC /* CSAuthSampleHelper in Frameworks */ = {isa = PBXBuildFile; productRef = 28E085FC244CE41E008BD2DC /* CSAuthSampleHelper */; };
 		28E085FF244CE41E008BD2DC /* CSAuthSampleApp in Frameworks */ = {isa = PBXBuildFile; productRef = 28E085FE244CE41E008BD2DC /* CSAuthSampleApp */; };
 		28E08601244CE41E008BD2DC /* CSAuthSampleCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 28E08600244CE41E008BD2DC /* CSAuthSampleCommon */; };
 		28E08603244CE429008BD2DC /* CSAuthSampleApp in Frameworks */ = {isa = PBXBuildFile; productRef = 28E08602244CE429008BD2DC /* CSAuthSampleApp */; };
 		28E08605244CE42F008BD2DC /* CSAuthSampleCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 28E08604244CE42F008BD2DC /* CSAuthSampleCommon */; };
-		28F83F082447FEB0008BD2DC /* com.charlessoft.CSAuthSample-Example.helper in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
-		28F83F2A244808B1008BD2DC /* HelperConnection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28F83F29244808B1008BD2DC /* HelperConnection.swift */; };
+		28F83F082447FEB0008BD2DC /* "$APP_ID.helper" in CopyFiles */ = {isa = PBXBuildFile; fileRef = 2805EA4D243A563B008BD2DC /* "$APP_ID.helper" */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		28F83F2A244808B1008BD2DC /* ExampleHelperTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28F83F29244808B1008BD2DC /* ExampleHelperTool.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -87,7 +82,7 @@
 			dstPath = Contents/Library/LaunchServices;
 			dstSubfolderSpec = 1;
 			files = (
-				28F83F082447FEB0008BD2DC /* com.charlessoft.CSAuthSample-Example.helper in CopyFiles */,
+				28F83F082447FEB0008BD2DC /* "$APP_ID.helper" in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,24 +95,23 @@
 		2805EA40243A55F5008BD2DC /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		2805EA42243A55F5008BD2DC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2805EA43243A55F5008BD2DC /* CSAuthSample_Example_App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CSAuthSample_Example_App.entitlements; sourceTree = "<group>"; };
-		2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; name = "com.charlessoft.CSAuthSample-Example.helper"; path = "Example Helper Tool"; sourceTree = BUILT_PRODUCTS_DIR; };
+		2805EA4D243A563B008BD2DC /* "$APP_ID.helper" */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "\"$APP_ID.helper\""; sourceTree = BUILT_PRODUCTS_DIR; };
 		2805EA4F243A563B008BD2DC /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		2805EA8E243A73FB008BD2DC /* Example XPC Service.xpc */ = {isa = PBXFileReference; explicitFileType = "wrapper.xpc-service"; includeInIndex = 0; path = "Example XPC Service.xpc"; sourceTree = BUILT_PRODUCTS_DIR; };
 		2805EA90243A73FB008BD2DC /* XPCServiceProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCServiceProtocol.swift; sourceTree = "<group>"; };
 		2805EA94243A73FB008BD2DC /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		2805EA96243A73FB008BD2DC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		2805EAD4243A7B9A008BD2DC /* HelperToolProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperToolProtocol.swift; sourceTree = "<group>"; };
+		2805EAD4243A7B9A008BD2DC /* ExampleCommandSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleCommandSet.swift; sourceTree = "<group>"; };
 		2805EAD9243A7EAD008BD2DC /* XPCService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XPCService.swift; sourceTree = "<group>"; };
-		2805EADB243A7FC2008BD2DC /* ExampleCommandSet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleCommandSet.swift; sourceTree = "<group>"; };
 		2805EAE0243A81BF008BD2DC /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Prompts.strings; sourceTree = "<group>"; };
 		2805EAF5243ADC5B008BD2DC /* ServiceDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDelegate.swift; sourceTree = "<group>"; };
 		2805EAF7243AEB00008BD2DC /* MessageSender.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageSender.swift; sourceTree = "<group>"; };
-		2805EAF9243AEBD4008BD2DC /* Identifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Identifiers.swift; sourceTree = "<group>"; };
 		2821463D2443E4CB008BD2DC /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		2821463E2443EC4D008BD2DC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		282146402443ED57008BD2DC /* CSAuthSample-Example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "CSAuthSample-Example.xcconfig"; sourceTree = "<group>"; };
+		282146402443ED57008BD2DC /* VersionNumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = VersionNumber.xcconfig; sourceTree = "<group>"; };
 		282146452444060B008BD2DC /* Launchd.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Launchd.plist; sourceTree = "<group>"; };
-		28F83F29244808B1008BD2DC /* HelperConnection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelperConnection.swift; sourceTree = "<group>"; };
+		28E1B06C26ACF4ED00804915 /* CSAuthSample-Example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "CSAuthSample-Example.xcconfig"; sourceTree = "<group>"; };
+		28F83F29244808B1008BD2DC /* ExampleHelperTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExampleHelperTool.swift; sourceTree = "<group>"; };
 		28F83F3824496868008BD2DC /* GlobalSetupScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalSetupScript.swift; sourceTree = "<group>"; };
 		28F83F3924496D1A008BD2DC /* SetupHelperPlists.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupHelperPlists.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -168,7 +162,7 @@
 			isa = PBXGroup;
 			children = (
 				2805EA33243A55F4008BD2DC /* Example App.app */,
-				2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */,
+				2805EA4D243A563B008BD2DC /* "$APP_ID.helper" */,
 				2805EA8E243A73FB008BD2DC /* Example XPC Service.xpc */,
 			);
 			name = Products;
@@ -193,7 +187,7 @@
 			children = (
 				28F83F3B24496D5D008BD2DC /* Build Scripts */,
 				2805EA4F243A563B008BD2DC /* main.swift */,
-				28F83F29244808B1008BD2DC /* HelperConnection.swift */,
+				28F83F29244808B1008BD2DC /* ExampleHelperTool.swift */,
 				2821463D2443E4CB008BD2DC /* Info.plist */,
 				282146452444060B008BD2DC /* Launchd.plist */,
 			);
@@ -222,9 +216,7 @@
 		2805EAD3243A7B79008BD2DC /* Common */ = {
 			isa = PBXGroup;
 			children = (
-				2805EAF9243AEBD4008BD2DC /* Identifiers.swift */,
-				2805EAD4243A7B9A008BD2DC /* HelperToolProtocol.swift */,
-				2805EADB243A7FC2008BD2DC /* ExampleCommandSet.swift */,
+				2805EAD4243A7B9A008BD2DC /* ExampleCommandSet.swift */,
 				2805EAE1243A81BF008BD2DC /* Prompts.strings */,
 				28F83F37244967AC008BD2DC /* Build Scripts */,
 				282146442443FA83008BD2DC /* Config */,
@@ -235,7 +227,8 @@
 		282146442443FA83008BD2DC /* Config */ = {
 			isa = PBXGroup;
 			children = (
-				282146402443ED57008BD2DC /* CSAuthSample-Example.xcconfig */,
+				28E1B06C26ACF4ED00804915 /* CSAuthSample-Example.xcconfig */,
+				282146402443ED57008BD2DC /* VersionNumber.xcconfig */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -301,7 +294,7 @@
 				28E08604244CE42F008BD2DC /* CSAuthSampleCommon */,
 			);
 			productName = "CSAuthSample Example Helper Tool";
-			productReference = 2805EA4D243A563B008BD2DC /* com.charlessoft.CSAuthSample-Example.helper */;
+			productReference = 2805EA4D243A563B008BD2DC /* "$APP_ID.helper" */;
 			productType = "com.apple.product-type.tool";
 		};
 		2805EA8D243A73FB008BD2DC /* Example XPC Service */ = {
@@ -334,7 +327,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 1140;
-				LastUpgradeCheck = 1240;
+				LastUpgradeCheck = 1300;
 				ORGANIZATIONNAME = "Charles Srstka";
 				TargetAttributes = {
 					2805EA32243A55F4008BD2DC = {
@@ -349,7 +342,7 @@
 				};
 			};
 			buildConfigurationList = 2805EA2E243A55F4008BD2DC /* Build configuration list for PBXProject "CSAuthSample Example App" */;
-			compatibilityVersion = "Xcode 9.3";
+			compatibilityVersion = "Xcode 13.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -421,7 +414,6 @@
 				2805EAF8243AEB00008BD2DC /* MessageSender.swift in Sources */,
 				2805EA39243A55F4008BD2DC /* ContentView.swift in Sources */,
 				2805EAC1243A7577008BD2DC /* XPCServiceProtocol.swift in Sources */,
-				2805EAFA243AEBD4008BD2DC /* Identifiers.swift in Sources */,
 				2805EA37243A55F4008BD2DC /* AppDelegate.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -430,11 +422,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				28F83F2A244808B1008BD2DC /* HelperConnection.swift in Sources */,
-				2805EAE4243A8636008BD2DC /* ExampleCommandSet.swift in Sources */,
+				28F83F2A244808B1008BD2DC /* ExampleHelperTool.swift in Sources */,
 				2805EA50243A563B008BD2DC /* main.swift in Sources */,
-				2805EAFC243AEBD4008BD2DC /* Identifiers.swift in Sources */,
-				2805EAD6243A7B9A008BD2DC /* HelperToolProtocol.swift in Sources */,
+				2805EAD6243A7B9A008BD2DC /* ExampleCommandSet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -442,11 +432,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				2805EAE3243A8635008BD2DC /* ExampleCommandSet.swift in Sources */,
 				2805EA95243A73FB008BD2DC /* main.swift in Sources */,
 				2805EAC2243A757B008BD2DC /* XPCServiceProtocol.swift in Sources */,
-				2805EAD5243A7B9A008BD2DC /* HelperToolProtocol.swift in Sources */,
-				2805EAFB243AEBD4008BD2DC /* Identifiers.swift in Sources */,
+				2805EAD5243A7B9A008BD2DC /* ExampleCommandSet.swift in Sources */,
 				2805EAF6243ADC5B008BD2DC /* ServiceDelegate.swift in Sources */,
 				2805EAE2243A862A008BD2DC /* XPCService.swift in Sources */,
 			);
@@ -494,7 +482,7 @@
 /* Begin XCBuildConfiguration section */
 		2805EA44243A55F5008BD2DC /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 282146402443ED57008BD2DC /* CSAuthSample-Example.xcconfig */;
+			baseConfigurationReference = 28E1B06C26ACF4ED00804915 /* CSAuthSample-Example.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -526,7 +514,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
@@ -547,7 +535,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -560,7 +548,7 @@
 		};
 		2805EA45243A55F5008BD2DC /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = 282146402443ED57008BD2DC /* CSAuthSample-Example.xcconfig */;
+			baseConfigurationReference = 28E1B06C26ACF4ED00804915 /* CSAuthSample-Example.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -592,7 +580,7 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Manual;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -607,7 +595,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = 12.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
@@ -623,16 +611,19 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/CSAuthSample_Example_App.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = HRLUCP7QP4;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
 			name = Debug;
 		};
@@ -642,22 +633,27 @@
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = App/CSAuthSample_Example_App.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = HRLUCP7QP4;
 				ENABLE_PREVIEWS = YES;
 				INFOPLIST_FILE = App/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID)";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 			};
 			name = Release;
 		};
 		2805EA52243A563B008BD2DC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				DEVELOPMENT_TEAM = "";
 				OTHER_LDFLAGS = (
 					"-sectcreate",
 					__TEXT,
@@ -675,6 +671,8 @@
 		2805EA53243A563B008BD2DC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
+				DEVELOPMENT_TEAM = "";
 				OTHER_LDFLAGS = (
 					"-sectcreate",
 					__TEXT,
@@ -692,7 +690,9 @@
 		2805EA9B243A73FB008BD2DC /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = "XPC Service/Info.plist";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).XPCService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -703,7 +703,9 @@
 		2805EA9C243A73FB008BD2DC /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_IDENTITY = "-";
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = "";
 				INFOPLIST_FILE = "XPC Service/Info.plist";
 				PRODUCT_BUNDLE_IDENTIFIER = "$(APP_BUNDLE_ID).XPCService";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -757,8 +759,8 @@
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/CharlesJS/CSAuthSample";
 			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 3.0.0;
+				branch = "swift-concurrency";
+				kind = branch;
 			};
 		};
 /* End XCRemoteSwiftPackageReference section */
