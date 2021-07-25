@@ -1,5 +1,0 @@
-module CSAuthSampleHelper {
-    header "CSASHelperTool.h"
-    header "CSASHelperConnection.h"
-    export *
-}
