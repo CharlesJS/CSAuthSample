@@ -1,6 +1,6 @@
 #include "VersionNumber.xcconfig"
 
-APP_ID = "com.charlessoft.CSAuthSample-Example"
-HELPER_ID = "$APP_ID.helper"
-XPC_SERVICE_ID = "$XPC_SERVICE_ID.xpc"
+APP_ID = com.charlessoft.CSAuthSample-Example
+HELPER_ID = ${APP_ID}.helper
+XPC_SERVICE_ID = ${APP_ID}.xpc
 CS_REQUIREMENT = ""
