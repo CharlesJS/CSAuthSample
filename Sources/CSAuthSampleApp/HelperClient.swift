@@ -70,20 +70,35 @@ public class HelperClient<CommandType: Command> {
 
     /// Install the helper tool.
     public func installHelperTool() async throws {
-        try self.requestPrivileges([kSMRightBlessPrivilegedHelper], allowUserInteraction: true)
+        _ = try? await self.uninstallHelperTool()
 
-        try await self.uninstallHelperTool()
+        try self.requestPrivileges([kSMRightBlessPrivilegedHelper], allowUserInteraction: true)
         try self.blessHelperTool()
     }
 
     /// Uninstall the helper tool.
     public func uninstallHelperTool() async throws {
-        try await self.executeInHelperTool(command: BuiltInCommands.uninstallHelperTool)
+        try await self._executeInHelperTool(command: BuiltInCommands.uninstallHelperTool)
         try self.unblessHelperTool()
     }
 
     @discardableResult
-    public func executeInHelperTool(command: Command, request: [String : Any] = [:]) async throws -> [String : Any] {
+    public func executeInHelperTool(
+        command: Command,
+        request: [String : Any] = [:],
+        reinstallIfInvalid: Bool = true
+    ) async throws -> [String : Any] {
+        do {
+            return try await self._executeInHelperTool(command: command, request: request)
+        } catch ConnectionError.connectionInvalid where reinstallIfInvalid {
+            print("connection invalid! Reconnecting")
+            try await self.installHelperTool()
+            return try await self._executeInHelperTool(command: command, request: request)
+        }
+    }
+
+    @discardableResult
+    private func _executeInHelperTool(command: Command, request: [String : Any] = [:]) async throws -> [String : Any] {
         try self.preauthorize(command: command)
 
         let connection = xpc_connection_create_mach_service(
@@ -211,7 +226,7 @@ public class HelperClient<CommandType: Command> {
         }
 
         // Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper).
-        let err = AuthorizationCopyRights(authorization, &rights, nil, flags, nil)
+        let err = AuthorizationCopyRights(self.authorization, &rights, nil, flags, nil)
         guard err == errAuthorizationSuccess else { throw convertOSStatusError(err) }
     }
 

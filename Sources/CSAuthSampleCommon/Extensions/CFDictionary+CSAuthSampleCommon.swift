@@ -18,7 +18,10 @@ extension CFDictionary {
     }
 
     public subscript(key: CFTypeRef) -> CFTypeRef? {
-        return CFDictionaryGetValue(self, unsafeBitCast(key, to: UnsafeRawPointer.self)) as CFTypeRef?
+        return unsafeBitCast(
+            CFDictionaryGetValue(self, unsafeBitCast(key, to: UnsafeRawPointer.self)),
+            to: CFTypeRef?.self
+        )
     }
 
     public subscript<T: CFTypeRef>(key: CFTypeRef, as typeID: CFTypeID) -> T? {

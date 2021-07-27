@@ -161,8 +161,6 @@ open class HelperTool<CommandType: Command> {
     }
 
     private func checkCallerCredentials(command: Command, connection: xpc_connection_t) throws {
-        guard let requirementString = command.codeSigningRequirement else { return }
-
         var pid = CFIndex(xpc_connection_get_pid(connection))
         var pidAttr = CFNumberCreate(kCFAllocatorDefault, .cfIndexType, &pid)
         var pidAttrKey = kSecGuestAttributePid
@@ -185,8 +183,11 @@ open class HelperTool<CommandType: Command> {
         guard err == errSecSuccess, let code = code else { throw convertOSStatusError(err) }
 
         var requirement: SecRequirement? = nil
-        err = SecRequirementCreateWithString(CFString.fromString(requirementString), [], &requirement)
-        guard err == errSecSuccess, let requirement = requirement else { throw convertOSStatusError(err) }
+
+        if let requirementString = command.codeSigningRequirement {
+            err = SecRequirementCreateWithString(CFString.fromString(requirementString), [], &requirement)
+            guard err == errSecSuccess, requirement != nil else { throw convertOSStatusError(err) }
+        }
 
         err = SecCodeCheckValidity(code, [], requirement)
         guard err == errSecSuccess else { throw convertOSStatusError(err) }
