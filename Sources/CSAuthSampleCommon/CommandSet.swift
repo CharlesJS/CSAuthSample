@@ -7,7 +7,6 @@
 
 import Security.AuthorizationDB
 import Darwin.POSIX.syslog
-import XPC
 import CoreGraphics
 
 public protocol Command {

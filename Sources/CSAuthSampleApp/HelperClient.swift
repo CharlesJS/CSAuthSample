@@ -9,6 +9,7 @@ import CSAuthSampleCommon
 import Foundation
 import ServiceManagement
 import System
+import SwiftyXPC
 
 /// The primary class used by your application to communicate with your helper tool.
 ///
@@ -16,6 +17,20 @@ import System
 public class HelperClient<CommandType: Command> {
     let helperID: String
     private let authorization: AuthorizationRef
+
+    private var authorizationData: Data {
+        get throws {
+            var data = Data(count: MemoryLayout<AuthorizationExternalForm>.stride)
+
+            try data.withUnsafeMutableBytes {
+                let ptr = $0.bindMemory(to: AuthorizationExternalForm.self).baseAddress!
+                let err = AuthorizationMakeExternalForm(self.authorization, ptr)
+                guard err == errAuthorizationSuccess else { throw convertOSStatusError(err) }
+            }
+
+            return data
+        }
+    }
 
     /// Create a `HelperClient` object.
     ///
@@ -85,7 +100,7 @@ public class HelperClient<CommandType: Command> {
     @discardableResult
     public func executeInHelperTool(
         command: Command,
-        request: [String : Any] = [:],
+        request: [String : Any]? = nil,
         reinstallIfInvalid: Bool = true
     ) async throws -> [String : Any] {
         do {
@@ -98,56 +113,23 @@ public class HelperClient<CommandType: Command> {
     }
 
     @discardableResult
-    private func _executeInHelperTool(command: Command, request: [String : Any] = [:]) async throws -> [String : Any] {
+    private func _executeInHelperTool(command: Command, request: [String : Any]?) async throws -> [String : Any] {
         try self.preauthorize(command: command)
 
-        let connection = xpc_connection_create_mach_service(
-            self.helperID,
-            nil,
-            UInt64(XPC_CONNECTION_MACH_SERVICE_PRIVILEGED)
+        let connection = XPCConnection(
+            type: .remoteMachService(serviceName: self.helperID, isPrivilegedHelperTool: true)
         )
 
-        var connectionError: ConnectionError? =  nil
-        xpc_connection_set_event_handler(connection) { event in
-            if connectionError != nil { return }
+        var message: [String : Any] = [
+            DictionaryKeys.authData: try self.authorizationData,
+            DictionaryKeys.commandName: command.name
+        ]
 
-            switch xpc_get_type(event) {
-            case XPC_TYPE_ERROR:
-                if event === XPC_ERROR_CONNECTION_INTERRUPTED {
-                    connectionError = .connectionInterrupted
-                } else if event === XPC_ERROR_CONNECTION_INVALID {
-                    connectionError = .connectionInvalid
-                } else {
-                    connectionError = .unexpectedConnection
-                }
-            default:
-                connectionError = .unexpectedEvent
-            }
+        if let request = request {
+            message[DictionaryKeys.request] = request
         }
 
-        xpc_connection_resume(connection)
-
-        let message = xpc_dictionary_create(nil, nil, 0)
-
-        try self.addAuthorizationData(to: message)
-
-        xpc_dictionary_set_string(message, DictionaryKeys.commandName, command.name)
-
-        if !request.isEmpty, let xpcRequest = (request as CFDictionary).toXPCObject() {
-            xpc_dictionary_set_value(message, DictionaryKeys.request, xpcRequest)
-        }
-
-        return try await withCheckedThrowingContinuation { continuation in
-            xpc_connection_send_message_with_reply(connection, message, nil) { reply in
-                do {
-                    if let error = connectionError { throw error }
-
-                    continuation.resume(returning: try self.handleXPCReply(reply))
-                } catch {
-                    continuation.resume(throwing: error)
-                }
-            }
-        }
+        return try await connection.sendMessage(message)
     }
 
     private func preauthorize(command: Command) throws {
@@ -172,32 +154,6 @@ public class HelperClient<CommandType: Command> {
                 guard err == errAuthorizationSuccess else { throw convertOSStatusError(err) }
             }
         }
-    }
-
-    private func addAuthorizationData(to dictionary: xpc_object_t) throws {
-        var extAuth = AuthorizationExternalForm()
-        let err = AuthorizationMakeExternalForm(self.authorization, &extAuth)
-
-        guard err == errAuthorizationSuccess else { throw convertOSStatusError(err) }
-
-        xpc_dictionary_set_data(
-            dictionary,
-            DictionaryKeys.authData,
-            &extAuth,
-            MemoryLayout<AuthorizationExternalForm>.size
-        )
-    }
-
-    private func handleXPCReply(_ reply: xpc_object_t) throws -> [String : Any] {
-        guard let response = xpc_dictionary_get_value(reply, DictionaryKeys.response) as? [String : Any] else {
-            if let err = xpc_dictionary_get_value(reply, DictionaryKeys.error) as? Error {
-                throw err
-            } else {
-                throw CocoaError(.fileReadUnknown)
-            }
-        }
-
-        return response
     }
 
     private func requestPrivileges(_ privileges: [String], allowUserInteraction: Bool = true) throws {

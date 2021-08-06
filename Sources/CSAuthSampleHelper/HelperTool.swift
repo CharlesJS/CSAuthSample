@@ -10,6 +10,7 @@ import System
 import Security.Authorization
 import CSAuthSampleCommon
 import CoreFoundation
+import SwiftyXPC
 import os
 
 open class HelperTool<CommandType: Command> {
@@ -37,64 +38,29 @@ open class HelperTool<CommandType: Command> {
 
     open func handleCommand(
         command: CommandType,
-        request: CFDictionary?,
+        request: [String : Any]?,
         authorization: AuthorizationRef,
-        connection: xpc_connection_t
-    ) async throws -> CFDictionary? {
+        connection: XPCConnection
+    ) async throws -> [String : Any]? {
         fatalError("Must override handleCommand(command:request:authorization:connection:)!")
     }
 
     public func run() -> Never {
         let helperID = self.helperID
-        let service = xpc_connection_create_mach_service(helperID, nil, UInt64(XPC_CONNECTION_MACH_SERVICE_LISTENER))
+        let listener = XPCListener(type: .machService(name: helperID))
 
-        xpc_connection_set_event_handler(service) { connection in
-            xpc_connection_set_event_handler(connection) { self.handleEvent(connection: connection, event: $0) }
-            xpc_connection_resume(connection)
-        }
+        listener.errorHandler ===                                                                                
 
-        xpc_connection_resume(service)
-
-        dispatchMain()
+        listener.activate()
     }
 
-    private func handleEvent(connection: xpc_object_t, event: xpc_object_t) {
-        switch xpc_get_type(event) {
-        case XPC_TYPE_ERROR:
-            self.handleError(connection: connection, event: event)
-        case XPC_TYPE_DICTIONARY:
-            Task {
-                await self.handleRequest(event: event)
-            }
-        default:
-            let description = xpc_copy_description(event)
-            defer { free(description) }
-
-            self.logger.notice("Unhandled XPC event: \(String(cString: description))")
-        }
-    }
-
-    private func sendResponse(response: xpc_object_t, event: xpc_object_t) {
-        if let reply = xpc_dictionary_create_reply(event) {
-            xpc_dictionary_set_value(reply, DictionaryKeys.response, reply)
-        }
-    }
-
-    private func handleError(connection: xpc_object_t, event: xpc_object_t) {
-        if event === XPC_ERROR_CONNECTION_INVALID {
-            // The client process on the other end of the connection has either
-            // crashed or cancelled the connection. After receiving this error,
-            // the connection is in an invalid state, and you do not need to
-            // call xpc_connection_cancel(). Just tear down any associated state
-            // here.
-
-            if let ctx = xpc_connection_get_context(connection) {
-                ctx.deallocate()
-                xpc_connection_set_context(connection, nil)
-            }
-        } else if event === XPC_ERROR_TERMINATION_IMMINENT {
+    private func handleError(error: XPCError) {
+        switch error {
+        case .connectionInvalid:
+            self.logger.notice("The XPC connection went invalid")
+        case .terminationImminent:
             self.logger.notice("Termination imminent")
-        } else {
+        default:
             self.logger.notice("Something went wrong")
         }
     }
@@ -105,10 +71,9 @@ open class HelperTool<CommandType: Command> {
             return
         }
 
-
         do {
             if let response = try await self.getResponse(connection: remote, event: event)?.toXPCObject() {
-                self.sendResponse(response: response, event: event)
+                self.sendResponse(connection: remote, response: response, event: event)
             }
         } catch {
             guard let error = error.toXPCObject() else {
@@ -116,11 +81,11 @@ open class HelperTool<CommandType: Command> {
                 return
             }
 
-            self.sendResponse(response: error, event: event)
+            self.sendResponse(connection: remote, response: error, event: event)
         }
     }
 
-    private func getResponse(connection: xpc_object_t, event: xpc_object_t) async throws -> CFDictionary? {
+    private func getResponse(connection: xpc_object_t, event: xpc_object_t) async throws -> [String : Any]? {
         guard let commandName = xpc_dictionary_get_string(event, DictionaryKeys.commandName),
               let command = CommandType[String(cString: commandName)] else {
             throw Errno.invalidArgument
@@ -140,8 +105,8 @@ open class HelperTool<CommandType: Command> {
 
         guard err == errAuthorizationSuccess, let authorization = authorization else { throw convertOSStatusError(err) }
 
-        let request = xpc_dictionary_get_value(event, DictionaryKeys.request)?.toCFType().flatMap {
-            CFGetTypeID($0 as AnyObject) == CFDictionaryGetTypeID() ? unsafeBitCast($0, to: CFDictionary.self) : nil
+        let request = xpc_dictionary_get_value(event, DictionaryKeys.request).flatMap {
+            convertFromXPC($0) as? [String : Any]
         }
 
         try self.checkAuthorization(command: command, authorization: authorization)
@@ -209,5 +174,4 @@ open class HelperTool<CommandType: Command> {
             }
         }
     }
-
 }

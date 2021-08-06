@@ -10,7 +10,7 @@ import CoreFoundation
 import System
 
 extension HelperTool {
-    func handleBuiltInCommand(_ command: BuiltInCommands) throws -> CFDictionary? {
+    func handleBuiltInCommand(_ command: BuiltInCommands) throws -> [String : Any]? {
         switch command {
         case .getVersion:
             return try self.getVersion()
@@ -20,7 +20,7 @@ extension HelperTool {
         }
     }
 
-    func getVersion() throws -> CFDictionary {
+    func getVersion() throws -> [String : Any] {
         guard let version = CFDictionaryGetValue(
             self.infoPlist,
             unsafeBitCast(kCFBundleVersionKey, to: UnsafeRawPointer.self)
@@ -28,13 +28,7 @@ extension HelperTool {
             throw Errno.badFileTypeOrFormat
         }
 
-        var keyCallBacks = kCFTypeDictionaryKeyCallBacks
-        var valueCallBacks = kCFTypeDictionaryValueCallBacks
-        let dict = CFDictionaryCreateMutable(kCFAllocatorDefault, 1, &keyCallBacks, &valueCallBacks)!
-
-        CFDictionarySetValue(dict, unsafeBitCast(kCFBundleVersionKey, to: UnsafeMutableRawPointer.self), version)
-
-        return dict
+        return [kCFBundleVersionKey.toString() : version]
     }
 
     func uninstallHelperTool() throws {
