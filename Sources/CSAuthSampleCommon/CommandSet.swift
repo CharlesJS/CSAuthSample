@@ -8,12 +8,12 @@
 import Security.AuthorizationDB
 import Darwin.POSIX.syslog
 import CoreGraphics
+import SwiftyXPC
 
 public protocol Command {
     var name: String { get }
     var rule: String { get }
     var prompt: String? { get }
-    var codeSigningRequirement: String? { get }
 
     static var allCommands: [Command] { get }
 
@@ -42,7 +42,6 @@ public enum BuiltInCommands: String, CaseIterable, Command {
 
 extension Command {
     public var prompt: String? { nil }
-    public var codeSigningRequirement: String? { nil }
 
     private static var fullCommandSet: [Command] { BuiltInCommands.allCommands + Self.allCommands }
 
@@ -72,7 +71,7 @@ extension Command {
                 )
 
                 guard err == errAuthorizationSuccess else {
-                    throw convertOSStatusError(err)
+                    throw CFError.make(err)
                 }
             } else {
                 // A right already exists (err == noErr) or any other error occurs, we

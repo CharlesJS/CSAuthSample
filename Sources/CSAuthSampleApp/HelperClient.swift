@@ -25,7 +25,7 @@ public class HelperClient<CommandType: Command> {
             try data.withUnsafeMutableBytes {
                 let ptr = $0.bindMemory(to: AuthorizationExternalForm.self).baseAddress!
                 let err = AuthorizationMakeExternalForm(self.authorization, ptr)
-                guard err == errAuthorizationSuccess else { throw convertOSStatusError(err) }
+                guard err == errAuthorizationSuccess else { throw CFError.make(err) }
             }
 
             return data
@@ -53,7 +53,7 @@ public class HelperClient<CommandType: Command> {
         self.authorization = try authorization ?? {
             var authorization: AuthorizationRef?
             let err = AuthorizationCreate(nil, nil, [], &authorization)
-            if err != errAuthorizationSuccess { throw convertOSStatusError(err) }
+            if err != errAuthorizationSuccess { throw CFError.make(err) }
 
             return try authorization ?? { throw CocoaError(.fileReadUnknown) }()
         }()
@@ -151,7 +151,7 @@ public class HelperClient<CommandType: Command> {
                     nil
                 )
 
-                guard err == errAuthorizationSuccess else { throw convertOSStatusError(err) }
+                guard err == errAuthorizationSuccess else { throw CFError.make(err) }
             }
         }
     }
@@ -183,7 +183,7 @@ public class HelperClient<CommandType: Command> {
 
         // Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper).
         let err = AuthorizationCopyRights(self.authorization, &rights, nil, flags, nil)
-        guard err == errAuthorizationSuccess else { throw convertOSStatusError(err) }
+        guard err == errAuthorizationSuccess else { throw CFError.make(err) }
     }
 
     private func blessHelperTool() throws {

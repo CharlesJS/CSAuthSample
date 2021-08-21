@@ -22,7 +22,9 @@ let package = Package(
             targets: ["CSAuthSampleCommon"]
         ),
     ],
-    dependencies: [],
+    dependencies: [
+        .package(name: "SwiftyXPC", url: "https://github.com/CharlesJS/SwiftyXPC.git", from: "0.2.4")
+    ],
     targets: [
         .target(
             name: "CSAuthSampleApp",
@@ -34,7 +36,7 @@ let package = Package(
         ),
         .target(
             name: "CSAuthSampleCommon",
-            dependencies: []
+            dependencies: ["SwiftyXPC"]
         ),
     ]
 )

@@ -15,13 +15,19 @@ import os
 
 open class HelperTool<CommandType: Command> {
     public let helperID: String
+    public let codeSigningRequirement: String
     public let url: CFURL
     public let infoPlist: CFDictionary
     public let timeoutInterval: CFTimeInterval?
 
     private let logger: Logger
 
-    public init(commandType _: CommandType.Type, helperID: String? = nil, timeoutInterval: CFTimeInterval? = nil) {
+    public init(
+        commandType _: CommandType.Type,
+        helperID: String? = nil,
+        codeSigningRequirement requirement: String? = nil,
+        timeoutInterval: CFTimeInterval? = nil
+    ) {
         let path = CFString.fromString(CommandLine.arguments.first!)
 
         self.url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path, .cfurlposixPathStyle, false)
@@ -30,6 +36,16 @@ open class HelperTool<CommandType: Command> {
         self.helperID = helperID ?? self.infoPlist.readString(key: kCFBundleIdentifierKey) ?? {
             fatalError("Helper ID must be specified, either in code or via \(kCFBundleIdentifierKey!) in Info.plist")
         }()
+
+        if let requirement = requirement {
+            self.codeSigningRequirement = requirement
+        } else if let authorizedClients: CFArray = self.infoPlist["SMAuthorizedClients", as: CFArrayGetTypeID()],
+                  CFArrayGetCount(authorizedClients) > 0,
+                  let requirement = (authorizedClients[0, as: CFStringGetTypeID()] as CFString?)?.toString() {
+            self.codeSigningRequirement = requirement
+        } else {
+            fatalError("A code signing requirement must be specified")
+        }
 
         self.timeoutInterval = timeoutInterval
 
@@ -46,68 +62,46 @@ open class HelperTool<CommandType: Command> {
     }
 
     public func run() -> Never {
-        let helperID = self.helperID
-        let listener = XPCListener(type: .machService(name: helperID))
+        let listener = try! XPCListener(
+            type: .machService(name: self.helperID),
+            codeSigningRequirement: self.codeSigningRequirement
+        )
 
-        listener.errorHandler ===                                                                                
+        listener.messageHandler = self.handleMessage
+        listener.errorHandler = self.handleError
 
         listener.activate()
+        fatalError("Should not get here")
     }
 
-    private func handleError(error: XPCError) {
+    private func handleError(connection: XPCConnection, error: Error) {
         switch error {
-        case .connectionInvalid:
+        case XPCError.connectionInvalid:
             self.logger.notice("The XPC connection went invalid")
-        case .terminationImminent:
+        case XPCError.terminationImminent:
             self.logger.notice("Termination imminent")
         default:
-            self.logger.notice("Something went wrong")
+            self.logger.notice("Something went wrong: \(error._domain) error \(error._code)")
         }
     }
 
-    private func handleRequest(event: xpc_object_t) async {
-        guard let remote = xpc_dictionary_get_remote_connection(event) else {
-            self.logger.error("Couldn't establish connection to main application!")
-            return
-        }
-
-        do {
-            if let response = try await self.getResponse(connection: remote, event: event)?.toXPCObject() {
-                self.sendResponse(connection: remote, response: response, event: event)
-            }
-        } catch {
-            guard let error = error.toXPCObject() else {
-                self.logger.error("Couldn't convert error object \(String(describing: error))")
-                return
-            }
-
-            self.sendResponse(connection: remote, response: error, event: event)
-        }
-    }
-
-    private func getResponse(connection: xpc_object_t, event: xpc_object_t) async throws -> [String : Any]? {
-        guard let commandName = xpc_dictionary_get_string(event, DictionaryKeys.commandName),
-              let command = CommandType[String(cString: commandName)] else {
+    private func handleMessage(connection: XPCConnection, message: [String : Any]) async throws -> [String : Any]? {
+        guard let commandName = message[DictionaryKeys.commandName] as? String,
+              let command = CommandType[commandName] else {
             throw Errno.invalidArgument
         }
 
-        try checkCallerCredentials(command: command, connection: connection)
-
-        var authFormDataLength = 0
-        guard let authFormExtData = xpc_dictionary_get_data(event, DictionaryKeys.authData, &authFormDataLength),
-              authFormDataLength == MemoryLayout<AuthorizationExternalForm>.size else { throw Errno.invalidArgument }
+        guard let authFormData = message[DictionaryKeys.authData, as: CFDataGetTypeID()] as CFData?,
+              CFDataGetLength(authFormData) >= MemoryLayout<AuthorizationExternalForm>.size else {
+                  throw Errno.invalidArgument
+        }
 
         var authorization: AuthorizationRef? = nil
-        let err = AuthorizationCreateFromExternalForm(
-            authFormExtData.bindMemory(to: AuthorizationExternalForm.self, capacity: 1),
-            &authorization
-        )
-
-        guard err == errAuthorizationSuccess, let authorization = authorization else { throw convertOSStatusError(err) }
-
-        let request = xpc_dictionary_get_value(event, DictionaryKeys.request).flatMap {
-            convertFromXPC($0) as? [String : Any]
+        let err = CFDataGetBytePtr(authFormData).withMemoryRebound(to: AuthorizationExternalForm.self, capacity: 1) {
+            AuthorizationCreateFromExternalForm($0, &authorization)
         }
+
+        guard err == errAuthorizationSuccess, let authorization = authorization else { throw CFError.make(err) }
 
         try self.checkAuthorization(command: command, authorization: authorization)
 
@@ -116,46 +110,13 @@ open class HelperTool<CommandType: Command> {
         } else if let command = command as? CommandType {
             return try await handleCommand(
                 command: command,
-                request: request,
+                request: message[DictionaryKeys.request] as? [String : Any],
                 authorization: authorization,
                 connection: connection
             )
         } else {
             throw Errno.invalidArgument
         }
-    }
-
-    private func checkCallerCredentials(command: Command, connection: xpc_connection_t) throws {
-        var pid = CFIndex(xpc_connection_get_pid(connection))
-        var pidAttr = CFNumberCreate(kCFAllocatorDefault, .cfIndexType, &pid)
-        var pidAttrKey = kSecGuestAttributePid
-
-        var keyCallBacks = kCFTypeDictionaryKeyCallBacks
-        var valueCallBacks = kCFTypeDictionaryValueCallBacks
-
-        let codeAttrs = withUnsafeMutablePointer(to: &pidAttrKey) {
-            $0.withMemoryRebound(to: UnsafeRawPointer?.self, capacity: 1) { keyPtr in
-                withUnsafeMutablePointer(to: &pidAttr) {
-                    $0.withMemoryRebound(to: UnsafeRawPointer?.self, capacity: 1) { keyAttrPtr in
-                        CFDictionaryCreate(kCFAllocatorDefault, keyPtr, keyAttrPtr, 1, &keyCallBacks, &valueCallBacks)
-                    }
-                }
-            }
-        }
-
-        var code: SecCode? = nil
-        var err = SecCodeCopyGuestWithAttributes(nil, codeAttrs, [], &code)
-        guard err == errSecSuccess, let code = code else { throw convertOSStatusError(err) }
-
-        var requirement: SecRequirement? = nil
-
-        if let requirementString = command.codeSigningRequirement {
-            err = SecRequirementCreateWithString(CFString.fromString(requirementString), [], &requirement)
-            guard err == errSecSuccess, requirement != nil else { throw convertOSStatusError(err) }
-        }
-
-        err = SecCodeCheckValidity(code, [], requirement)
-        guard err == errSecSuccess else { throw convertOSStatusError(err) }
     }
 
     private func checkAuthorization(command: Command, authorization auth: AuthorizationRef) throws {
@@ -168,9 +129,7 @@ open class HelperTool<CommandType: Command> {
 
                 let err = AuthorizationCopyRights(auth, &rights, nil, [.extendRights, .interactionAllowed], nil)
 
-                if err != errAuthorizationSuccess {
-                    throw convertOSStatusError(err)
-                }
+                if err != errAuthorizationSuccess { throw CFError.make(err) }
             }
         }
     }
