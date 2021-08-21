@@ -93,7 +93,7 @@ public class HelperClient<CommandType: Command> {
 
     /// Uninstall the helper tool.
     public func uninstallHelperTool() async throws {
-        try await self._executeInHelperTool(command: BuiltInCommands.uninstallHelperTool)
+        try await self._executeInHelperTool(command: BuiltInCommands.uninstallHelperTool, request: nil)
         try self.unblessHelperTool()
     }
 
@@ -105,7 +105,7 @@ public class HelperClient<CommandType: Command> {
     ) async throws -> [String : Any] {
         do {
             return try await self._executeInHelperTool(command: command, request: request)
-        } catch ConnectionError.connectionInvalid where reinstallIfInvalid {
+        } catch XPCError.connectionInvalid where reinstallIfInvalid {
             print("connection invalid! Reconnecting")
             try await self.installHelperTool()
             return try await self._executeInHelperTool(command: command, request: request)
@@ -116,7 +116,7 @@ public class HelperClient<CommandType: Command> {
     private func _executeInHelperTool(command: Command, request: [String : Any]?) async throws -> [String : Any] {
         try self.preauthorize(command: command)
 
-        let connection = XPCConnection(
+        let connection = try XPCConnection(
             type: .remoteMachService(serviceName: self.helperID, isPrivilegedHelperTool: true)
         )
 
