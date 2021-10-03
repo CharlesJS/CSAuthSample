@@ -6,8 +6,8 @@
         "repositoryURL": "https://github.com/CharlesJS/SwiftyXPC.git",
         "state": {
           "branch": null,
-          "revision": "005de83ffc48f285ee3e53cc3a69516f99b02b58",
-          "version": "0.2.4"
+          "revision": "d77b8a478644c098e9a301e7bbfe8991a450e287",
+          "version": "0.2.6-beta"
         }
       }
     ]
