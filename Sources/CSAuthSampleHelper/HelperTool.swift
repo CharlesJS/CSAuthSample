@@ -71,7 +71,7 @@ open class HelperTool<CommandType: Command> {
         listener.errorHandler = self.handleError
 
         listener.activate()
-        fatalError("Should not get here")
+        dispatchMain()
     }
 
     private func handleError(connection: XPCConnection, error: Error) {
