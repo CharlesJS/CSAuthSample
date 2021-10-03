@@ -129,6 +129,8 @@ public class HelperClient<CommandType: Command> {
             message[DictionaryKeys.request] = request
         }
 
+        connection.activate()
+
         return try await connection.sendMessage(message)
     }
 
