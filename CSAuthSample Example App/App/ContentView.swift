@@ -14,22 +14,28 @@ struct ContentView: View {
     var body: some View {
         VStack {
             Button {
-                NSLog("get here?")
-                self.messageSendInProgress = true
+                Task {
+                    do {
+                        let reply = try await MessageSender.shared.sayHello()
 
-                MessageSender.shared.sayHello {
-                    self.messageSendInProgress = false
-
-                    switch $0 {
-                    case .success(let reply):
                         self.response = "Received reply from helper:\n\n\(reply)"
-                    case .failure(let error):
+                    } catch {
                         self.response = "Received error from helper:\n\n\(error.localizedDescription)"
                     }
                 }
             } label: {
                 Text("Say Hello")
             }.padding().disabled(self.messageSendInProgress)
+            Button {
+                Task {
+                    do {
+                        let reply = try await MessageSender.shared.uninstallHelperTool()
+                        self.response = "Received reply from helper:\n\n\(reply)"
+                    } catch {
+                        self.response = "Received error \(error.localizedDescription)\n\n"
+                    }
+                }
+            } label: { Text("Uninstall") }.padding().disabled(self.messageSendInProgress)
             Text("Response:")
             Text($response.wrappedValue)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

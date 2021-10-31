@@ -25,7 +25,7 @@
 	<key>SMPrivilegedExecutables</key>
 	<dict>
 		<key>com.charlessoft.CSAuthSample-Example.helper</key>
-		<string>identifier "$(HELPER_ID)" and $(CS_REQUIREMENT)</string>
+		<string>anchor apple generic and identifier &quot;${HELPER_ID}&quot; and ${CS_REQUIREMENT}</string>
 	</dict>
 	<key>XPCService</key>
 	<dict>

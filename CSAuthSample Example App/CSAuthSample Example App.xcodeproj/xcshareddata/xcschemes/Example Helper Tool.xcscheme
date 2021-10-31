@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1300"
+   LastUpgradeVersion = "1310"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -15,7 +15,7 @@
                   <BuildableReference
                      BuildableIdentifier = "primary"
                      BlueprintIdentifier = "2805EA4C243A563B008BD2DC"
-                     BuildableName = "&quot;$APP_ID.helper&quot;"
+                     BuildableName = "com.charlessoft.CSAuthSample-Example.helper"
                      BlueprintName = "Example Helper Tool"
                      ReferencedContainer = "container:CSAuthSample Example App.xcodeproj">
                   </BuildableReference>
@@ -33,7 +33,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "2805EA4C243A563B008BD2DC"
-               BuildableName = "&quot;$APP_ID.helper&quot;"
+               BuildableName = "com.charlessoft.CSAuthSample-Example.helper"
                BlueprintName = "Example Helper Tool"
                ReferencedContainer = "container:CSAuthSample Example App.xcodeproj">
             </BuildableReference>
@@ -63,7 +63,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "2805EA4C243A563B008BD2DC"
-            BuildableName = "&quot;$APP_ID.helper&quot;"
+            BuildableName = "com.charlessoft.CSAuthSample-Example.helper"
             BlueprintName = "Example Helper Tool"
             ReferencedContainer = "container:CSAuthSample Example App.xcodeproj">
          </BuildableReference>
@@ -80,7 +80,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "2805EA4C243A563B008BD2DC"
-            BuildableName = "&quot;$APP_ID.helper&quot;"
+            BuildableName = "com.charlessoft.CSAuthSample-Example.helper"
             BlueprintName = "Example Helper Tool"
             ReferencedContainer = "container:CSAuthSample Example App.xcodeproj">
          </BuildableReference>

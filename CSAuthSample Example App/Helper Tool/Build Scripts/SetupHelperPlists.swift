@@ -11,6 +11,7 @@ let env = ProcessInfo.processInfo.environment
 
 let helperID = env["HELPER_ID"]!
 let xpcServiceID = env["XPC_SERVICE_ID"]!
+let csRequirement = env["CS_REQUIREMENT"]!
 
 let srcRoot = URL(fileURLWithPath: env["SRCROOT"]!)
 let derivedFileDir = URL(fileURLWithPath: env["DERIVED_FILE_DIR"]!)
@@ -26,7 +27,7 @@ var launchd = NSDictionary(contentsOf: launchdSrcURL) as! [String: Any]
 
 info[kCFBundleVersionKey as String] = env["CURRENT_PROJECT_VERSION"]!
 info[kCFBundleIdentifierKey as String] = "\(helperID)"
-info["SMAuthorizedClients"] = ["identifier \"\(xpcServiceID)\" and \(env["CS_REQUIREMENT"]!)"]
+info["SMAuthorizedClients"] = ["anchor apple generic and identifier \"\(xpcServiceID)\" and \(csRequirement)"]
 
 launchd["Label"] = helperID
 launchd["MachServices"] = [helperID: true]

@@ -5,57 +5,55 @@
 //  Created by Charles Srstka on 4/5/20.
 //
 
-import CSAuthSampleApp
-import Foundation
+import CSAuthSampleCommon
+import SwiftyXPC
+import Combine
+import os
+import Example_XPC_Service
 
-class MessageSender {
-    static let shared = MessageSender()
+actor MessageSender {
+    static let shared = try! MessageSender()
 
-    private var _xpcConnection: NSXPCConnection?
-    private var sema = DispatchSemaphore(value: 1)
+    private var connection: XPCConnection
+    @Published var messageSendInProgress = false
 
-    private var xpcConnection: NSXPCConnection {
-        self.sema.wait()
-        defer { self.sema.signal() }
+    private let logger: Logger
 
-        if let connection = self._xpcConnection {
-            return connection
-        }
+    private init() throws {
+        let connection = try XPCConnection(type: .remoteService(bundleID: "com.charlessoft.CSAuthSample-Example.xpc"))
+        let logger = Logger()
 
-        let connection = NSXPCConnection(serviceName: "com.charlessoft.CSAuthSample-Example.xpc")
-
-        connection.remoteObjectInterface = NSXPCInterface(with: XPCServiceProtocol.self)
-
-        connection.invalidationHandler = { [weak connection] in
-            self.sema.wait()
-            defer { self.sema.signal() }
-
-            connection?.invalidationHandler = nil
-            self._xpcConnection = nil
+        connection.errorHandler = { _, error in
+            logger.error("The connection to the XPC service received an error: \(error.localizedDescription)")
         }
 
         connection.resume()
 
-        self._xpcConnection = connection
-        return connection
+        self.connection = connection
+        self.logger = logger
     }
 
-    func sayHello(reply: @escaping (Result<String, Error>) -> Void) {
-        let proxy = self.getProxy { reply(.failure($0)) }
-        let sandboxWorkaround = SandboxWorkaround()
+    func sayHello() async throws -> String {
+        let reply = try await self.sendMessage(command: ExampleCommands.sayHello, request: ["Hello" : "World"])
 
-        proxy.sayHello(message: "Hello there, helper tool!") {
-            sandboxWorkaround.stop()
-
-            if let replyMessage = $0 {
-                reply(.success(replyMessage))
-            } else {
-                reply(.failure($1 ?? CocoaError(.fileReadUnknown)))
-            }
-        }
+        return reply["Message"] as? String ?? "(no message)"
     }
 
-    func getProxy(errorHandler: @escaping (Error) -> Void) -> XPCServiceProtocol {
-        return self.xpcConnection.remoteObjectProxyWithErrorHandler(errorHandler) as! XPCServiceProtocol
+    func uninstallHelperTool() async throws -> String {
+         _ = try await self.sendMessage(command: BuiltInCommands.uninstallHelperTool, request: [:])
+
+        return "Uninstall Successful"
+    }
+
+    private func sendMessage(command: Command, request: [String : Any]) async throws -> [String : Any] {
+        self.messageSendInProgress = true
+        defer { self.messageSendInProgress = false }
+
+        let message: [String : Any] = [
+            CSAuthSampleCommon.DictionaryKeys.commandName: command.name,
+            CSAuthSampleCommon.DictionaryKeys.request: request
+        ]
+
+        return try await self.connection.sendMessage(message)
     }
 }
