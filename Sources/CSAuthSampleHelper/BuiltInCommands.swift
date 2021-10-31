@@ -16,7 +16,7 @@ extension HelperTool {
             return try self.getVersion()
         case .uninstallHelperTool:
             try self.uninstallHelperTool()
-            return nil
+            return [:]
         }
     }
 

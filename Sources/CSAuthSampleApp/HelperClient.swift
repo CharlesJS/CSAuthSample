@@ -16,7 +16,22 @@ import SwiftyXPC
 /// To use, create an instance and use `connectToHelperTool` to send messages to the helper tool.
 public class HelperClient<CommandType: Command> {
     let helperID: String
-    private let authorization: AuthorizationRef
+    private var _authorization: AuthorizationRef?
+    private var authorization: AuthorizationRef {
+        get throws {
+            if let authorization = self._authorization {
+                return authorization
+            }
+
+            var authorization: AuthorizationRef?
+            let err = AuthorizationCreate(nil, nil, [], &authorization)
+            if err != errAuthorizationSuccess { throw CFError.make(err) }
+
+            self._authorization = authorization
+
+            return try authorization ?? { throw CocoaError(.fileReadUnknown) }()
+        }
+    }
 
     private var authorizationData: Data {
         get throws {
@@ -24,7 +39,7 @@ public class HelperClient<CommandType: Command> {
 
             try data.withUnsafeMutableBytes {
                 let ptr = $0.bindMemory(to: AuthorizationExternalForm.self).baseAddress!
-                let err = AuthorizationMakeExternalForm(self.authorization, ptr)
+                let err = try AuthorizationMakeExternalForm(self.authorization, ptr)
                 guard err == errAuthorizationSuccess else { throw CFError.make(err) }
             }
 
@@ -50,14 +65,6 @@ public class HelperClient<CommandType: Command> {
     ) throws {
         self.helperID = helperID
 
-        self.authorization = try authorization ?? {
-            var authorization: AuthorizationRef?
-            let err = AuthorizationCreate(nil, nil, [], &authorization)
-            if err != errAuthorizationSuccess { throw CFError.make(err) }
-
-            return try authorization ?? { throw CocoaError(.fileReadUnknown) }()
-        }()
-
         let cfBundle = bundle == .main ? CFBundleGetMainBundle() : bundle.flatMap {
             CFBundleCreate(kCFAllocatorDefault, $0.bundleURL as CFURL)
         }
@@ -66,7 +73,7 @@ public class HelperClient<CommandType: Command> {
     }
 
     deinit {
-        AuthorizationFree(self.authorization, .destroyRights)
+        _ = try? self.revokePrivileges()
     }
 
     /// Get the version of the helper tool.
@@ -95,6 +102,7 @@ public class HelperClient<CommandType: Command> {
     public func uninstallHelperTool() async throws {
         try await self._executeInHelperTool(command: BuiltInCommands.uninstallHelperTool, request: nil)
         try self.unblessHelperTool()
+        try self.revokePrivileges()
     }
 
     @discardableResult
@@ -103,6 +111,11 @@ public class HelperClient<CommandType: Command> {
         request: [String : Any]? = nil,
         reinstallIfInvalid: Bool = true
     ) async throws -> [String : Any] {
+        if case BuiltInCommands.uninstallHelperTool = command {
+            try await self.uninstallHelperTool()
+            return [:]
+        }
+
         do {
             return try await self._executeInHelperTool(command: command, request: request)
         } catch XPCError.connectionInvalid where reinstallIfInvalid {
@@ -146,7 +159,7 @@ public class HelperClient<CommandType: Command> {
                 var rights = AuthorizationRights(count: 1, items: $0)
 
                 let err = AuthorizationCopyRights(
-                    self.authorization,
+                    try self.authorization,
                     &rights,
                     nil,
                     [.extendRights, .interactionAllowed, .preAuthorize],
@@ -184,13 +197,22 @@ public class HelperClient<CommandType: Command> {
         }
 
         // Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper).
-        let err = AuthorizationCopyRights(self.authorization, &rights, nil, flags, nil)
+        let err = AuthorizationCopyRights(try self.authorization, &rights, nil, flags, nil)
         guard err == errAuthorizationSuccess else { throw CFError.make(err) }
+    }
+
+    private func revokePrivileges() throws {
+        guard let auth = self._authorization else { return }
+
+        let err = AuthorizationFree(auth, .destroyRights)
+        guard err == errAuthorizationSuccess else { throw CFError.make(err) }
+
+        self._authorization = nil
     }
 
     private func blessHelperTool() throws {
         var smError: Unmanaged<CFError>?
-        if !SMJobBless(kSMDomainSystemLaunchd, self.helperID as CFString, self.authorization, &smError) {
+        if !SMJobBless(kSMDomainSystemLaunchd, self.helperID as CFString, try self.authorization, &smError) {
             throw smError?.takeRetainedValue() ?? CocoaError(.fileWriteUnknown)
         }
     }
@@ -200,12 +222,14 @@ public class HelperClient<CommandType: Command> {
         // deprecated, but there is still not a decent replacement, so 🤷
         // For now, kludge around the deprecation warning using dlsym.
 
+        try self.requestPrivileges([kSMRightModifySystemDaemons], allowUserInteraction: true)
+
         let remove = unsafeBitCast(
             dlsym(UnsafeMutableRawPointer(bitPattern: -1), "SMJobRemove"),
             to: (@convention(c) (CFString?, CFString, AuthorizationRef?, Bool, UnsafeMutablePointer<Unmanaged<CFError>?>?) -> Bool).self
         )
 
-        if !remove(kSMDomainSystemLaunchd, self.helperID as CFString, self.authorization, true, &smError) {
+        if !remove(kSMDomainSystemLaunchd, self.helperID as CFString, try self.authorization, true, &smError) {
             throw smError?.takeRetainedValue() ?? CocoaError(.fileWriteUnknown)
         }
     }
