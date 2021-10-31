@@ -16,6 +16,8 @@ import SwiftyXPC
 /// To use, create an instance and use `connectToHelperTool` to send messages to the helper tool.
 public class HelperClient<CommandType: Command> {
     let helperID: String
+    let version: String
+
     private var _authorization: AuthorizationRef?
     private var authorization: AuthorizationRef {
         get throws {
@@ -51,6 +53,7 @@ public class HelperClient<CommandType: Command> {
     ///
     /// - Parameters:
     ///   - helperID: The bundle identifier of your helper tool, which should generally be distinct from your main application's bundle identifier.
+    ///   - version: The expected value of `CFBundleVersion` in the helper's Info.plist. Defaults to the main application's `CFBundleVersion`.
     ///   - authData: Authorization data, in the format of an `AuthorizationExternalForm`. If not provided, a new `AuthorizationRef` will be created.
     ///   - commandSet: A `CommandSet` object describing the messages the helper accepts, and their required authorization levels.
     ///   - bundle: A bundle containing a strings table containing localized messages to present to the user. Optional.
@@ -58,12 +61,14 @@ public class HelperClient<CommandType: Command> {
     /// - Throws: Any errors that occur in the process of creating the `HelperClient`'s internal `AuthorizationRef`.
     public init(
         helperID: String,
+        version: String = Bundle.main.infoDictionary?[kCFBundleVersionKey as String] as? String ?? "0",
         authorization: AuthorizationRef? = nil,
         commandType: CommandType.Type,
         bundle: Bundle? = nil,
         tableName: String? = nil
     ) throws {
         self.helperID = helperID
+        self.version = version
 
         let cfBundle = bundle == .main ? CFBundleGetMainBundle() : bundle.flatMap {
             CFBundleCreate(kCFAllocatorDefault, $0.bundleURL as CFURL)
@@ -108,7 +113,6 @@ public class HelperClient<CommandType: Command> {
     @discardableResult
     public func executeInHelperTool(
         command: Command,
-        expectedVersion: String? = nil,
         request: [String : Any]? = nil,
         reinstallIfInvalid: Bool = true
     ) async throws -> [String : Any] {
@@ -118,11 +122,11 @@ public class HelperClient<CommandType: Command> {
         }
 
         do {
-            return try await self._executeInHelperTool(command: command, expectedVersion: expectedVersion, request: request)
+            return try await self._executeInHelperTool(command: command, expectedVersion: self.version, request: request)
         } catch XPCError.connectionInvalid where reinstallIfInvalid {
             print("connection invalid! Reconnecting")
             try await self.installHelperTool()
-            return try await self._executeInHelperTool(command: command, expectedVersion: expectedVersion, request: request)
+            return try await self._executeInHelperTool(command: command, expectedVersion: self.version, request: request)
         }
     }
 
