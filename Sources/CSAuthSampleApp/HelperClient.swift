@@ -100,7 +100,7 @@ public class HelperClient<CommandType: Command> {
 
     /// Uninstall the helper tool.
     public func uninstallHelperTool() async throws {
-        try await self._executeInHelperTool(command: BuiltInCommands.uninstallHelperTool, request: nil)
+        try await self._executeInHelperTool(command: BuiltInCommands.uninstallHelperTool, expectedVersion: nil, request: nil)
         try self.unblessHelperTool()
         try self.revokePrivileges()
     }
@@ -108,6 +108,7 @@ public class HelperClient<CommandType: Command> {
     @discardableResult
     public func executeInHelperTool(
         command: Command,
+        expectedVersion: String? = nil,
         request: [String : Any]? = nil,
         reinstallIfInvalid: Bool = true
     ) async throws -> [String : Any] {
@@ -117,16 +118,20 @@ public class HelperClient<CommandType: Command> {
         }
 
         do {
-            return try await self._executeInHelperTool(command: command, request: request)
+            return try await self._executeInHelperTool(command: command, expectedVersion: expectedVersion, request: request)
         } catch XPCError.connectionInvalid where reinstallIfInvalid {
             print("connection invalid! Reconnecting")
             try await self.installHelperTool()
-            return try await self._executeInHelperTool(command: command, request: request)
+            return try await self._executeInHelperTool(command: command, expectedVersion: expectedVersion, request: request)
         }
     }
 
     @discardableResult
-    private func _executeInHelperTool(command: Command, request: [String : Any]?) async throws -> [String : Any] {
+    private func _executeInHelperTool(
+        command: Command,
+        expectedVersion: String?,
+        request: [String : Any]?
+    ) async throws -> [String : Any] {
         try self.preauthorize(command: command)
 
         let connection = try XPCConnection(
@@ -137,6 +142,10 @@ public class HelperClient<CommandType: Command> {
             DictionaryKeys.authData: try self.authorizationData,
             DictionaryKeys.commandName: command.name
         ]
+
+        if let expectedVersion = expectedVersion {
+            message[DictionaryKeys.expectedVersion] = expectedVersion
+        }
 
         if let request = request {
             message[DictionaryKeys.request] = request

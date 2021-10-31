@@ -20,6 +20,13 @@ open class HelperTool<CommandType: Command> {
     public let infoPlist: CFDictionary
     public let timeoutInterval: CFTimeInterval?
 
+    public private(set) lazy var version: String? = {
+        let key = unsafeBitCast(kCFBundleVersionKey, to: UnsafeRawPointer.self)
+        let value = CFDictionaryGetValue(self.infoPlist, key)
+
+        return unsafeBitCast(value, to: CFString?.self)?.toString()
+    }()
+
     private let logger: Logger
 
     public init(
@@ -94,6 +101,10 @@ open class HelperTool<CommandType: Command> {
         guard let authFormData = message[DictionaryKeys.authData, as: CFDataGetTypeID()] as CFData?,
               CFDataGetLength(authFormData) >= MemoryLayout<AuthorizationExternalForm>.size else {
                   throw Errno.invalidArgument
+        }
+
+        if let expectedVersion = message[DictionaryKeys.expectedVersion] as? String, expectedVersion != self.version {
+            throw CFError.make(errAuthorizationDenied)
         }
 
         var authorization: AuthorizationRef? = nil

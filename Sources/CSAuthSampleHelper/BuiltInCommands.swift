@@ -21,14 +21,11 @@ extension HelperTool {
     }
 
     func getVersion() throws -> [String : Any] {
-        guard let version = CFDictionaryGetValue(
-            self.infoPlist,
-            unsafeBitCast(kCFBundleVersionKey, to: UnsafeRawPointer.self)
-        ) else {
+        if let version = self.version {
+            return [kCFBundleVersionKey.toString() : version]
+        } else {
             throw Errno.badFileTypeOrFormat
         }
-
-        return [kCFBundleVersionKey.toString() : version]
     }
 
     func uninstallHelperTool() throws {
