@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "CSAuthSample",
     platforms: [
-        .macOS(.v12)
+        .macOS(.v10_15)
     ],
     products: [
         .library(
@@ -23,20 +23,25 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(name: "SwiftyXPC", url: "https://github.com/CharlesJS/SwiftyXPC.git", from: "0.2.8")
+        .package(name: "SwiftyXPC", url: "https://github.com/CharlesJS/SwiftyXPC.git", from: "0.3.0"),
+        .package(name: "CSCoreFoundation", url: "https://github.com/CharlesJS/CSCoreFoundation.git", from: "0.2.0")
     ],
     targets: [
         .target(
             name: "CSAuthSampleApp",
-            dependencies: ["CSAuthSampleCommon"]
+            dependencies: ["CSAuthSampleCommon", "CSAuthSampleInternal"]
         ),
         .target(
             name: "CSAuthSampleHelper",
-            dependencies: ["CSAuthSampleCommon"]
+            dependencies: ["CSAuthSampleCommon", "CSAuthSampleInternal"]
         ),
         .target(
             name: "CSAuthSampleCommon",
-            dependencies: ["SwiftyXPC"]
+            dependencies: ["SwiftyXPC", "CSCoreFoundation"]
+        ),
+        .target(
+            name: "CSAuthSampleInternal",
+            dependencies: ["CSAuthSampleCommon"]
         ),
     ]
 )

@@ -2,12 +2,21 @@
   "object": {
     "pins": [
       {
+        "package": "CSCoreFoundation",
+        "repositoryURL": "https://github.com/CharlesJS/CSCoreFoundation.git",
+        "state": {
+          "branch": null,
+          "revision": "cac0cb12c976d7f3f95b2202dadbc09a5cabe8bc",
+          "version": "0.2.0"
+        }
+      },
+      {
         "package": "SwiftyXPC",
         "repositoryURL": "https://github.com/CharlesJS/SwiftyXPC.git",
         "state": {
           "branch": null,
-          "revision": "9ed1f3426e5532df66c69cdc1e4afef180db697a",
-          "version": "0.2.8"
+          "revision": "6e0ea8774ba7db46a8fd87e8874a6a4d326faf9f",
+          "version": "0.3.0"
         }
       }
     ]

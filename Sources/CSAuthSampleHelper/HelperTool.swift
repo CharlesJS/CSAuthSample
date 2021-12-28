@@ -9,11 +9,15 @@
 import System
 import Security.Authorization
 import CSAuthSampleCommon
+import CSAuthSampleInternal
+import CSCoreFoundation
 import CoreFoundation
 import SwiftyXPC
 import os
+import Foundation
+import SwiftUI
 
-open class HelperTool<CommandType: Command> {
+public class HelperTool {
     public let helperID: String
     public let codeSigningRequirement: String
     public let url: CFURL
@@ -27,14 +31,39 @@ open class HelperTool<CommandType: Command> {
         return unsafeBitCast(value, to: CFString?.self)?.toString()
     }()
 
-    private let logger: Logger
+    private enum LoggerPolyfill {
+        case logger(Any)
+        case legacy
+
+        init(helperID: String, category: String) {
+            if #available(macOS 11.0, *) {
+                self = .logger(Logger(subsystem: helperID, category: category))
+            } else {
+                self = .legacy
+            }
+        }
+
+        func notice(_ string: String) {
+            if #available(macOS 11.0, *), case .logger(let logger) = self {
+                (logger as! Logger).notice("\(string)")
+            } else {
+                NSLog(string)
+            }
+        }
+    }
+
+    private let listener: XPCListener
+    private let logger: LoggerPolyfill
+
+    private static let _globalInit: Void = { csAuthSampleGlobalInit() }()
 
     public init(
-        commandType _: CommandType.Type,
         helperID: String? = nil,
         codeSigningRequirement requirement: String? = nil,
         timeoutInterval: CFTimeInterval? = nil
     ) {
+        _ = Self._globalInit
+
         let path = CFString.fromString(CommandLine.arguments.first!)
 
         self.url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path, .cfurlposixPathStyle, false)
@@ -56,28 +85,67 @@ open class HelperTool<CommandType: Command> {
 
         self.timeoutInterval = timeoutInterval
 
-        self.logger = Logger(subsystem: self.helperID, category: "com.charlessoft.CSAuthSample.HelperTool")
-    }
-
-    open func handleCommand(
-        command: CommandType,
-        request: [String : Any]?,
-        authorization: AuthorizationRef,
-        connection: XPCConnection
-    ) async throws -> [String : Any]? {
-        fatalError("Must override handleCommand(command:request:authorization:connection:)!")
-    }
-
-    public func run() -> Never {
-        let listener = try! XPCListener(
+        self.listener = try! XPCListener(
             type: .machService(name: self.helperID),
             codeSigningRequirement: self.codeSigningRequirement
         )
 
-        listener.messageHandler = self.handleMessage
-        listener.errorHandler = self.handleError
+        self.logger = LoggerPolyfill(helperID: self.helperID, category: "com.charlessoft.CSAuthSample.HelperTool")
+    }
 
-        listener.activate()
+    public func setHandler(command: CommandSpec, handler: @escaping () async throws -> ()) {
+        self.setHandler(command: command) { () async throws -> XPCNull in
+            try await handler()
+            return XPCNull.shared
+        }
+    }
+
+    public func setHandler<Response: Codable>(command: CommandSpec, handler: @escaping () async throws -> Response) {
+        self.setHandler(command: command) { (_: XPCNull) in try await handler() }
+    }
+
+    public func setHandler<Request: Codable>(command: CommandSpec, handler: @escaping (Request) async throws -> ()) {
+        self.setHandler(command: command) { (request: Request) async throws -> XPCNull in
+            try await handler(request)
+            return XPCNull.shared
+        }
+    }
+
+    public func setHandler<Request: Codable, Response: Codable>(
+        command: CommandSpec,
+        handler: @escaping (Request) async throws -> Response
+    ) {
+        do {
+            try validateArguments(command: command, requestType: Request.self, responseType: Response.self)
+        } catch {
+            preconditionFailure("Incorrect request and/or response type")
+        }
+
+        let xpcHandler: (XPCConnection, AuthMessage<Request>) async throws -> AuthMessage<Response> = { _, message in
+            if let expectedVersion = message.expectedVersion, expectedVersion != self.version {
+                throw CSAuthSampleError.versionMismatch(expected: expectedVersion, actual: self.version ?? "(nil)")
+            }
+
+            guard let authorization = message.authorization else {
+                throw CFError.make(posixError: EINVAL)
+            }
+
+            try self.checkAuthorization(command: command, authorization: authorization)
+
+            let response = try await handler(message.body)
+
+            return AuthMessage(authorization: nil, expectedVersion: nil, body: response)
+        }
+
+        self.listener.setMessageHandler(name: command.name, handler: xpcHandler)
+    }
+
+    public func run() -> Never {
+        self.setUpBuiltInHandlers()
+
+        self.listener.errorHandler = self.handleError
+        self.listener.activate()
+
         dispatchMain()
     }
 
@@ -92,45 +160,7 @@ open class HelperTool<CommandType: Command> {
         }
     }
 
-    private func handleMessage(connection: XPCConnection, message: [String : Any]) async throws -> [String : Any]? {
-        guard let commandName = message[DictionaryKeys.commandName] as? String,
-              let command = CommandType[commandName] else {
-            throw Errno.invalidArgument
-        }
-
-        guard let authFormData = message[DictionaryKeys.authData, as: CFDataGetTypeID()] as CFData?,
-              CFDataGetLength(authFormData) >= MemoryLayout<AuthorizationExternalForm>.size else {
-                  throw Errno.invalidArgument
-        }
-
-        if let expectedVersion = message[DictionaryKeys.expectedVersion] as? String, expectedVersion != self.version {
-            throw CFError.make(errAuthorizationDenied)
-        }
-
-        var authorization: AuthorizationRef? = nil
-        let err = CFDataGetBytePtr(authFormData).withMemoryRebound(to: AuthorizationExternalForm.self, capacity: 1) {
-            AuthorizationCreateFromExternalForm($0, &authorization)
-        }
-
-        guard err == errAuthorizationSuccess, let authorization = authorization else { throw CFError.make(err) }
-
-        try self.checkAuthorization(command: command, authorization: authorization)
-
-        if let command = command as? BuiltInCommands {
-            return try self.handleBuiltInCommand(command)
-        } else if let command = command as? CommandType {
-            return try await handleCommand(
-                command: command,
-                request: message[DictionaryKeys.request] as? [String : Any],
-                authorization: authorization,
-                connection: connection
-            )
-        } else {
-            throw Errno.invalidArgument
-        }
-    }
-
-    private func checkAuthorization(command: Command, authorization auth: AuthorizationRef) throws {
+    private func checkAuthorization(command: CommandSpec, authorization auth: AuthorizationRef) throws {
         // Acquire the associated right for the command.
         try command.name.withCString {
             var item = AuthorizationItem(name: $0, valueLength: 0, value: nil, flags: 0)
@@ -140,7 +170,7 @@ open class HelperTool<CommandType: Command> {
 
                 let err = AuthorizationCopyRights(auth, &rights, nil, [.extendRights, .interactionAllowed], nil)
 
-                if err != errAuthorizationSuccess { throw CFError.make(err) }
+                if err != errAuthorizationSuccess { throw CFError.make(osStatus: err) }
             }
         }
     }

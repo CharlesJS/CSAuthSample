@@ -6,6 +6,7 @@
 //
 
 import CSAuthSampleCommon
+import CSAuthSampleInternal
 import Foundation
 import ServiceManagement
 import System
@@ -14,7 +15,7 @@ import SwiftyXPC
 /// The primary class used by your application to communicate with your helper tool.
 ///
 /// To use, create an instance and use `connectToHelperTool` to send messages to the helper tool.
-public class HelperClient<CommandType: Command> {
+public class HelperClient {
     let helperID: String
     let version: String
 
@@ -27,7 +28,7 @@ public class HelperClient<CommandType: Command> {
 
             var authorization: AuthorizationRef?
             let err = AuthorizationCreate(nil, nil, [], &authorization)
-            if err != errAuthorizationSuccess { throw CFError.make(err) }
+            if err != errAuthorizationSuccess { throw CFError.make(osStatus: err) }
 
             self._authorization = authorization
 
@@ -35,19 +36,7 @@ public class HelperClient<CommandType: Command> {
         }
     }
 
-    private var authorizationData: Data {
-        get throws {
-            var data = Data(count: MemoryLayout<AuthorizationExternalForm>.stride)
-
-            try data.withUnsafeMutableBytes {
-                let ptr = $0.bindMemory(to: AuthorizationExternalForm.self).baseAddress!
-                let err = try AuthorizationMakeExternalForm(self.authorization, ptr)
-                guard err == errAuthorizationSuccess else { throw CFError.make(err) }
-            }
-
-            return data
-        }
-    }
+    private static let _globalInit: Void = { csAuthSampleGlobalInit() }()
 
     /// Create a `HelperClient` object.
     ///
@@ -63,10 +52,12 @@ public class HelperClient<CommandType: Command> {
         helperID: String,
         version: String = Bundle.main.infoDictionary?[kCFBundleVersionKey as String] as? String ?? "0",
         authorization: AuthorizationRef? = nil,
-        commandType: CommandType.Type,
+        commandSet: [CommandSpec],
         bundle: Bundle? = nil,
         tableName: String? = nil
     ) throws {
+        _ = Self._globalInit
+
         self.helperID = helperID
         self.version = version
 
@@ -74,7 +65,12 @@ public class HelperClient<CommandType: Command> {
             CFBundleCreate(kCFAllocatorDefault, $0.bundleURL as CFURL)
         }
 
-        try commandType.setUpAccessRights(authorization: self.authorization, bundle: cfBundle, tableName: tableName)
+        try CommandSpec.setUpAccessRights(
+            commandSet: commandSet,
+            authorization: self.authorization,
+            bundle: cfBundle,
+            tableName: tableName
+        )
     }
 
     deinit {
@@ -86,18 +82,16 @@ public class HelperClient<CommandType: Command> {
     /// This is helpful for making sure that the application and helper tool are in sync with each other.
     /// If the helper's version does not match the app's version, it is generally a sign that the helper needs to be upgraded.
     public func requestHelperVersion() async throws -> String {
-        let response = try await self.executeInHelperTool(command: BuiltInCommands.getVersion)
-
-        guard let version = response[kCFBundleVersionKey as String] as? String else {
-            throw Errno.badFileTypeOrFormat
-        }
-
-        return version
+        try await self._executeInHelperTool(
+            command: BuiltInCommands.getVersion,
+            expectedVersion: nil,
+            request: XPCNull.shared
+        )
     }
 
     /// Install the helper tool.
     public func installHelperTool() async throws {
-        _ = try? await self.uninstallHelperTool()
+        _ = try? await self._uninstallHelperTool()
 
         try self.requestPrivileges([kSMRightBlessPrivilegedHelper], allowUserInteraction: true)
         try self.blessHelperTool()
@@ -105,62 +99,109 @@ public class HelperClient<CommandType: Command> {
 
     /// Uninstall the helper tool.
     public func uninstallHelperTool() async throws {
-        try await self._executeInHelperTool(command: BuiltInCommands.uninstallHelperTool, expectedVersion: nil, request: nil)
+        try self.requestPrivileges([kSMRightModifySystemDaemons], allowUserInteraction: true)
+
+        try await self._uninstallHelperTool()
+
         try self.unblessHelperTool()
         try self.revokePrivileges()
     }
 
-    @discardableResult
-    public func executeInHelperTool(
-        command: Command,
-        request: [String : Any]? = nil,
+    private func _uninstallHelperTool() async throws {
+        _ = try await self._executeInHelperTool(
+            command: BuiltInCommands.uninstallHelperTool,
+            expectedVersion: nil,
+            request: XPCNull.shared
+        ) as XPCNull
+    }
+
+
+    public func executeInHelperTool(command: CommandSpec, reinstallIfInvalid: Bool = true) async throws {
+        try await self.executeInHelperTool(
+            command: command,
+            request: XPCNull.shared,
+            reinstallIfInvalid: reinstallIfInvalid
+        )
+    }
+
+    public func executeInHelperTool<Request: Codable>(
+        command: CommandSpec,
+        request: Request,
         reinstallIfInvalid: Bool = true
-    ) async throws -> [String : Any] {
-        if case BuiltInCommands.uninstallHelperTool = command {
+    ) async throws {
+        _ = try await self.executeInHelperTool(
+            command: command,
+            request: request,
+            reinstallIfInvalid: reinstallIfInvalid
+        ) as XPCNull
+    }
+
+    public func executeInHelperTool<Response: Codable>(
+        command: CommandSpec,
+        reinstallIfInvalid: Bool = true
+    ) async throws -> Response {
+        try await self.executeInHelperTool(
+            command: command,
+            request: XPCNull.shared,
+            reinstallIfInvalid: reinstallIfInvalid
+        )
+    }
+
+    public func executeInHelperTool<Request: Codable, Response: Codable>(
+        command: CommandSpec,
+        request: Request,
+        reinstallIfInvalid: Bool = true
+    ) async throws -> Response {
+        try validateArguments(command: command, requestType: type(of: request), responseType: Response.self)
+
+        if command == BuiltInCommands.uninstallHelperTool {
             try await self.uninstallHelperTool()
-            return [:]
+            return XPCNull.shared as! Response
         }
 
         do {
             return try await self._executeInHelperTool(command: command, expectedVersion: self.version, request: request)
-        } catch XPCError.connectionInvalid where reinstallIfInvalid {
-            print("connection invalid! Reconnecting")
-            try await self.installHelperTool()
-            return try await self._executeInHelperTool(command: command, expectedVersion: self.version, request: request)
+        } catch where reinstallIfInvalid {
+            let reinstall: Bool
+
+            if let error = error as? XPCError, case .connectionInvalid = error {
+                reinstall = true
+            } else if let error = error as? CSAuthSampleError, case .versionMismatch = error {
+                reinstall = true
+            } else {
+                reinstall = false
+            }
+
+            if reinstall {
+                try await self.installHelperTool()
+                return try await self._executeInHelperTool(command: command, expectedVersion: self.version, request: request)
+            } else {
+                throw error
+            }
         }
     }
 
-    @discardableResult
-    private func _executeInHelperTool(
-        command: Command,
+    private func _executeInHelperTool<Request: Codable, Response: Codable>(
+        command: CommandSpec,
         expectedVersion: String?,
-        request: [String : Any]?
-    ) async throws -> [String : Any] {
+        request: Request?
+    ) async throws -> Response {
         try self.preauthorize(command: command)
 
         let connection = try XPCConnection(
             type: .remoteMachService(serviceName: self.helperID, isPrivilegedHelperTool: true)
         )
 
-        var message: [String : Any] = [
-            DictionaryKeys.authData: try self.authorizationData,
-            DictionaryKeys.commandName: command.name
-        ]
-
-        if let expectedVersion = expectedVersion {
-            message[DictionaryKeys.expectedVersion] = expectedVersion
-        }
-
-        if let request = request {
-            message[DictionaryKeys.request] = request
-        }
+        let message = try AuthMessage(authorization: self.authorization, expectedVersion: expectedVersion, body: request)
 
         connection.activate()
 
-        return try await connection.sendMessage(message)
+        let replyMessage: AuthMessage<Response> = try await connection.sendMessage(name: command.name, request: message)
+
+        return replyMessage.body
     }
 
-    private func preauthorize(command: Command) throws {
+    private func preauthorize(command: CommandSpec) throws {
         // Look up the command and preauthorize.  This has the nice side effect that
         // the authentication dialog comes up, in the typical case, here, rather than
         // in the helper tool.
@@ -179,7 +220,7 @@ public class HelperClient<CommandType: Command> {
                     nil
                 )
 
-                guard err == errAuthorizationSuccess else { throw CFError.make(err) }
+                guard err == errAuthorizationSuccess else { throw CFError.make(osStatus: err) }
             }
         }
     }
@@ -211,14 +252,14 @@ public class HelperClient<CommandType: Command> {
 
         // Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper).
         let err = AuthorizationCopyRights(try self.authorization, &rights, nil, flags, nil)
-        guard err == errAuthorizationSuccess else { throw CFError.make(err) }
+        guard err == errAuthorizationSuccess else { throw CFError.make(osStatus: err) }
     }
 
     private func revokePrivileges() throws {
         guard let auth = self._authorization else { return }
 
         let err = AuthorizationFree(auth, .destroyRights)
-        guard err == errAuthorizationSuccess else { throw CFError.make(err) }
+        guard err == errAuthorizationSuccess else { throw CFError.make(osStatus: err) }
 
         self._authorization = nil
     }
@@ -234,8 +275,6 @@ public class HelperClient<CommandType: Command> {
         var smError: Unmanaged<CFError>? = nil
         // deprecated, but there is still not a decent replacement, so 🤷
         // For now, kludge around the deprecation warning using dlsym.
-
-        try self.requestPrivileges([kSMRightModifySystemDaemons], allowUserInteraction: true)
 
         let remove = unsafeBitCast(
             dlsym(UnsafeMutableRawPointer(bitPattern: -1), "SMJobRemove"),
