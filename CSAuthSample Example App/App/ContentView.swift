@@ -29,6 +29,19 @@ struct ContentView: View {
             Button {
                 Task {
                     do {
+                        let reply = try await MessageSender.shared.getVersion()
+
+                        self.response = "Received reply from helper:\n\n\(reply)"
+                    } catch {
+                        self.response = "Received error from helper:\n\n\(error.localizedDescription)"
+                    }
+                }
+            } label: {
+                Text("Get Helper Version")
+            }.padding().disabled(self.messageSendInProgress)
+            Button {
+                Task {
+                    do {
                         let reply = try await MessageSender.shared.uninstallHelperTool()
                         self.response = "Received reply from helper:\n\n\(reply)"
                     } catch {
@@ -38,7 +51,7 @@ struct ContentView: View {
             } label: { Text("Uninstall") }.padding().disabled(self.messageSendInProgress)
             Text("Response:")
             Text($response.wrappedValue)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }.padding().frame(minWidth: 300)
+                .frame(maxWidth: .infinity, minHeight: 300, maxHeight: .infinity)
+        }.padding()
     }
 }

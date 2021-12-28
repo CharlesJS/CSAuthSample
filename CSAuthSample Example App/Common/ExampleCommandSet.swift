@@ -7,28 +7,21 @@
 
 import CSAuthSampleCommon
 import CoreFoundation
-import Security.Authorization
+import Security.AuthorizationDB
 
-enum ExampleCommands: String, Command, CaseIterable {
-    case sayHello = "com.charlessoft.CSAuthSample-Example.Commands.SayHello"
+struct ExampleCommands {
+    static let all = [Self.sayHello]
 
-    var rule: String {
-        switch self {
-        case .sayHello:
-            return kAuthorizationRuleAuthenticateAsAdmin
-        }
-    }
-
-    var prompt: String? {
-        switch self {
-        case .sayHello:
-            let bundle = CFBundleGetMainBundle()
-            return CFBundleCopyLocalizedString(
-                bundle,
-                CFString.fromString("SayHello"),
-                nil,
-                CFString.fromString("Prompts")
-            ).toString()
-        }
-    }
+    static let sayHello = CommandSpec(
+        name: "com.charlessoft.CSAuthSample-Example.Commands.SayHello",
+        rule: kAuthorizationRuleAuthenticateAsAdmin,
+        prompt: CFBundleCopyLocalizedString(
+            CFBundleGetMainBundle(),
+            CFString.fromString("SayHello"),
+            nil,
+            CFString.fromString("Prompts")
+        ).toString(),
+        requestType: String.self,
+        responseType: .wait(String.self)
+    )
 }

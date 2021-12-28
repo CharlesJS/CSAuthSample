@@ -6,5 +6,19 @@
 //
 
 import CSAuthSampleHelper
+import Darwin
 
-ExampleHelperTool(commandType: ExampleCommands.self).run()
+func sayHello(message: String) async throws -> String {
+    let replyMessage = """
+        Received message from app: “\(message)”
+        Sending reply to app: “Hello app! My UID is \(getuid()) and my GID is \(getgid())!”
+        """
+
+    return replyMessage
+}
+
+let helperTool = HelperTool()
+
+helperTool.setHandler(command: ExampleCommands.sayHello, handler: sayHello)
+
+helperTool.run()

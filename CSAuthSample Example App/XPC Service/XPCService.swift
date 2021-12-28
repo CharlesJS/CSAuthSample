@@ -14,23 +14,30 @@ import Foundation
 
 @main
 class XPCService {
-    private let logger = os.Logger()
+    private let helperClient: HelperClient
 
-    private let helperClient = try! HelperClient(
-        helperID: "com.charlessoft.CSAuthSample-Example.helper",
-        commandType: ExampleCommands.self,
-        bundle: .main,
-        tableName: "Prompts"
-    )
+    private init(helperClient: HelperClient) {
+        self.helperClient = helperClient
+    }
 
     static func main() {
         do {
-            let xpcService = XPCService()
+            let helperClient = try HelperClient(
+                helperID: "com.charlessoft.CSAuthSample-Example.helper",
+                commandSet: ExampleCommands.all,
+                bundle: .main,
+                tableName: "Prompts"
+            )
+
+            let xpcService = XPCService(helperClient: helperClient)
 
             let requirement: String? = nil
             let serviceListener = try XPCListener(type: .service, codeSigningRequirement: requirement)
 
-            serviceListener.messageHandler = xpcService.handleMessage
+            serviceListener.setMessageHandler(name: ExampleCommands.sayHello.name, handler: xpcService.sayHello)
+            serviceListener.setMessageHandler(name: BuiltInCommands.getVersion.name, handler: xpcService.getHelperVersion)
+            serviceListener.setMessageHandler(name: BuiltInCommands.uninstallHelperTool.name, handler: xpcService.uninstall)
+
             serviceListener.errorHandler = xpcService.handleError
 
             serviceListener.activate()
@@ -40,29 +47,32 @@ class XPCService {
         }
     }
 
-    private func handleMessage(connection: XPCConnection, message: [String : Any]) async throws -> [String : Any]? {
-        // Sanity check to make sure the message is a valid helper command
-        let allowedCommands: [Command] = [
-            ExampleCommands.sayHello,
-            BuiltInCommands.getVersion,
-            BuiltInCommands.uninstallHelperTool
-        ]
-
-        guard let commandName = message[CSAuthSampleCommon.DictionaryKeys.commandName] as? String,
-              let command: Command = ExampleCommands(rawValue: commandName) ?? BuiltInCommands(rawValue: commandName),
-              allowedCommands.contains(where: { $0.name == commandName }),
-              let request = message[CSAuthSampleCommon.DictionaryKeys.request] as? [String : Any] else {
-            throw Errno.invalidArgument
-        }
-
+    private func sayHello(_: XPCConnection, message: String) async throws -> String {
+        do {
         return try await self.helperClient.executeInHelperTool(
-            command: command,
-            request: request,
-            reinstallIfInvalid: true
+            command: ExampleCommands.sayHello,
+            request: message
         )
+        } catch {
+            let e = error
+            NSLog("error: \(e)")
+            throw e
+        }
+    }
+
+    private func getHelperVersion(_: XPCConnection) async throws -> String {
+        try await self.helperClient.requestHelperVersion()
+    }
+
+    private func uninstall(_: XPCConnection) async throws {
+        try await self.helperClient.uninstallHelperTool()
     }
 
     private func handleError(connection: XPCConnection, error: Error) {
-        self.logger.error("Received error: \(error.localizedDescription)")
+        if #available(macOS 11.0, *) {
+            os.Logger().error("Received error: \(error.localizedDescription)")
+        } else {
+            os_log(.error, "Received error: %@", error.localizedDescription)
+        }
     }
 }
