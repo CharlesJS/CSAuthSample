@@ -7,3 +7,4 @@
 */
 
 "SayHello" = "CSAuthSample Example App would like to say hello.";
+"OpenSudoLectureFile" = "CSAuthSample Example App would like to read a secret file.";

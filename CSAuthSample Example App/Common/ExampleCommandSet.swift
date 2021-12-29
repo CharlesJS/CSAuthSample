@@ -11,7 +11,7 @@ import Security.AuthorizationDB
 import SwiftyXPC
 
 struct ExampleCommands {
-    static let all = [Self.sayHello]
+    static let all = [Self.sayHello, Self.openSudoLectureFile]
 
     static let sayHello = CommandSpec(
         name: "com.charlessoft.CSAuthSample-Example.Commands.SayHello",
