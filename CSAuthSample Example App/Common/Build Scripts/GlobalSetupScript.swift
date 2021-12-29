@@ -9,22 +9,26 @@ import Foundation
 
 let env = ProcessInfo.processInfo.environment
 let versionVarName = "CURRENT_PROJECT_VERSION"
+let appID = env["PRODUCT_BUNDLE_IDENTIFIER"]!
 
 let srcURL = URL(fileURLWithPath: env["SRCROOT"]!)
 let derivedFileDir = URL(fileURLWithPath: env["DERIVED_FILE_DIR"]!)
-let configURL = srcURL.appendingPathComponent("Common/Config/CSAuthSample-Example.xcconfig")
+let versionNumberURL = srcURL.appendingPathComponent("Common/Config/VersionNumber.xcconfig")
+let requirementURL = srcURL.appendingPathComponent("Common/Config/CodeSignatureRequirement.xcconfig")
 
 let version = Int(env[versionVarName]!)!
 
-let newConfig = """
-    \(versionVarName) = \(version + 1)
-    APP_BUNDLE_ID = \(Identifiers.appID)
-    XPC_SERVICE_ID = \(Identifiers.xpcServiceID)
-    HELPER_ID = \(Identifiers.helperID)
-    CS_REQUIREMENT=\(getRequirement())
-    """
+if !((try? derivedFileDir.checkResourceIsReachable()) ?? false) {
+    try! FileManager.default.createDirectory(at: derivedFileDir, withIntermediateDirectories: true, attributes: nil)
+}
 
-try! newConfig.write(to: configURL, atomically: true, encoding: .utf8)
+let newVersion = "\(versionVarName) = \(version + 1)\n"
+
+try! newVersion.write(to: versionNumberURL, atomically: true, encoding: .utf8)
+
+let requirementConfig = "CS_REQUIREMENT = \(getRequirement())\n"
+
+try! requirementConfig.write(to: requirementURL, atomically: true, encoding: .utf8)
 
 func getRequirement() -> String {
     // Is there any way to generate the designated requirement string without invoking the codesign tool?
@@ -32,7 +36,7 @@ func getRequirement() -> String {
     // format that `codesign` uses
 
     let tempFileName = UUID().uuidString
-    let tempFileURL = `derivedFileDir`.appendingPathComponent(tempFileName)
+    let tempFileURL = derivedFileDir.appendingPathComponent(tempFileName)
 
     try! Data().write(to: tempFileURL)
     defer { try! FileManager.default.removeItem(at: tempFileURL) }

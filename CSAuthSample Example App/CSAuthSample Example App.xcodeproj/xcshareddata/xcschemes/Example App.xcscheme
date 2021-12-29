@@ -10,7 +10,7 @@
             ActionType = "Xcode.IDEStandardExecutionActionsCore.ExecutionActionType.ShellScriptAction">
             <ActionContent
                title = "Run Script"
-               scriptText = "IDENTIFIERS_PATH=&quot;$SRCROOT/Common/Identifiers.swift&quot;&#10;&#10;APP_BUNDLE_ID=`echo &quot;print(Identifiers.appID)&quot; | /bin/cat &quot;$IDENTIFIERS_PATH&quot; - | swift -`&#10;&#10;TMP_ERR_LOG=&quot;/tmp/$APP_BUNDLE_ID-SetupLog.txt&quot;&#10;&#10;/bin/rm &quot;$TMP_ERR_LOG&quot;&#10;env &gt; /tmp/env.txt&#10;/bin/cat &quot;$IDENTIFIERS_PATH&quot; &quot;$SRCROOT/Common/Build Scripts/GlobalSetupScript.swift&quot; | swift - &gt; &quot;$TMP_ERR_LOG&quot; 2&gt;&amp;1&#10;&#10;">
+               scriptText = "TMP_ERR_LOG=&quot;/tmp/$PRODUCT_BUNDLE_IDENTIFIER-SetupLog.txt&quot;&#10;&#10;/bin/rm &quot;$TMP_ERR_LOG&quot;&#10;env &gt; /tmp/env.txt&#10;swift &quot;$SRCROOT/Common/Build Scripts/GlobalSetupScript.swift&quot; &gt; &quot;$TMP_ERR_LOG&quot; 2&gt;&amp;1&#10;&#10;">
                <EnvironmentBuildable>
                   <BuildableReference
                      BuildableIdentifier = "primary"

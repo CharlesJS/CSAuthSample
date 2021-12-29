@@ -102,6 +102,7 @@
 		2821463E2443EC4D008BD2DC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		282146402443ED57008BD2DC /* VersionNumber.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = VersionNumber.xcconfig; sourceTree = "<group>"; };
 		282146452444060B008BD2DC /* Launchd.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Launchd.plist; sourceTree = "<group>"; };
+		283F738F277BEF54008BD2DC /* CodeSignatureRequirement.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = CodeSignatureRequirement.xcconfig; sourceTree = "<group>"; };
 		28E1B06C26ACF4ED00804915 /* CSAuthSample-Example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "CSAuthSample-Example.xcconfig"; sourceTree = "<group>"; };
 		28EAC3E9277A98FD008BD2DC /* Errors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Errors.swift; sourceTree = "<group>"; };
 		28F83F3824496868008BD2DC /* GlobalSetupScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalSetupScript.swift; sourceTree = "<group>"; };
@@ -215,6 +216,7 @@
 			isa = PBXGroup;
 			children = (
 				28E1B06C26ACF4ED00804915 /* CSAuthSample-Example.xcconfig */,
+				283F738F277BEF54008BD2DC /* CodeSignatureRequirement.xcconfig */,
 				282146402443ED57008BD2DC /* VersionNumber.xcconfig */,
 			);
 			path = Config;

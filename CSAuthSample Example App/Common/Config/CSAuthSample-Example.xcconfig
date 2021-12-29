@@ -1,9 +1,9 @@
 #include "VersionNumber.xcconfig"
+#include "CodeSignatureRequirement.xcconfig"
 
 APP_ID = com.charlessoft.CSAuthSample-Example
 HELPER_ID = ${APP_ID}.helper
 XPC_SERVICE_ID = ${APP_ID}.xpc
 
 // The part that appears in parentheses at the end of your Developer ID Application certificate in Keychain Access
-CERTIFICATE_LEAF = HRLUCP7QP4
-CS_REQUIREMENT = (certificate leaf[field.1.2.840.113635.100.6.1.9] /* exists */ or certificate 1[field.1.2.840.113635.100.6.2.6] /* exists */ and certificate leaf[field.1.2.840.113635.100.6.1.13] /* exists */ and certificate leaf[subject.OU] = ${CERTIFICATE_LEAF})
+CERTIFICATE_LEAF = ABCDEF1234
