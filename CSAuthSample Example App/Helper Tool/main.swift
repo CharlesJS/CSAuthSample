@@ -5,8 +5,10 @@
 //  Created by Charles Srstka on 4/5/20.
 //
 
+import CoreFoundation
 import CSAuthSampleHelper
-import Darwin
+import CSCoreFoundation
+import SwiftyXPC
 
 func sayHello(message: String) async throws -> String {
     let replyMessage = """
@@ -17,8 +19,18 @@ func sayHello(message: String) async throws -> String {
     return replyMessage
 }
 
+func openSudoLectureFile() async throws -> XPCFileDescriptor {
+    let fd = open("/etc/sudo_lecture", O_RDONLY)
+    guard fd >= 0 else {
+        throw CFError.make(posixError: errno)
+    }
+
+    return XPCFileDescriptor(fileDescriptor: fd)
+}
+
 let helperTool = HelperTool()
 
 helperTool.setHandler(command: ExampleCommands.sayHello, handler: sayHello)
+helperTool.setHandler(command: ExampleCommands.openSudoLectureFile, handler: openSudoLectureFile)
 
 helperTool.run()

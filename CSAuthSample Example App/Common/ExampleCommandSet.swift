@@ -8,6 +8,7 @@
 import CSAuthSampleCommon
 import CoreFoundation
 import Security.AuthorizationDB
+import SwiftyXPC
 
 struct ExampleCommands {
     static let all = [Self.sayHello]
@@ -23,5 +24,17 @@ struct ExampleCommands {
         ).toString(),
         requestType: String.self,
         responseType: .wait(String.self)
+    )
+
+    static let openSudoLectureFile = CommandSpec(
+        name: "com.charlessoft.CSAuthSample-Example.Commands.OpenSudoLectureFile",
+        rule: kAuthorizationRuleAuthenticateAsAdmin,
+        prompt: CFBundleCopyLocalizedString(
+            CFBundleGetMainBundle(),
+            CFString.fromString("OpenSudoLectureFile"),
+            nil,
+            CFString.fromString("Prompts")
+        ).toString(),
+        responseType: .wait(XPCFileDescriptor.self)
     )
 }

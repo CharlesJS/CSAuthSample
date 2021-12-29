@@ -35,6 +35,10 @@ class XPCService {
             let serviceListener = try XPCListener(type: .service, codeSigningRequirement: requirement)
 
             serviceListener.setMessageHandler(name: ExampleCommands.sayHello.name, handler: xpcService.sayHello)
+            serviceListener.setMessageHandler(
+                name: ExampleCommands.openSudoLectureFile.name,
+                handler: xpcService.openSudoLectureFile
+            )
             serviceListener.setMessageHandler(name: BuiltInCommands.getVersion.name, handler: xpcService.getHelperVersion)
             serviceListener.setMessageHandler(name: BuiltInCommands.uninstallHelperTool.name, handler: xpcService.uninstall)
 
@@ -48,16 +52,11 @@ class XPCService {
     }
 
     private func sayHello(_: XPCConnection, message: String) async throws -> String {
-        do {
-        return try await self.helperClient.executeInHelperTool(
-            command: ExampleCommands.sayHello,
-            request: message
-        )
-        } catch {
-            let e = error
-            NSLog("error: \(e)")
-            throw e
-        }
+        try await self.helperClient.executeInHelperTool(command: ExampleCommands.sayHello, request: message)
+    }
+
+    private func openSudoLectureFile(_: XPCConnection) async throws -> XPCFileDescriptor {
+        try await self.helperClient.executeInHelperTool(command: ExampleCommands.openSudoLectureFile)
     }
 
     private func getHelperVersion(_: XPCConnection) async throws -> String {

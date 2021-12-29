@@ -29,6 +29,29 @@ struct ContentView: View {
             Button {
                 Task {
                     do {
+                        let fd = try await MessageSender.shared.openSudoLectureFile()
+                        let handle = FileHandle(fileDescriptor: fd.fileDescriptor, closeOnDealloc: false)
+                        defer { _ = try? handle.close() }
+
+                        guard let data = try handle.readToEnd() else {
+                            throw CocoaError(.fileReadUnknown)
+                        }
+                        
+                        guard let lecture = String(data: data, encoding: .utf8) else {
+                            throw CocoaError(.fileReadInapplicableStringEncoding)
+                        }
+
+                        self.response = "Read sudo lecture file:\n\n\(lecture)"
+                    } catch {
+                        self.response = "Received error:\n\n\(error.localizedDescription)"
+                    }
+                }
+            } label: {
+                Text("Open sudo lecture file")
+            }.padding().disabled(self.messageSendInProgress)
+            Button {
+                Task {
+                    do {
                         let reply = try await MessageSender.shared.getVersion()
 
                         self.response = "Received reply from helper:\n\n\(reply)"

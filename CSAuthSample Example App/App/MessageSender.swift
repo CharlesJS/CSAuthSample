@@ -44,6 +44,13 @@ actor MessageSender {
         return try await self.connection.sendMessage(name: ExampleCommands.sayHello.name, request: "Hello, World!")
     }
 
+    func openSudoLectureFile() async throws -> XPCFileDescriptor {
+        self.messageSendInProgress = true
+        defer { self.messageSendInProgress = false }
+
+        return try await self.connection.sendMessage(name: ExampleCommands.openSudoLectureFile.name)
+    }
+
     func getVersion() async throws -> String {
         self.messageSendInProgress = true
         defer { self.messageSendInProgress = false }
