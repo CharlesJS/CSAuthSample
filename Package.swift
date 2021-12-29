@@ -23,7 +23,7 @@ let package = Package(
         ),
     ],
     dependencies: [
-        .package(name: "SwiftyXPC", url: "https://github.com/CharlesJS/SwiftyXPC.git", from: "0.3.3"),
+        .package(name: "SwiftyXPC", url: "https://github.com/CharlesJS/SwiftyXPC.git", from: "0.3.4"),
         .package(name: "CSCoreFoundation", url: "https://github.com/CharlesJS/CSCoreFoundation.git", from: "0.2.0")
     ],
     targets: [
