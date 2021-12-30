@@ -15,12 +15,24 @@ import CoreFoundation
 import SwiftyXPC
 import os
 
+/// The primary class used by your helper tool to receive and reply to messages sent from your application.
+///
+/// At the beginning of your helper tool’s execution, you should create a `HelperTool` object, call the `setHandler` family of functions for each
+/// command that your helper tool supports, and call `run()`.
 public class HelperTool {
+    /// The bundle identifier of your helper tool.
     public let helperID: String
+
+    /// The code signing requirement that your application must fulfill in order to send messages to your helper tool.
     public let codeSigningRequirement: String
+
+    /// The URL of your helper tool.
     public let url: CFURL
+
+    /// Your helper tool’s embedded `Info.plist`, as a `CFDictionary`.
     public let infoPlist: CFDictionary
 
+    /// The version of your helper tool.
     public private(set) lazy var version: String? = {
         let key = unsafeBitCast(kCFBundleVersionKey, to: UnsafeRawPointer.self)
         let value = CFDictionaryGetValue(self.infoPlist, key)
@@ -54,6 +66,11 @@ public class HelperTool {
 
     private static let _globalInit: Void = { csAuthSampleGlobalInit() }()
 
+    /// Create a new `HelperTool` instance.
+    ///
+    /// - Parameters:
+    ///   - helperID: The bundle identifier of your helper tool. If `nil`, this will be populated using the value of `CFBundleIdentifier` in your helper tool’s embedded info dictionary.
+    ///   - requirement: A code signing requirement that your app must fulfill in order to send messages to this tool. If `nil`, this will be populated from the `SMAuthorizedClients` key in your helper tool’s embedded info dictionary.
     public init(
         helperID: String? = nil,
         codeSigningRequirement requirement: String? = nil
@@ -87,6 +104,11 @@ public class HelperTool {
         self.logger = LoggerPolyfill(helperID: self.helperID, category: "com.charlessoft.CSAuthSample.HelperTool")
     }
 
+    /// Set an implementation for a command that takes no arguments and returns no value.
+    ///
+    /// - Parameters:
+    ///   - command: A `CommandSpec` representing the command which should be implemented by the handler function.
+    ///   - handler: A function which will be called when the app sends this command to your helper tool.
     public func setHandler(command: CommandSpec, handler: @escaping () async throws -> ()) {
         self.setHandler(command: command) { () async throws -> XPCNull in
             try await handler()
@@ -94,10 +116,11 @@ public class HelperTool {
         }
     }
 
-    public func setHandler<Response: Codable>(command: CommandSpec, handler: @escaping () async throws -> Response) {
-        self.setHandler(command: command) { (_: XPCNull) in try await handler() }
-    }
-
+    /// Set an implementation for a command that takes an argument but returns no value.
+    ///
+    /// - Parameters:
+    ///   - command: A `CommandSpec` representing the command which should be implemented by the handler function.
+    ///   - handler: A function which will be called when the app sends this command to your helper tool.
     public func setHandler<Request: Codable>(command: CommandSpec, handler: @escaping (Request) async throws -> ()) {
         self.setHandler(command: command) { (request: Request) async throws -> XPCNull in
             try await handler(request)
@@ -105,6 +128,20 @@ public class HelperTool {
         }
     }
 
+    /// Set an implementation for a command that takes no arguments but returns a value.
+    ///
+    /// - Parameters:
+    ///   - command: A `CommandSpec` representing the command which should be implemented by the handler function.
+    ///   - handler: A function which will be called when the app sends this command to your helper tool.
+    public func setHandler<Response: Codable>(command: CommandSpec, handler: @escaping () async throws -> Response) {
+        self.setHandler(command: command) { (_: XPCNull) in try await handler() }
+    }
+
+    /// Set an implementation for a command that takes an argument and returns a value.
+    ///
+    /// - Parameters:
+    ///   - command: A `CommandSpec` representing the command which should be implemented by the handler function.
+    ///   - handler: A function which will be called when the app sends this command to your helper tool.
     public func setHandler<Request: Codable, Response: Codable>(
         command: CommandSpec,
         handler: @escaping (Request) async throws -> Response
@@ -134,6 +171,11 @@ public class HelperTool {
         self.listener.setMessageHandler(name: command.name, handler: xpcHandler)
     }
 
+    /// Starts listening for messages from the application and handling them.
+    ///
+    /// This method should be run at the end of your helper tool’s `main.swift` file, after configuring all the command handlers.
+    ///
+    /// This method never returns.
     public func run() -> Never {
         self.setUpBuiltInHandlers()
 

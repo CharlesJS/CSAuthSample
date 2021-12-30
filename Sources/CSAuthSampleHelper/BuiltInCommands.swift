@@ -15,6 +15,11 @@ extension HelperTool {
         self.setHandler(command: BuiltInCommands.uninstallHelperTool, handler: self.uninstallHelperTool)
     }
 
+    /// Implementation of the `BuiltInCommands.getVersion` command.
+    ///
+    /// - Returns: The version of this helper tool.
+    ///
+    /// - Throws: `EBADF` if `CFBundleVersion` is missing from the helper tool’s embedded `Info.plist`.
     public func getVersion() throws -> String {
         if let version = self.version {
             return version
@@ -23,6 +28,9 @@ extension HelperTool {
         }
     }
 
+    /// Implementation of the `BuiltInCommands.uninstallHelperTool` command.
+    ///
+    /// - Throws: Any error that occurs in the process of uninstalling the helper tool.
     public func uninstallHelperTool() throws {
         let servicePath = "/Library/LaunchDaemons/\(self.helperID).plist"
 

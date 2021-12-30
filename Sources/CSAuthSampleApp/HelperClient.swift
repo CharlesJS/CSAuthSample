@@ -11,13 +11,17 @@ import Foundation
 import ServiceManagement
 import System
 import SwiftyXPC
+import System
 
 /// The primary class used by your application to communicate with your helper tool.
 ///
-/// To use, create an instance and use `connectToHelperTool` to send messages to the helper tool.
+/// To use, create an instance and use the `executeInHelperTool(command:request:reinstallIfInvalid:)` method to send messages to the helper tool.
 public class HelperClient {
-    let helperID: String
-    let version: String
+    /// The bundle identifier of your helper tool.
+    public let helperID: String
+
+    /// The version of your helper tool.
+    public let version: String
 
     private var _authorization: AuthorizationRef?
     private var authorization: AuthorizationRef {
@@ -43,8 +47,8 @@ public class HelperClient {
     /// - Parameters:
     ///   - helperID: The bundle identifier of your helper tool, which should generally be distinct from your main application's bundle identifier.
     ///   - version: The expected value of `CFBundleVersion` in the helper's Info.plist. Defaults to the main application's `CFBundleVersion`.
-    ///   - authData: Authorization data, in the format of an `AuthorizationExternalForm`. If not provided, a new `AuthorizationRef` will be created.
-    ///   - commandSet: A `CommandSet` object describing the messages the helper accepts, and their required authorization levels.
+    ///   - authorization: An `AuthorizationRef` representing the current authorization session. If `nil`, a new one will be created automatically.
+    ///   - commandSet: An array of `CommandSpec` objects describing the messages the helper accepts, and their required authorization levels. Does not need to include the contents of `BuiltInCommands`, as those will be automatically added to the array.
     ///   - bundle: A bundle containing a strings table containing localized messages to present to the user. Optional.
     ///   - tableName: The name of a strings table containing localized messages to present to the user. Optional.
     /// - Throws: Any errors that occur in the process of creating the `HelperClient`'s internal `AuthorizationRef`.
@@ -81,6 +85,10 @@ public class HelperClient {
     ///
     /// This is helpful for making sure that the application and helper tool are in sync with each other.
     /// If the helper's version does not match the app's version, it is generally a sign that the helper needs to be upgraded.
+    ///
+    /// - Returns: The version of the currently-installed helper tool.
+    ///
+    /// - Throws: Any error that occurs in the process of communicating with the helper tool.
     public func requestHelperVersion() async throws -> String {
         try await self._executeInHelperTool(
             command: BuiltInCommands.getVersion,
@@ -90,6 +98,8 @@ public class HelperClient {
     }
 
     /// Install the helper tool.
+    ///
+    /// - Throws: Any error that occurs during the process of installing the helper tool.
     public func installHelperTool() async throws {
         _ = try? await self._uninstallHelperTool()
 
@@ -98,6 +108,8 @@ public class HelperClient {
     }
 
     /// Uninstall the helper tool.
+    ///
+    /// - Throws: Any error that occurs in the process of uninstalling the helper tool.
     public func uninstallHelperTool() async throws {
         try self.requestPrivileges([kSMRightModifySystemDaemons], allowUserInteraction: true)
 
@@ -115,7 +127,16 @@ public class HelperClient {
         ) as XPCNull
     }
 
-
+    /// Execute a command in your helper tool that takes no arguments and returns no value.
+    ///
+    /// - Parameters:
+    ///   - command: A `CommandSpec` representing the command to execute in the helper tool.
+    ///   - reinstallIfInvalid: If `true`, automatically reinstall the tool if it is not installed properly.
+    ///
+    /// - Throws:
+    ///   - Any error that is thrown by the helper function.
+    ///   - Any error that occurs in the process of communicating with the helper.
+    ///   - If `reinstallIfInvalid` is true, any error that occurs in the process of reinstalling the helper tool.
     public func executeInHelperTool(command: CommandSpec, reinstallIfInvalid: Bool = true) async throws {
         try await self.executeInHelperTool(
             command: command,
@@ -124,6 +145,17 @@ public class HelperClient {
         )
     }
 
+    /// Execute a command in your helper tool that takes an argument but does not returns a value.
+    ///
+    /// - Parameters:
+    ///   - command: A `CommandSpec` representing the command to execute in the helper tool.
+    ///   - request: A parameter to send to the helper function. Can be any value that conforms to `Codable`.
+    ///   - reinstallIfInvalid: If `true`, automatically reinstall the tool if it is not installed properly.
+    ///
+    /// - Throws:
+    ///   - Any error that is thrown by the helper function.
+    ///   - Any error that occurs in the process of communicating with the helper.
+    ///   - If `reinstallIfInvalid` is true, any error that occurs in the process of reinstalling the helper tool.
     public func executeInHelperTool<Request: Codable>(
         command: CommandSpec,
         request: Request,
@@ -136,6 +168,18 @@ public class HelperClient {
         ) as XPCNull
     }
 
+    /// Execute a command in your helper tool that takes no arguments but returns a value.
+    ///
+    /// - Parameters:
+    ///   - command: A `CommandSpec` representing the command to execute in the helper tool.
+    ///   - reinstallIfInvalid: If `true`, automatically reinstall the tool if it is not installed properly.
+    ///
+    /// - Returns: The value returned by the helper function.
+    ///
+    /// - Throws:
+    ///   - Any error that is thrown by the helper function.
+    ///   - Any error that occurs in the process of communicating with the helper.
+    ///   - If `reinstallIfInvalid` is true, any error that occurs in the process of reinstalling the helper tool.
     public func executeInHelperTool<Response: Codable>(
         command: CommandSpec,
         reinstallIfInvalid: Bool = true
@@ -147,6 +191,19 @@ public class HelperClient {
         )
     }
 
+    /// Execute a command in your helper tool that takes an argument and returns a value.
+    ///
+    /// - Parameters:
+    ///   - command: A `CommandSpec` representing the command to execute in the helper tool.
+    ///   - request: A parameter to send to the helper function. Can be any value that conforms to `Codable`.
+    ///   - reinstallIfInvalid: If `true`, automatically reinstall the tool if it is not installed properly.
+    ///
+    /// - Returns: The value returned by the helper function.
+    ///
+    /// - Throws:
+    ///   - Any error that is thrown by the helper function.
+    ///   - Any error that occurs in the process of communicating with the helper.
+    ///   - If `reinstallIfInvalid` is true, any error that occurs in the process of reinstalling the helper tool.
     public func executeInHelperTool<Request: Codable, Response: Codable>(
         command: CommandSpec,
         request: Request,

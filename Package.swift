@@ -24,7 +24,7 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "SwiftyXPC", url: "https://github.com/CharlesJS/SwiftyXPC.git", from: "0.4.0"),
-        .package(name: "CSCoreFoundation", url: "https://github.com/CharlesJS/CSCoreFoundation.git", from: "0.2.0")
+        .package(name: "CSCoreFoundation", url: "https://github.com/CharlesJS/CSCoreFoundation.git", from: "0.2.0"),
     ],
     targets: [
         .target(
