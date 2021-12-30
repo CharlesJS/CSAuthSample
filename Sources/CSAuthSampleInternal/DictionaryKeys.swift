@@ -5,6 +5,7 @@
 //  Created by Charles Srstka on 7/24/21.
 //
 
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public struct DictionaryKeys {
     public static let commandName = "com.charlessoft.CSAuthSample.CommandName"
     public static let authData = "com.charlessoft.CSAuthSample.AuthorizationData"

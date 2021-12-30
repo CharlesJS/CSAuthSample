@@ -39,40 +39,6 @@ public struct CommandSpec: Equatable {
         self.responseType = responseType
     }
 
-    public static func setUpAccessRights(
-        commandSet: [CommandSpec],
-        authorization: AuthorizationRef,
-        bundle: CFBundle?,
-        tableName: String?
-    ) throws {
-        for eachCommand in BuiltInCommands.all + commandSet {
-            // First get the right.  If we get back errAuthorizationDenied that means there's
-            // no current definition, so we add our default one.
-
-            var err = AuthorizationRightGet(eachCommand.name, nil)
-
-            if err == errAuthorizationDenied {
-                err = AuthorizationRightSet(
-                    authorization,
-                    eachCommand.name,
-                    CFString.fromString(eachCommand.rule),
-                    eachCommand.prompt.map { CFString.fromString($0) },
-                    bundle,
-                    tableName.map { CFString.fromString($0) }
-                )
-
-                guard err == errAuthorizationSuccess else {
-                    throw CFError.make(osStatus: err)
-                }
-            } else {
-                // A right already exists (err == noErr) or any other error occurs, we
-                // assume that it has been set up in advance by the system administrator or
-                // this is the second time we've run.  Either way, there's nothing more for
-                // us to do.
-            }
-        }
-    }
-
     public static func ==(lhs: CommandSpec, rhs: CommandSpec) -> Bool {
         if lhs.name != rhs.name || lhs.rule != rhs.rule || lhs.prompt != rhs.prompt || lhs.requestType != rhs.requestType {
             return false
@@ -111,6 +77,4 @@ public struct BuiltInCommands {
         name: "com.charlessoft.CSAuthSample.ConnectWithEndpoint",
         rule: kAuthorizationRuleClassAllow
     )
-
-    fileprivate static let all: [CommandSpec] = [Self.getVersion, Self.uninstallHelperTool]
 }
