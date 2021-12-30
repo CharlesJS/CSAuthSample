@@ -14,8 +14,6 @@ import CSCoreFoundation
 import CoreFoundation
 import SwiftyXPC
 import os
-import Foundation
-import SwiftUI
 
 public class HelperTool {
     public let helperID: String
