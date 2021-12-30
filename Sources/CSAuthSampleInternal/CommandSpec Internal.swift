@@ -1,6 +1,6 @@
 //
 //  CommandSpec Internal.swift
-//  
+//
 //
 //  Created by Charles Srstka on 12/30/21.
 //

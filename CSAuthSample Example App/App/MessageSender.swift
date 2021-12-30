@@ -6,10 +6,10 @@
 //
 
 import CSAuthSampleCommon
-import SwiftyXPC
 import Combine
-import os
 import Example_XPC_Service
+import SwiftyXPC
+import os
 
 actor MessageSender {
     static let shared = try! MessageSender()

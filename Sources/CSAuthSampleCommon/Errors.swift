@@ -1,6 +1,6 @@
 //
 //  Errors.swift
-//  
+//
 //
 //  Created by Charles Srstka on 10/31/21.
 //

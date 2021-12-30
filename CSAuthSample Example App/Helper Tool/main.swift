@@ -5,9 +5,9 @@
 //  Created by Charles Srstka on 4/5/20.
 //
 
-import CoreFoundation
 import CSAuthSampleHelper
 import CSCoreFoundation
+import CoreFoundation
 import SwiftyXPC
 
 func sayHello(message: String) async throws -> String {

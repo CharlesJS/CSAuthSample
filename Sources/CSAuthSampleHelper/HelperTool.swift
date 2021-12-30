@@ -6,13 +6,13 @@
 //
 //
 
-import System
-import Security.Authorization
 import CSAuthSampleCommon
 import CSAuthSampleInternal
 import CSCoreFoundation
 import CoreFoundation
+import Security.Authorization
 import SwiftyXPC
+import System
 import os
 
 /// The primary class used by your helper tool to receive and reply to messages sent from your application.
@@ -82,15 +82,20 @@ public class HelperTool {
         self.url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path, .cfurlposixPathStyle, false)
         self.infoPlist = CFBundleCopyInfoDictionaryForURL(self.url)
 
-        self.helperID = helperID ?? self.infoPlist.readString(key: kCFBundleIdentifierKey) ?? {
+        if let helperID = helperID {
+            self.helperID = helperID
+        } else if let helperID = self.infoPlist.readString(key: kCFBundleIdentifierKey) {
+            self.helperID = helperID
+        } else {
             fatalError("Helper ID must be specified, either in code or via \(kCFBundleIdentifierKey!) in Info.plist")
-        }()
+        }
 
         if let requirement = requirement {
             self.codeSigningRequirement = requirement
         } else if let authorizedClients: CFArray = self.infoPlist["SMAuthorizedClients", as: CFArrayGetTypeID()],
-                  CFArrayGetCount(authorizedClients) > 0,
-                  let requirement = (authorizedClients[0, as: CFStringGetTypeID()] as CFString?)?.toString() {
+            CFArrayGetCount(authorizedClients) > 0,
+            let requirement = (authorizedClients[0, as: CFStringGetTypeID()] as CFString?)?.toString()
+        {
             self.codeSigningRequirement = requirement
         } else {
             fatalError("A code signing requirement must be specified")

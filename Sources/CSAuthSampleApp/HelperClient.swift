@@ -9,7 +9,6 @@ import CSAuthSampleCommon
 import CSAuthSampleInternal
 import Foundation
 import ServiceManagement
-import System
 import SwiftyXPC
 import System
 
@@ -24,6 +23,8 @@ public class HelperClient {
     public let version: String
 
     private var _authorization: AuthorizationRef?
+    // https://github.com/nicklockwood/SwiftFormat/issues/1109
+    // swift-format-ignore: UseSingleLinePropertyGetter
     private var authorization: AuthorizationRef {
         get throws {
             if let authorization = self._authorization {
@@ -65,8 +66,13 @@ public class HelperClient {
         self.helperID = helperID
         self.version = version
 
-        let cfBundle = bundle == .main ? CFBundleGetMainBundle() : bundle.flatMap {
-            CFBundleCreate(kCFAllocatorDefault, $0.bundleURL as CFURL)
+        let cfBundle: CFBundle?
+        if bundle == .main {
+            cfBundle = CFBundleGetMainBundle()
+        } else {
+            cfBundle = bundle.flatMap {
+                CFBundleCreate(kCFAllocatorDefault, $0.bundleURL as CFURL)
+            }
         }
 
         try CommandSpec.setUpAccessRights(
@@ -120,11 +126,12 @@ public class HelperClient {
     }
 
     private func _uninstallHelperTool() async throws {
-        _ = try await self._executeInHelperTool(
-            command: BuiltInCommands.uninstallHelperTool,
-            expectedVersion: nil,
-            request: XPCNull.shared
-        ) as XPCNull
+        _ =
+            try await self._executeInHelperTool(
+                command: BuiltInCommands.uninstallHelperTool,
+                expectedVersion: nil,
+                request: XPCNull.shared
+            ) as XPCNull
     }
 
     /// Execute a command in your helper tool that takes no arguments and returns no value.
@@ -161,11 +168,12 @@ public class HelperClient {
         request: Request,
         reinstallIfInvalid: Bool = true
     ) async throws {
-        _ = try await self.executeInHelperTool(
-            command: command,
-            request: request,
-            reinstallIfInvalid: reinstallIfInvalid
-        ) as XPCNull
+        _ =
+            try await self.executeInHelperTool(
+                command: command,
+                request: request,
+                reinstallIfInvalid: reinstallIfInvalid
+            ) as XPCNull
     }
 
     /// Execute a command in your helper tool that takes no arguments but returns a value.
@@ -218,7 +226,7 @@ public class HelperClient {
 
         do {
             return try await self._executeInHelperTool(command: command, expectedVersion: self.version, request: request)
-        } catch where reinstallIfInvalid {
+        } catch  where reinstallIfInvalid {
             let reinstall: Bool
 
             if let error = error as? XPCError, case .connectionInvalid = error {
@@ -327,7 +335,7 @@ public class HelperClient {
             throw smError?.takeRetainedValue() ?? CocoaError(.fileWriteUnknown)
         }
     }
-    
+
     private func unblessHelperTool() throws {
         var smError: Unmanaged<CFError>? = nil
         // deprecated, but there is still not a decent replacement, so 🤷
@@ -335,7 +343,8 @@ public class HelperClient {
 
         let remove = unsafeBitCast(
             dlsym(UnsafeMutableRawPointer(bitPattern: -1), "SMJobRemove"),
-            to: (@convention(c) (CFString?, CFString, AuthorizationRef?, Bool, UnsafeMutablePointer<Unmanaged<CFError>?>?) -> Bool).self
+            to: (@convention(c) (CFString?, CFString, AuthorizationRef?, Bool, UnsafeMutablePointer<Unmanaged<CFError>?>?) ->
+                Bool).self
         )
 
         if !remove(kSMDomainSystemLaunchd, self.helperID as CFString, try self.authorization, true, &smError) {

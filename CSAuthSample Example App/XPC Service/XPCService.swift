@@ -7,10 +7,10 @@
 
 import CSAuthSampleApp
 import CSAuthSampleCommon
+import Foundation
 import SwiftyXPC
 import System
 import os
-import Foundation
 
 @main
 class XPCService {

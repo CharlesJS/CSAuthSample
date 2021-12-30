@@ -36,7 +36,7 @@ struct ContentView: View {
                         guard let data = try handle.readToEnd() else {
                             throw CocoaError(.fileReadUnknown)
                         }
-                        
+
                         guard let lecture = String(data: data, encoding: .utf8) else {
                             throw CocoaError(.fileReadInapplicableStringEncoding)
                         }
@@ -71,7 +71,9 @@ struct ContentView: View {
                         self.response = "Received error \(error.localizedDescription)\n\n"
                     }
                 }
-            } label: { Text("Uninstall") }.padding().disabled(self.messageSendInProgress)
+            } label: {
+                Text("Uninstall")
+            }.padding().disabled(self.messageSendInProgress)
             Text("Response:")
             Text($response.wrappedValue)
                 .frame(maxWidth: .infinity, minHeight: 300, maxHeight: .infinity)

@@ -6,11 +6,11 @@
 //
 
 import CSCoreFoundation
-import Security.AuthorizationDB
-import Darwin.POSIX.syslog
 import CoreGraphics
-import System
+import Darwin.POSIX.syslog
+import Security.AuthorizationDB
 import SwiftyXPC
+import System
 
 /// A structure representing a command that can be executed in the helper tool.
 ///
@@ -74,7 +74,7 @@ public struct CommandSpec: Equatable {
     ///   - rhs: A `CommandSpec`.
     ///
     /// - Returns: A boolean value indicating whether or not the two commands are equal.
-    public static func ==(lhs: CommandSpec, rhs: CommandSpec) -> Bool {
+    public static func == (lhs: CommandSpec, rhs: CommandSpec) -> Bool {
         if lhs.name != rhs.name || lhs.rule != rhs.rule || lhs.prompt != rhs.prompt || lhs.requestType != rhs.requestType {
             return false
         }
@@ -106,7 +106,7 @@ public struct BuiltInCommands {
         rule: kAuthorizationRuleClassAllow,
         responseType: .wait(String.self)
     )
-        
+
     /// Uninstalls the helper tool.
     public static let uninstallHelperTool = CommandSpec(
         name: "com.charlessoft.CSAuthSample.ConnectWithEndpoint",

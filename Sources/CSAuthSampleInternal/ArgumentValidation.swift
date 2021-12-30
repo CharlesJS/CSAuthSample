@@ -1,6 +1,6 @@
 //
 //  CommandValidation.swift
-//  
+//
 //
 //  Created by Charles Srstka on 12/26/21.
 //
@@ -11,6 +11,7 @@ import CoreFoundation
 import SwiftyXPC
 import System
 
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public func validateArguments(command: CommandSpec, requestType: Codable.Type, responseType: Codable.Type) throws {
     if requestType != (command.requestType ?? XPCNull.self) {
         throw CFError.make(posixError: EINVAL)

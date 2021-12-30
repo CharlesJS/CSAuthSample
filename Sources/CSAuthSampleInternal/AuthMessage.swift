@@ -1,13 +1,14 @@
 //
 //  AuthMessage.swift
-//  
+//
 //
 //  Created by Charles Srstka on 12/25/21.
 //
 
-import Security.AuthorizationDB
 import CSCoreFoundation
+import Security.AuthorizationDB
 
+// swift-format-ignore: AllPublicDeclarationsHaveDocumentation
 public struct AuthMessage<Body: Codable>: Codable {
     private enum Key: CodingKey {
         case authorization
