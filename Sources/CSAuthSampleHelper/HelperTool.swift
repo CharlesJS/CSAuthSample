@@ -44,7 +44,7 @@ public class HelperTool {
             if #available(macOS 11.0, *), case .logger(let logger) = self {
                 (logger as! Logger).notice("\(string)")
             } else {
-                NSLog(string)
+                os_log(.info, log: .default, "%@", CFString.fromString(string) as! CVarArg)
             }
         }
     }
