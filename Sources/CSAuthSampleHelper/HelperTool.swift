@@ -20,7 +20,6 @@ public class HelperTool {
     public let codeSigningRequirement: String
     public let url: CFURL
     public let infoPlist: CFDictionary
-    public let timeoutInterval: CFTimeInterval?
 
     public private(set) lazy var version: String? = {
         let key = unsafeBitCast(kCFBundleVersionKey, to: UnsafeRawPointer.self)
@@ -57,8 +56,7 @@ public class HelperTool {
 
     public init(
         helperID: String? = nil,
-        codeSigningRequirement requirement: String? = nil,
-        timeoutInterval: CFTimeInterval? = nil
+        codeSigningRequirement requirement: String? = nil
     ) {
         _ = Self._globalInit
 
@@ -80,8 +78,6 @@ public class HelperTool {
         } else {
             fatalError("A code signing requirement must be specified")
         }
-
-        self.timeoutInterval = timeoutInterval
 
         self.listener = try! XPCListener(
             type: .machService(name: self.helperID),
