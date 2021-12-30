@@ -23,7 +23,7 @@ public class HelperClient {
     public let version: String
 
     private var _authorization: AuthorizationRef?
-    // https://github.com/nicklockwood/SwiftFormat/issues/1109
+    // https://bugs.swift.org/browse/SR-15671
     // swift-format-ignore: UseSingleLinePropertyGetter
     private var authorization: AuthorizationRef {
         get throws {
