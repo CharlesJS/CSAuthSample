@@ -294,11 +294,21 @@ public struct HelperClient {
     private func unblessHelperTool(helperID: String, completionHandler: @escaping (Error?) -> Void) {
         var smError: Unmanaged<CFError>? = nil
         // deprecated, but there is still not a decent replacement, so 🤷
-        if !SMJobRemove(kSMDomainSystemLaunchd, helperID as CFString, self.authRef, true, &smError) {
-            completionHandler(smError.map { ConvertCFError($0.takeRetainedValue()) } ?? CocoaError(.fileWriteUnknown))
-        } else {
-            completionHandler(nil)
+        // use some rather unfortunate hackery with dlsym to get around deprecation warning
+
+        guard let smJobRemoveSym = dlsym(UnsafeMutableRawPointer(bitPattern: -2), "SMJobRemove") else {
+            completionHandler(CocoaError(.fileWriteUnknown))
+            return
         }
+
+        let smJobRemove = unsafeBitCast(smJobRemoveSym, to: (@convention(c) (CFString?, CFString, AuthorizationRef?, Bool, UnsafeMutablePointer<Unmanaged<CFError>?>?) -> Bool).self)
+
+        guard smJobRemove(kSMDomainSystemLaunchd, helperID as CFString, self.authRef, true, &smError) else {
+            completionHandler(smError.map { ConvertCFError($0.takeRetainedValue()) } ?? CocoaError(.fileWriteUnknown))
+            return
+        }
+
+        completionHandler(nil)
     }
 
     private func _installAndConnect<P: BuiltInCommands>(

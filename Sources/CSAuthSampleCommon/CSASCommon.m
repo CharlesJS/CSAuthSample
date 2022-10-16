@@ -149,14 +149,8 @@ static NSString * const rightValueKey = @"com.charlessoft.CSAuthSample.CSASComma
     NSInteger count = [coder decodeIntegerForKey:countKey];
     NSData *rightsData = [coder decodeObjectOfClass:[NSData class] forKey:rightsKey];
     
-    NSKeyedUnarchiver *unarchiver;
-    
-    if (@available(macOS 10.13, *)) {
-        unarchiver = [[NSKeyedUnarchiver alloc] initForReadingFromData:rightsData error:NULL];
-    } else {
-        unarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:rightsData];
-    }
-    
+    NSKeyedUnarchiver *unarchiver = [[NSKeyedUnarchiver alloc] initForReadingFromData:rightsData error:NULL];
+
     if (unarchiver == nil) {
         return nil;
     }
@@ -183,17 +177,8 @@ static NSString * const rightValueKey = @"com.charlessoft.CSAuthSample.CSASComma
 }
 
 - (void)encodeWithCoder:(NSCoder *)coder {
-    NSKeyedArchiver *archiver;
-    NSData *data;
-    
-    if (@available(macOS 10.13, *)) {
-        archiver = [[NSKeyedArchiver alloc] initRequiringSecureCoding:YES];
-    } else {
-        NSMutableData *mutableData = [NSMutableData new];
-        archiver = [[NSKeyedArchiver alloc] initForWritingWithMutableData:mutableData];
-        data = mutableData;
-    }
-    
+    NSKeyedArchiver *archiver = [[NSKeyedArchiver alloc] initRequiringSecureCoding:YES];
+
     __block NSInteger count = 0;
     
     [self.rights enumerateKeysAndObjectsUsingBlock:^(NSString *name, CSASAuthorizationRight *right, __unused BOOL *stop) {
@@ -203,11 +188,7 @@ static NSString * const rightValueKey = @"com.charlessoft.CSAuthSample.CSASComma
         count++;
     }];
     
-    if (@available(macOS 10.13, *)) {
-        data = archiver.encodedData;
-    } else {
-        [archiver finishEncoding];
-    }
+    NSData *data = archiver.encodedData;
     
     [coder encodeInteger:count forKey:countKey];
     [coder encodeObject:data forKey:rightsKey];
