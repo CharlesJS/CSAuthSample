@@ -61,7 +61,7 @@ public class HelperTool {
         }
     }
 
-    private let listener: XPCListener
+    private let listener: SwiftyXPC.XPCListener
     private let logger: LoggerPolyfill
 
     private static let _globalInit: Void = { csAuthSampleGlobalInit() }()
