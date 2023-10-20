@@ -1,0 +1,9 @@
+#include "VersionNumber.xcconfig"
+#include "CodeSignatureRequirement.xcconfig"
+
+APP_ID = com.charlessoft.CSAuthSample-LegacyExample
+HELPER_ID = ${APP_ID}.helper
+XPC_SERVICE_ID = ${APP_ID}.xpc
+
+// The part that appears in parentheses at the end of your Developer ID Application certificate in Keychain Access
+CERTIFICATE_LEAF = ABCDEFG123
