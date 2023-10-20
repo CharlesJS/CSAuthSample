@@ -77,9 +77,7 @@ public class HelperTool {
     ) {
         _ = Self._globalInit
 
-        let path = CFString.fromString(CommandLine.arguments.first!)
-
-        self.url = CFURLCreateWithFileSystemPath(kCFAllocatorDefault, path, .cfurlposixPathStyle, false)
+        self.url = CFBundleCopyExecutableURL(CFBundleGetMainBundle())
         self.infoPlist = CFBundleCopyInfoDictionaryForURL(self.url)
 
         if let helperID = helperID {

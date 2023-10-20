@@ -108,6 +108,7 @@ public struct BuiltInCommands {
     )
 
     /// Uninstalls the helper tool.
+    @available(macOS, deprecated: 13.0, message: "Simply call `unregisterHelperTool()` on the helper client instead")
     public static let uninstallHelperTool = CommandSpec(
         name: "com.charlessoft.CSAuthSample.ConnectWithEndpoint",
         rule: kAuthorizationRuleClassAllow

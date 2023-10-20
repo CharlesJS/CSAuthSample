@@ -18,6 +18,7 @@ import System
 public class HelperClient {
     /// The bundle identifier of your helper tool.
     public let helperID: String
+    private let plistName: String?
 
     /// The version of your helper tool.
     public let version: String
@@ -43,7 +44,41 @@ public class HelperClient {
 
     private static let _globalInit: Void = { csAuthSampleGlobalInit() }()
 
-    /// Create a `HelperClient` object.
+    /// Create a `HelperClient` object for use in applications targeting macOS 13.0 or higher.
+    ///
+    /// - Parameters:
+    ///   - helperID: The bundle identifier of your helper tool, which should generally be distinct from your main application's bundle identifier.
+    ///   - plistName: The path to the launchd plist for your helper tool. This plist should reside in `Contents/Library/LaunchDaemons`
+    ///     within your application or XPC service’s bundle.
+    ///   - version: The expected value of `CFBundleVersion` in the helper's Info.plist. Defaults to the main application's `CFBundleVersion`.
+    ///   - authorization: An `AuthorizationRef` representing the current authorization session. If `nil`, a new one will be created automatically.
+    ///   - commandSet: An array of `CommandSpec` objects describing the messages the helper accepts, and their required authorization levels. 
+    ///     Does not need to include the contents of `BuiltInCommands`, as those will be automatically added to the array.
+    ///   - bundle: A bundle containing a strings table containing localized messages to present to the user. Optional.
+    ///   - tableName: The name of a strings table containing localized messages to present to the user. Optional.
+    /// - Throws: Any errors that occur in the process of creating the `HelperClient`'s internal `AuthorizationRef`.
+    @available(macOS 13.0, *)
+    public convenience init(
+        helperID: String,
+        plistName: String,
+        version: String = Bundle.main.infoDictionary?[kCFBundleVersionKey as String] as? String ?? "0",
+        authorization: AuthorizationRef? = nil,
+        commandSet: [CommandSpec],
+        bundle: Bundle? = nil,
+        tableName: String? = nil
+    ) throws {
+        try self.init(
+            helperID: helperID,
+            maybePlistName: plistName,
+            version: version,
+            authorization: authorization,
+            commandSet: commandSet,
+            bundle: bundle,
+            tableName: tableName
+        )
+    }
+    
+    /// Create a `HelperClient` object using the legacy service management APIs, for use in applications targeting macOS versions earlier than 13.0.
     ///
     /// - Parameters:
     ///   - helperID: The bundle identifier of your helper tool, which should generally be distinct from your main application's bundle identifier.
@@ -53,7 +88,8 @@ public class HelperClient {
     ///   - bundle: A bundle containing a strings table containing localized messages to present to the user. Optional.
     ///   - tableName: The name of a strings table containing localized messages to present to the user. Optional.
     /// - Throws: Any errors that occur in the process of creating the `HelperClient`'s internal `AuthorizationRef`.
-    public init(
+    @available(macOS, deprecated: 13.0, message: "Use init(helperID:plistName:...) instead")
+    public convenience init(
         helperID: String,
         version: String = Bundle.main.infoDictionary?[kCFBundleVersionKey as String] as? String ?? "0",
         authorization: AuthorizationRef? = nil,
@@ -61,9 +97,30 @@ public class HelperClient {
         bundle: Bundle? = nil,
         tableName: String? = nil
     ) throws {
+        try self.init(
+            helperID: helperID,
+            maybePlistName: nil,
+            version: version,
+            authorization: authorization,
+            commandSet: commandSet,
+            bundle: bundle,
+            tableName: tableName
+        )
+    }
+
+    private init(
+        helperID: String,
+        maybePlistName: String?,
+        version: String,
+        authorization: AuthorizationRef?,
+        commandSet: [CommandSpec],
+        bundle: Bundle?,
+        tableName: String?
+    ) throws {
         _ = Self._globalInit
 
         self.helperID = helperID
+        self.plistName = maybePlistName
         self.version = version
 
         let cfBundle: CFBundle?
@@ -103,35 +160,51 @@ public class HelperClient {
         )
     }
 
-    /// Install the helper tool.
+    /// Register the helper tool.
+    /// When using the legacy API, this will also install the helper tool in `/Library/PrivilegedHelperTools`.
     ///
-    /// - Throws: Any error that occurs during the process of installing the helper tool.
-    public func installHelperTool() async throws {
-        _ = try? await self._uninstallHelperTool()
+    /// - Throws: Any error that occurs during the process of installing or registering the helper tool.
+    public func registerHelperTool() async throws {
+        if #available(macOS 13.0, *), let plistName = self.plistName {
+            try await self.requestPrivileges([kSMRightModifySystemDaemons], allowUserInteraction: true)
 
-        try self.requestPrivileges([kSMRightBlessPrivilegedHelper], allowUserInteraction: true)
-        try self.blessHelperTool()
+            _ = try? await SMAppService.daemon(plistName: plistName).unregister()
+
+            try SMAppService.daemon(plistName: plistName).register()
+        } else {
+            try await self.requestPrivileges([kSMRightBlessPrivilegedHelper], allowUserInteraction: true)
+
+            _ = try? await self._uninstallHelperTool()
+            _ = try? await self.unblessHelperTool()
+
+            try self.blessHelperTool()
+        }
     }
 
-    /// Uninstall the helper tool.
+    /// Unregister the helper tool.
+    /// When using the legacy API, this will also uninstall the helper tool and LaunchDaemons plist from `/Library`.
     ///
-    /// - Throws: Any error that occurs in the process of uninstalling the helper tool.
-    public func uninstallHelperTool() async throws {
-        try self.requestPrivileges([kSMRightModifySystemDaemons], allowUserInteraction: true)
+    /// - Throws: Any error that occurs in the process of uninstalling or unregistering the helper tool.
+    public func unregisterHelperTool() async throws {
+        try await self.requestPrivileges([kSMRightModifySystemDaemons], allowUserInteraction: true)
 
-        try await self._uninstallHelperTool()
-
-        try self.unblessHelperTool()
+        if #available(macOS 13.0, *), let plistName = self.plistName {
+            try await SMAppService.daemon(plistName: plistName).unregister()
+        } else {
+            try await self._uninstallHelperTool()
+            try await self.unblessHelperTool()
+        }
+        
         try self.revokePrivileges()
     }
 
+    @available(macOS, deprecated: 13.0, message: "Installing is only relevant when using the legacy service management APIs")
     private func _uninstallHelperTool() async throws {
-        _ =
-            try await self._executeInHelperTool(
-                command: BuiltInCommands.uninstallHelperTool,
-                expectedVersion: nil,
-                request: XPCNull.shared
-            ) as XPCNull
+        _ = try await self._executeInHelperTool(
+            command: BuiltInCommands.uninstallHelperTool,
+            expectedVersion: nil,
+            request: XPCNull.shared
+        ) as XPCNull
     }
 
     /// Execute a command in your helper tool that takes no arguments and returns no value.
@@ -168,12 +241,11 @@ public class HelperClient {
         request: Request,
         reinstallIfInvalid: Bool = true
     ) async throws {
-        _ =
-            try await self.executeInHelperTool(
-                command: command,
-                request: request,
-                reinstallIfInvalid: reinstallIfInvalid
-            ) as XPCNull
+        _ = try await self.executeInHelperTool(
+            command: command,
+            request: request,
+            reinstallIfInvalid: reinstallIfInvalid
+        ) as XPCNull
     }
 
     /// Execute a command in your helper tool that takes no arguments but returns a value.
@@ -220,13 +292,13 @@ public class HelperClient {
         try validateArguments(command: command, requestType: type(of: request), responseType: Response.self)
 
         if command == BuiltInCommands.uninstallHelperTool {
-            try await self.uninstallHelperTool()
+            try await self.unregisterHelperTool()
             return XPCNull.shared as! Response
         }
 
         do {
             return try await self._executeInHelperTool(command: command, expectedVersion: self.version, request: request)
-        } catch  where reinstallIfInvalid {
+        } catch where reinstallIfInvalid {
             let reinstall: Bool
 
             if let error = error as? XPCError, case .connectionInvalid = error {
@@ -238,7 +310,7 @@ public class HelperClient {
             }
 
             if reinstall {
-                try await self.installHelperTool()
+                try await self.registerHelperTool()
                 return try await self._executeInHelperTool(command: command, expectedVersion: self.version, request: request)
             } else {
                 throw error
@@ -251,7 +323,10 @@ public class HelperClient {
         expectedVersion: String?,
         request: Request?
     ) async throws -> Response {
-        try self.preauthorize(command: command)
+        // Look up the command and preauthorize.  This has the nice side effect that
+        // the authentication dialog comes up, in the typical case, here, rather than
+        // in the helper tool.
+        try await self.requestPrivileges([command.name])
 
         let connection = try XPCConnection(
             type: .remoteMachService(serviceName: self.helperID, isPrivilegedHelperTool: true)
@@ -266,32 +341,10 @@ public class HelperClient {
         return replyMessage.body
     }
 
-    private func preauthorize(command: CommandSpec) throws {
-        // Look up the command and preauthorize.  This has the nice side effect that
-        // the authentication dialog comes up, in the typical case, here, rather than
-        // in the helper tool.
-
-        try command.name.withCString {
-            var item = AuthorizationItem(name: $0, valueLength: 0, value: nil, flags: 0)
-
-            try withUnsafeMutablePointer(to: &item) {
-                var rights = AuthorizationRights(count: 1, items: $0)
-
-                let err = AuthorizationCopyRights(
-                    try self.authorization,
-                    &rights,
-                    nil,
-                    [.extendRights, .interactionAllowed, .preAuthorize],
-                    nil
-                )
-
-                guard err == errAuthorizationSuccess else { throw CFError.make(osStatus: err) }
-            }
-        }
-    }
-
-    private func requestPrivileges(_ privileges: [String], allowUserInteraction: Bool = true) throws {
+    private func requestPrivileges(_ privileges: [String], allowUserInteraction: Bool = true) async throws {
         if privileges.isEmpty { return }
+
+        let authorization = try self.authorization
 
         let items = UnsafeMutablePointer<AuthorizationItem>.allocate(capacity: privileges.count)
 
@@ -315,9 +368,16 @@ public class HelperClient {
             flags.insert(.interactionAllowed)
         }
 
-        // Obtain the right to install privileged helper tools (kSMRightBlessPrivilegedHelper).
-        let err = AuthorizationCopyRights(try self.authorization, &rights, nil, flags, nil)
-        guard err == errAuthorizationSuccess else { throw CFError.make(osStatus: err) }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) -> Void in
+            AuthorizationCopyRightsAsync(authorization, &rights, nil, flags) { err, _ in
+                switch err {
+                case errAuthorizationSuccess:
+                    continuation.resume()
+                default:
+                    continuation.resume(throwing: CFError.make(osStatus: err))
+                }
+            }
+        }
     }
 
     private func revokePrivileges() throws {
@@ -329,6 +389,7 @@ public class HelperClient {
         self._authorization = nil
     }
 
+    @available(macOS, deprecated: 13.0, message: "Blessing is only relevant when using the legacy service management APIs")
     private func blessHelperTool() throws {
         var smError: Unmanaged<CFError>?
         if !SMJobBless(kSMDomainSystemLaunchd, self.helperID as CFString, try self.authorization, &smError) {
@@ -336,15 +397,16 @@ public class HelperClient {
         }
     }
 
-    private func unblessHelperTool() throws {
+    @available(macOS, deprecated: 13.0, message: "Blessing is only relevant when using the legacy service management APIs")
+    private func unblessHelperTool() async throws {
         var smError: Unmanaged<CFError>? = nil
-        // deprecated, but there is still not a decent replacement, so 🤷
-        // For now, kludge around the deprecation warning using dlsym.
+        // deprecated in macOS 10.10, but the replacement is not available until 13.0.
+        // Therefore, kludge around the deprecation warning using dlsym.
 
         let remove = unsafeBitCast(
             dlsym(UnsafeMutableRawPointer(bitPattern: -1), "SMJobRemove"),
             to: (@convention(c) (CFString?, CFString, AuthorizationRef?, Bool, UnsafeMutablePointer<Unmanaged<CFError>?>?) ->
-                Bool).self
+                 Bool).self
         )
 
         if !remove(kSMDomainSystemLaunchd, self.helperID as CFString, try self.authorization, true, &smError) {

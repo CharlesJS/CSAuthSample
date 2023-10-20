@@ -32,6 +32,16 @@ extension HelperTool {
     ///
     /// - Throws: Any error that occurs in the process of uninstalling the helper tool.
     public func uninstallHelperTool() throws {
+        guard CFURLCopyScheme(self.url)?.toString() == "file",
+              let parentURL = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault, self.url),
+              let parentPath = CFURLCopyPath(parentURL)?.toString(),
+              parentPath == "/Library/PrivilegedHelperTools" else {
+            // Uninstalling the helper tool is only relevant for legacy helper tools installed via `SMJobBless`.
+            // Helper tools registered via `SMAppService` are managed by the system and do not need to be uninstalled.
+
+            return
+        }
+
         let servicePath = "/Library/LaunchDaemons/\(self.helperID).plist"
 
         if CFURLResourceIsReachable(self.url, nil) {
