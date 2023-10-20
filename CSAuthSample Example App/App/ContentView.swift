@@ -30,7 +30,7 @@ struct ContentView: View {
                 Task {
                     do {
                         let fd = try await MessageSender.shared.openSudoLectureFile()
-                        let handle = FileHandle(fileDescriptor: fd.fileDescriptor, closeOnDealloc: false)
+                        let handle = try FileHandle(fileDescriptor: fd.dup(), closeOnDealloc: false)
                         defer { _ = try? handle.close() }
 
                         guard let data = try handle.readToEnd() else {
@@ -65,14 +65,14 @@ struct ContentView: View {
             Button {
                 Task {
                     do {
-                        let reply = try await MessageSender.shared.uninstallHelperTool()
+                        let reply = try await MessageSender.shared.unregisterHelperTool()
                         self.response = "Received reply from helper:\n\n\(reply)"
                     } catch {
                         self.response = "Received error \(error.localizedDescription)\n\n"
                     }
                 }
             } label: {
-                Text("Uninstall")
+                Text("Unregister Helper Tool")
             }.padding().disabled(self.messageSendInProgress)
             Text("Response:")
             Text($response.wrappedValue)

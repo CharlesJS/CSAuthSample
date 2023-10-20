@@ -20,16 +20,10 @@ actor MessageSender {
     private init() throws {
         let connection = try XPCConnection(type: .remoteService(bundleID: "com.charlessoft.CSAuthSample-Example.xpc"))
 
-        if #available(macOS 11.0, *) {
-            let logger = Logger()
+        let logger = Logger()
 
-            connection.errorHandler = { _, error in
-                logger.error("The connection to the XPC service received an error: \(error.localizedDescription)")
-            }
-        } else {
-            connection.errorHandler = { _, error in
-                os_log(.error, "The connection to the XPC service received an error: %@", error.localizedDescription)
-            }
+        connection.errorHandler = { _, error in
+            logger.error("The connection to the XPC service received an error: \(error.localizedDescription)")
         }
 
         connection.resume()
@@ -58,9 +52,9 @@ actor MessageSender {
         return try await self.connection.sendMessage(name: BuiltInCommands.getVersion.name)
     }
 
-    func uninstallHelperTool() async throws -> String {
-        try await self.connection.sendMessage(name: BuiltInCommands.uninstallHelperTool.name)
+    func unregisterHelperTool() async throws -> String {
+        try await self.connection.sendMessage(name: XPCCommands.unregisterHelperTool.name)
 
-        return "Uninstall Successful"
+        return "Unregister Successful"
     }
 }

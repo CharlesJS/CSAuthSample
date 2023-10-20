@@ -38,3 +38,19 @@ struct ExampleCommands {
         responseType: .wait(XPCFileDescriptor.self)
     )
 }
+
+struct XPCCommands {
+    static let all = ExampleCommands.all + [Self.unregisterHelperTool]
+
+    static let unregisterHelperTool = CommandSpec(
+        name: "com.charlessoft.CSAuthSample-Example.Commands.UnregisterHelperTool",
+        rule: kAuthorizationRuleAuthenticateAsAdmin,
+        prompt: CFBundleCopyLocalizedString(
+            CFBundleGetMainBundle(),
+            CFString.fromString("UnregisterHelperTool"),
+            nil,
+            CFString.fromString("Prompts")
+        ).toString(),
+        responseType: .wait(XPCFileDescriptor.self)
+    )
+}

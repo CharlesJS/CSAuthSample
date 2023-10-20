@@ -3,10 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>(set by build script)</string>
+	<string>com.charlessoft.CSAuthSample-Example.helper</string>
 	<key>BundleProgram</key>
 	<string>Contents/Resources/com.charlessoft.CSAuthSample-Example.helper</string>
 	<key>MachServices</key>
-	<string>(set by build script)</string>
+	<dict>
+		<key>com.charlessoft.CSAuthSample-Example.helper</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

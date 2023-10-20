@@ -24,7 +24,8 @@ class XPCService {
         do {
             let helperClient = try HelperClient(
                 helperID: "com.charlessoft.CSAuthSample-Example.helper",
-                commandSet: ExampleCommands.all,
+                plistName: "Helper.plist",
+                commandSet: XPCCommands.all,
                 bundle: .main,
                 tableName: "Prompts"
             )
@@ -40,7 +41,7 @@ class XPCService {
                 handler: xpcService.openSudoLectureFile
             )
             serviceListener.setMessageHandler(name: BuiltInCommands.getVersion.name, handler: xpcService.getHelperVersion)
-            serviceListener.setMessageHandler(name: BuiltInCommands.uninstallHelperTool.name, handler: xpcService.uninstall)
+            serviceListener.setMessageHandler(name: XPCCommands.unregisterHelperTool.name, handler: xpcService.unregister)
 
             serviceListener.errorHandler = xpcService.handleError
 
@@ -63,8 +64,8 @@ class XPCService {
         try await self.helperClient.requestHelperVersion()
     }
 
-    private func uninstall(_: XPCConnection) async throws {
-        try await self.helperClient.uninstallHelperTool()
+    private func unregister(_: XPCConnection) async throws {
+        try await self.helperClient.unregisterHelperTool()
     }
 
     private func handleError(connection: XPCConnection, error: Error) {
