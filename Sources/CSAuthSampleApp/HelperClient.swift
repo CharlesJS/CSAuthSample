@@ -168,9 +168,18 @@ public class HelperClient {
         if #available(macOS 13.0, *), let plistName = self.plistName {
             try await self.requestPrivileges([kSMRightModifySystemDaemons], allowUserInteraction: true)
 
-            _ = try? await SMAppService.daemon(plistName: plistName).unregister()
+            let daemon = SMAppService.daemon(plistName: plistName)
 
-            try SMAppService.daemon(plistName: plistName).register()
+            if case .enabled = daemon.status {
+                try await daemon.unregister()
+
+                // SMAppService errors if we try to register before the previous version has finished unregistering
+                for _ in 0..<500 where daemon.status != .notRegistered {
+                    try await Task.sleep(for: .microseconds(10))
+                }
+            }
+
+            try daemon.register()
         } else {
             try await self.requestPrivileges([kSMRightBlessPrivilegedHelper], allowUserInteraction: true)
 
